@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - platform-cilium.appproject.yaml
+  - platform-external-secrets.appproject.yaml
+  - platform-k8s-monitoring.appproject.yaml
+  - platform-kube-state-metrics.appproject.yaml
+  - platform-metallb.appproject.yaml
+  - platform-metallb-config.appproject.yaml
+  - platform-metrics-server.appproject.yaml
+  - platform-traefik.appproject.yaml
+  - secrets.appproject.yaml
+  - dsqr.appproject.yaml
+  - fidara.appproject.yaml
+  - twt.appproject.yaml

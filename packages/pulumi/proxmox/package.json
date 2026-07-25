@@ -1,0 +1,23 @@
+{
+  "name": "@dsqr/pulumi-proxmox",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@dsqr/model": "0.0.0",
+    "@dsqr/pulumi-shared": "0.0.0",
+    "@muhlba91/pulumi-proxmoxve": "8.3.0",
+    "@pulumi/pulumi": "3.254.0",
+    "effect": "3.22.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

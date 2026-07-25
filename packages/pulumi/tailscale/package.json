@@ -1,0 +1,22 @@
+{
+  "name": "@dsqr/pulumi-tailscale",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@dsqr/pulumi-shared": "0.0.0",
+    "@pulumi/pulumi": "3.254.0",
+    "@pulumi/tailscale": "0.29.0",
+    "effect": "3.22.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

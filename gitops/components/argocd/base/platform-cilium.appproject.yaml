@@ -1,0 +1,56 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-cilium
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: platform-cilium
+    app.kubernetes.io/part-of: dsqr-gitops
+    homelab.dev/tier: platform
+spec:
+  description: Cilium cluster networking
+  sourceRepos:
+    - https://helm.cilium.io/
+    - https://github.com/0xdsqr/infrastructure.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: kube-system
+    - server: https://kubernetes.default.svc
+      namespace: cilium-secrets
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+      name: cilium-secrets
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cilium
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cilium-operator
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: cilium
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: cilium-operator
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: Secret
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ServiceAccount
+    - group: apps
+      kind: DaemonSet
+    - group: apps
+      kind: Deployment
+    - group: rbac.authorization.k8s.io
+      kind: Role
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding

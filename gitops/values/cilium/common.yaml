@@ -1,0 +1,13 @@
+# Shared default Helm values for the Cilium chart.
+# Keep values here when every cluster should use the same networking defaults.
+# Put cluster-specific identity, API server addresses, or rollout settings in gitops/values/cilium/<cluster>.yaml.
+
+ipam:
+  mode: kubernetes
+
+kubeProxyReplacement: true
+
+rollOutCiliumPods: true
+
+operator:
+  replicas: 1

@@ -1,0 +1,112 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dsqr
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-options: ServerSideApply=true,Prune=confirm,Delete=confirm
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: dsqr-dotdev
+    homelab.dev/owner: dsqr
+    homelab.dev/tier: apps
+    homelab.dev/ghcr-pull: "true"
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fidara
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-options: ServerSideApply=true,Prune=confirm,Delete=confirm
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: fidara
+    homelab.dev/owner: fidara
+    homelab.dev/tier: apps
+    homelab.dev/ghcr-pull: "true"
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: twt
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-options: ServerSideApply=true,Prune=confirm,Delete=confirm
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: tastingswithtay
+    homelab.dev/owner: twt
+    homelab.dev/tier: apps
+    homelab.dev/ghcr-pull: "true"
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: metallb-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-options: ServerSideApply=true,Prune=confirm,Delete=confirm
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: cluster-networking
+    homelab.dev/owner: platform
+    homelab.dev/tier: platform
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: traefik
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-options: ServerSideApply=true,Prune=confirm,Delete=confirm
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: cluster-ingress
+    homelab.dev/owner: platform
+    homelab.dev/tier: platform
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: observability
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-options: ServerSideApply=true,Prune=confirm,Delete=confirm
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: observability
+    homelab.dev/owner: platform
+    homelab.dev/tier: platform
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-secrets
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-options: ServerSideApply=true,Prune=confirm,Delete=confirm
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: cluster-secrets
+    homelab.dev/owner: platform
+    homelab.dev/tier: platform-addon
+    pod-security.kubernetes.io/enforce: baseline

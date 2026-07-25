@@ -1,0 +1,24 @@
+# Shared default Helm values for the Traefik chart.
+# Keep values here when every cluster should use the same ingress controller defaults.
+# Put cluster-specific service, entrypoint, or dashboard settings in gitops/values/traefik/<cluster>.yaml.
+deployment:
+  replicas: 1
+
+api:
+  dashboard: false
+
+service:
+  type: LoadBalancer
+
+ports:
+  web:
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+
+ingressRoute:
+  dashboard:
+    enabled: false

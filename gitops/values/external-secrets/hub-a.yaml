@@ -1,0 +1,3 @@
+# hub-a Helm value overrides for External Secrets Operator.
+# Use this for node placement, extra labels, or ServiceMonitor wiring once observability CRDs own it.
+{}

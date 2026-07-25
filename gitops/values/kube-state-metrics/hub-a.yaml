@@ -1,0 +1,4 @@
+# hub-a Helm value overrides for kube-state-metrics.
+# Use this for cluster-specific scrape, ServiceMonitor, resource, node placement, or pod metadata settings.
+# Leave empty when hub-a uses the base values unchanged.
+{}

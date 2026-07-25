@@ -1,0 +1,26 @@
+{
+  "name": "@dsqr/cli",
+  "version": "0.0.0",
+  "private": true,
+  "bin": {
+    "infra": "src/bin.ts"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@dsqr/core": "0.0.0",
+    "@effect/cli": "0.76.0",
+    "@effect/platform": "0.97.0",
+    "@effect/platform-node": "0.108.0",
+    "effect": "3.22.0"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

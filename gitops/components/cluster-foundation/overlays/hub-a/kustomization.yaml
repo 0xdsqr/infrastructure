@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespaces.yaml
+  - app-default-deny.networkpolicies.yaml
+  - internal-ca.configmaps.yaml
+
+labels:
+  - pairs:
+      homelab.dev/cluster: hub-a
+      homelab.dev/environment: homelab

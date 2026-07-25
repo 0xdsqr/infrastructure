@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-kube-state-metrics
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: platform-kube-state-metrics
+    app.kubernetes.io/part-of: dsqr-gitops
+    homelab.dev/tier: platform
+spec:
+  description: Kubernetes object-state metrics
+  sourceRepos:
+    - https://prometheus-community.github.io/helm-charts
+    - https://github.com/0xdsqr/infrastructure.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: kube-system
+  clusterResourceWhitelist:
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: kube-state-metrics
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: kube-state-metrics
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ServiceAccount
+    - group: apps
+      kind: Deployment

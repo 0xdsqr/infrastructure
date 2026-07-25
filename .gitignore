@@ -1,0 +1,29 @@
+# Dependencies and build output
+node_modules
+dist
+result*
+*.tgz
+
+# Local state and credentials
+.direnv
+.pulumi
+.env
+.env.*
+!.env.example
+.envrc.local
+Pulumi.*.yaml
+*.pulumi-state.json
+*.key
+*.pem
+*.p12
+*.pfx
+
+# Tool caches
+.cache
+*.log
+*.tsbuildinfo
+
+# Editors and operating systems
+.DS_Store
+.idea
+.vscode

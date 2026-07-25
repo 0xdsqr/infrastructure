@@ -1,0 +1,81 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-metallb
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: platform-metallb
+    app.kubernetes.io/part-of: dsqr-gitops
+    homelab.dev/tier: platform
+spec:
+  description: MetalLB controllers
+  sourceRepos:
+    - https://metallb.github.io/metallb
+    - https://github.com/0xdsqr/infrastructure.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: metallb-system
+  clusterResourceWhitelist:
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      name: metallb-webhook-configuration
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: bfdprofiles.metallb.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: bgpadvertisements.metallb.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: bgppeers.metallb.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: communities.metallb.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: configurationstates.metallb.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: ipaddresspools.metallb.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: l2advertisements.metallb.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: servicebgpstatuses.metallb.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: servicel2statuses.metallb.io
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: metallb:controller
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: metallb:speaker
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: metallb:controller
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: metallb:speaker
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: Secret
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ServiceAccount
+    - group: apps
+      kind: DaemonSet
+    - group: apps
+      kind: Deployment
+    - group: rbac.authorization.k8s.io
+      kind: Role
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding

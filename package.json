@@ -1,0 +1,61 @@
+{
+  "name": "infrastructure",
+  "version": "0.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "packages/pulumi/*"
+  ],
+  "type": "module",
+  "scripts": {
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm test",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
+    "infra": "node packages/cli/src/bin.ts",
+    "infra:preview": "npm run infra -- preview default",
+    "infra:preview:all": "npm run infra -- preview all",
+    "infra:preview:k8s": "npm run infra -- preview kubernetes",
+    "infra:preview:vault": "npm run infra -- preview vault",
+    "lint": "oxlint --deny-warnings .",
+    "test": "node --test tests/*.test.ts",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p infra/tsconfig.json"
+  },
+  "dependencies": {
+    "@dsqr/core": "0.0.0",
+    "@dsqr/model": "0.0.0",
+    "@dsqr/pulumi-cloudflare": "0.0.0",
+    "@dsqr/pulumi-hetzner": "0.0.0",
+    "@dsqr/pulumi-kubernetes": "0.0.0",
+    "@dsqr/pulumi-proxmox": "0.0.0",
+    "@dsqr/pulumi-shared": "0.0.0",
+    "@dsqr/pulumi-tailscale": "0.0.0",
+    "@dsqr/pulumi-vault": "0.0.0",
+    "@effect/platform": "0.97.0",
+    "@effect/platform-node": "0.108.0",
+    "@pulumi/pulumi": "3.254.0",
+    "effect": "3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "esbuild": "0.28.1",
+    "oxfmt": "0.60.0",
+    "oxlint": "1.75.0",
+    "typescript": "7.0.2"
+  },
+  "overrides": {
+    "esbuild": "$esbuild",
+    "typescript": "$typescript"
+  },
+  "engines": {
+    "node": ">=24",
+    "npm": ">=11"
+  },
+  "packageManager": "npm@11.16.0",
+  "allowScripts": {
+    "@parcel/watcher": false,
+    "@pulumi/kubernetes@4.33.0": true,
+    "esbuild@0.28.1": true,
+    "msgpackr-extract": false,
+    "protobufjs@7.6.5": true
+  }
+}

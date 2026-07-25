@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: fidara
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: fidara
+    app.kubernetes.io/part-of: dsqr-gitops
+    homelab.dev/tier: apps
+spec:
+  description: Fidara application workloads
+  sourceRepos:
+    - https://github.com/0xdsqr/infrastructure.git
+    - https://github.com/0xdsqr/fidara.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: fidara
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ServiceAccount
+    - group: apps
+      kind: Deployment
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+    - group: networking.k8s.io
+      kind: Ingress
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+    - group: policy
+      kind: PodDisruptionBudget

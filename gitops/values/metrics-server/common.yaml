@@ -1,0 +1,4 @@
+# Shared default Helm values for the metrics-server chart.
+# Metrics Server provides the metrics.k8s.io API used by kubectl top and HPA resource metrics.
+# Keep cluster-specific kubelet TLS and address choices in gitops/values/metrics-server/<cluster>.yaml.
+replicas: 1

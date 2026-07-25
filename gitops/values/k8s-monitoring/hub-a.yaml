@@ -1,0 +1,4 @@
+# hub-a Helm value overrides for k8s-monitoring.
+# Use this for cluster-specific observability destinations, collectors, resources, node placement, or pod metadata.
+cluster:
+  name: hub-a

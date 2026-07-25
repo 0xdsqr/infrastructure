@@ -1,0 +1,64 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: bootstrap
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/name: bootstrap
+    app.kubernetes.io/part-of: dsqr-gitops
+    homelab.dev/cluster: hub-a
+    homelab.dev/environment: homelab
+    homelab.dev/owner: platform
+    homelab.dev/tier: gitops
+spec:
+  description: Admin-only hub-a bootstrap resources
+  sourceRepos:
+    - https://github.com/0xdsqr/infrastructure.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: argocd
+    - server: https://kubernetes.default.svc
+      namespace: dsqr
+    - server: https://kubernetes.default.svc
+      namespace: fidara
+    - server: https://kubernetes.default.svc
+      namespace: twt
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+      name: dsqr
+    - group: ""
+      kind: Namespace
+      name: fidara
+    - group: ""
+      kind: Namespace
+      name: twt
+    - group: ""
+      kind: Namespace
+      name: metallb-system
+    - group: ""
+      kind: Namespace
+      name: traefik
+    - group: ""
+      kind: Namespace
+      name: observability
+    - group: ""
+      kind: Namespace
+      name: external-secrets
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ConfigMap
+    - group: argoproj.io
+      kind: Application
+    - group: argoproj.io
+      kind: AppProject
+    - group: external-secrets.io
+      kind: ExternalSecret
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+    - group: traefik.io
+      kind: IngressRoute
+    - group: traefik.io
+      kind: Middleware

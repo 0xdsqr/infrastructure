@@ -1,0 +1,4 @@
+# Shared default Helm values for fidara.
+# This file is intentionally empty until this repo needs cross-cluster defaults for the external fidara chart.
+# Put cluster-specific overrides in gitops/values/fidara/<cluster>.yaml.
+{}

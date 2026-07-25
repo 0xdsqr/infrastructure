@@ -1,0 +1,8 @@
+name: vault-homelab
+description: Homelab Vault mounts, policies, and authentication stack
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+    typescript: false
+main: index.ts

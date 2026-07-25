@@ -1,0 +1,60 @@
+# Shared Helm values for External Secrets Operator.
+installCRDs: true
+
+crds:
+  annotations:
+    argocd.argoproj.io/sync-options: Replace=true
+  createClusterExternalSecret: true
+  createClusterSecretStore: true
+  createSecretStore: true
+  unsafeServeV1Beta1: false
+
+replicaCount: 1
+leaderElect: false
+
+serviceAccount:
+  create: true
+  name: external-secrets
+  automount: true
+
+rbac:
+  create: true
+  serviceAccountTokenCreate: true
+
+systemAuthDelegator: true
+
+resources:
+  requests:
+    cpu: 10m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+serviceMonitor:
+  enabled: false
+
+metrics:
+  service:
+    enabled: true
+
+webhook:
+  create: true
+  certManager:
+    enabled: false
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+certController:
+  create: true
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 256Mi

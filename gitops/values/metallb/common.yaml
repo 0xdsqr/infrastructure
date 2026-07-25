@@ -1,0 +1,14 @@
+# Shared default Helm values for the MetalLB chart.
+# Keep values here when every cluster should use the same controller/speaker defaults.
+# Put cluster-specific resource sizing or address-pool-adjacent settings in gitops/values/metallb/<cluster>.yaml.
+controller:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+speaker:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi

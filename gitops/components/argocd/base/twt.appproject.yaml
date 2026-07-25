@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: twt
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: twt
+    app.kubernetes.io/part-of: dsqr-gitops
+    homelab.dev/tier: apps
+spec:
+  description: Tastings with Tay application workloads
+  sourceRepos:
+    - https://github.com/0xdsqr/infrastructure.git
+    - https://github.com/0xdsqr/tastingswithtay.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: twt
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ServiceAccount
+    - group: apps
+      kind: Deployment
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+    - group: networking.k8s.io
+      kind: Ingress
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+    - group: policy
+      kind: PodDisruptionBudget

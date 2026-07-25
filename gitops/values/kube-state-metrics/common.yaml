@@ -1,0 +1,6 @@
+# Shared default Helm values for the kube-state-metrics chart.
+# Keep values here when every cluster should expose metrics the same way.
+# Put cluster-specific ServiceMonitor or scrape settings in gitops/values/kube-state-metrics/<cluster>.yaml.
+prometheus:
+  monitor:
+    enabled: false

@@ -1,0 +1,14 @@
+# hub-a Helm value overrides for Argo CD.
+# Use this for settings that should differ from the shared base on this cluster.
+global:
+  domain: argocd.hub-a.home.arpa
+
+configs:
+  cm:
+    webhook.maxPayloadSizeMB: "5"
+  secret:
+    githubSecret: "$argocd-github-webhook:secret"
+
+server:
+  ingress:
+    hostname: argocd.hub-a.home.arpa

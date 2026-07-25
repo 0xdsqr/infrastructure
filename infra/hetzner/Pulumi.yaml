@@ -1,0 +1,8 @@
+name: hetzner-mail
+description: Hetzner Cloud mail server bootstrap stack
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+    typescript: false
+main: index.ts

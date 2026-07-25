@@ -1,0 +1,46 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-metrics-server
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: platform-metrics-server
+    app.kubernetes.io/part-of: dsqr-gitops
+    homelab.dev/tier: platform
+spec:
+  description: Kubernetes resource metrics API
+  sourceRepos:
+    - https://kubernetes-sigs.github.io/metrics-server/
+    - https://github.com/0xdsqr/infrastructure.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: kube-system
+  clusterResourceWhitelist:
+    - group: apiregistration.k8s.io
+      kind: APIService
+      name: v1beta1.metrics.k8s.io
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: system:metrics-server
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: system:metrics-server-aggregated-reader
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: metrics-server:system:auth-delegator
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: system:metrics-server
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ServiceAccount
+    - group: apps
+      kind: Deployment
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding

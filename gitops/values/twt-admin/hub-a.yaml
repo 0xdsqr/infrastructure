@@ -1,0 +1,46 @@
+# hub-a Helm value overrides for twt-admin.
+# Use this for cluster-specific external chart values that should layer on top of Tastings with Tay's own values-prod.yaml.
+# Leave empty when hub-a uses the external chart values unchanged.
+existingSecret: twt-admin-secrets
+
+env:
+  DATABASE_SSL: require
+  DATABASE_SSL_REJECT_UNAUTHORIZED: "true"
+
+additionalTrustedCa:
+  enabled: true
+  configMapName: dsqr-home-root-ca
+
+networkPolicy:
+  egress:
+    extra:
+      - to:
+          - ipBlock:
+              cidr: 0.0.0.0/0
+              except:
+                - 10.0.0.0/8
+                - 100.64.0.0/10
+                - 127.0.0.0/8
+                - 169.254.0.0/16
+                - 172.16.0.0/12
+                - 192.168.0.0/16
+        ports:
+          - protocol: TCP
+            port: 443
+      - to:
+          - ipBlock:
+              cidr: 10.10.30.109/32
+        ports:
+          - protocol: TCP
+            port: 5432
+      - to:
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: observability
+            podSelector:
+              matchLabels:
+                app.kubernetes.io/instance: k8s-monitoring-alloy-receiver
+                app.kubernetes.io/name: alloy-receiver
+        ports:
+          - protocol: TCP
+            port: 4318

@@ -1,0 +1,8 @@
+name: tailscale-control
+description: Homelab Tailscale policy and auth key stack
+runtime:
+  name: nodejs
+  options:
+    packagemanager: npm
+    typescript: false
+main: index.ts

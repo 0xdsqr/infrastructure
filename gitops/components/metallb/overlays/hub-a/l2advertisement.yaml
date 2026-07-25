@@ -1,0 +1,13 @@
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+metadata:
+  name: ingress
+  namespace: metallb-system
+  labels:
+    app.kubernetes.io/name: metallb
+    app.kubernetes.io/part-of: cluster-networking
+    homelab.dev/owner: platform
+    homelab.dev/tier: platform-addon
+spec:
+  ipAddressPools:
+    - ingress

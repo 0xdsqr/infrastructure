@@ -1,0 +1,271 @@
+# Shared default Helm values for the Argo CD chart.
+# Keep values here when every cluster should use the same Argo CD defaults.
+# Put cluster-specific changes in gitops/values/argocd/<cluster>.yaml.
+global:
+  addPrometheusAnnotations: true
+  networkPolicy:
+    # The chart's server policy permits every ingress source and its metrics
+    # rules permit every namespace. Explicit policies below define each flow.
+    create: false
+    defaultDenyIngress: false
+
+configs:
+  cm:
+    # Keep the local admin account until SSO and an offline break-glass path
+    # have both been configured and exercised.
+    admin.enabled: "true"
+    timeout.reconciliation: 120s
+    timeout.reconciliation.jitter: 60s
+    resource.customizations.health.argoproj.io_Application: |
+      hs = {}
+      hs.status = "Progressing"
+      hs.message = "Waiting for child Application status"
+      if obj.status == nil then
+        return hs
+      end
+      if obj.status.health ~= nil and obj.status.health.status == "Degraded" then
+        hs.status = "Degraded"
+        hs.message = obj.status.health.message or "Child Application is degraded"
+        return hs
+      end
+      if obj.status.sync == nil or obj.status.sync.status ~= "Synced" then
+        local syncStatus = "Unknown"
+        if obj.status.sync ~= nil and obj.status.sync.status ~= nil then
+          syncStatus = obj.status.sync.status
+        end
+        hs.message = "Waiting for child Application sync (" .. syncStatus .. ")"
+        return hs
+      end
+      if obj.status.health ~= nil and obj.status.health.status == "Healthy" then
+        hs.status = "Healthy"
+        hs.message = obj.status.health.message or "Child Application is synced and healthy"
+        return hs
+      end
+      hs.message = "Waiting for child Application health"
+      if obj.status.health ~= nil and obj.status.health.message ~= nil then
+        hs.message = obj.status.health.message
+      end
+      return hs
+  params:
+    server.insecure: "true"
+
+crds:
+  install: true
+  keep: true
+
+controller:
+  metrics:
+    enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 384Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+  networkPolicy:
+    create: false
+
+dex:
+  # No SSO connector is configured yet. Do not run an unused identity service.
+  enabled: false
+
+redis:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  networkPolicy:
+    create: false
+
+redisSecretInit:
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 128Mi
+
+repoServer:
+  metrics:
+    enabled: true
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+  networkPolicy:
+    create: false
+
+server:
+  metrics:
+    enabled: true
+  resources:
+    requests:
+      cpu: 25m
+      memory: 96Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+  networkPolicy:
+    create: false
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    path: /
+    pathType: Prefix
+    tls: false
+
+applicationSet:
+  # No ApplicationSets are declared. Re-enable only when a second cluster
+  # makes generator-driven Application ownership worthwhile.
+  replicas: 0
+  metrics:
+    enabled: false
+  networkPolicy:
+    create: false
+
+notifications:
+  # Re-enable with a concrete notifier and alert-routing policy.
+  enabled: false
+
+extraObjects:
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: argocd-default-deny-ingress
+      namespace: argocd
+    spec:
+      podSelector: {}
+      policyTypes:
+        - Ingress
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: argocd-allow-server-ingress
+      namespace: argocd
+    spec:
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/instance: argocd
+          app.kubernetes.io/name: argocd-server
+      policyTypes:
+        - Ingress
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: traefik
+              podSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: traefik-traefik
+                  app.kubernetes.io/name: traefik
+          ports:
+            - port: 8080
+              protocol: TCP
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: observability
+              podSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: k8s-monitoring-alloy-metrics
+                  app.kubernetes.io/name: alloy-metrics
+          ports:
+            - port: 8083
+              protocol: TCP
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: argocd-allow-repo-server-ingress
+      namespace: argocd
+    spec:
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/instance: argocd
+          app.kubernetes.io/name: argocd-repo-server
+      policyTypes:
+        - Ingress
+      ingress:
+        - from:
+            - podSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: argocd
+                  app.kubernetes.io/name: argocd-application-controller
+            - podSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: argocd
+                  app.kubernetes.io/name: argocd-server
+          ports:
+            - port: 8081
+              protocol: TCP
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: observability
+              podSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: k8s-monitoring-alloy-metrics
+                  app.kubernetes.io/name: alloy-metrics
+          ports:
+            - port: 8084
+              protocol: TCP
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: argocd-allow-controller-metrics
+      namespace: argocd
+    spec:
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/instance: argocd
+          app.kubernetes.io/name: argocd-application-controller
+      policyTypes:
+        - Ingress
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels:
+                  kubernetes.io/metadata.name: observability
+              podSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: k8s-monitoring-alloy-metrics
+                  app.kubernetes.io/name: alloy-metrics
+          ports:
+            - port: 8082
+              protocol: TCP
+  - apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: argocd-allow-redis
+      namespace: argocd
+    spec:
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/instance: argocd
+          app.kubernetes.io/name: argocd-redis
+      policyTypes:
+        - Ingress
+      ingress:
+        - from:
+            - podSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: argocd
+                  app.kubernetes.io/name: argocd-application-controller
+            - podSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: argocd
+                  app.kubernetes.io/name: argocd-repo-server
+            - podSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: argocd
+                  app.kubernetes.io/name: argocd-server
+          ports:
+            - port: 6379
+              protocol: TCP

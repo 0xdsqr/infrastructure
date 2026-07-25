@@ -1,0 +1,66 @@
+# Shared default Helm values for the Grafana k8s-monitoring chart.
+# Keep values here when every cluster should use the same observability pipeline defaults.
+# Put cluster-specific identity, destinations, collectors, or pod settings in gitops/values/k8s-monitoring/<cluster>.yaml.
+
+destinations:
+  - name: loki
+    type: loki
+    url: http://10.10.30.102:3100/loki/api/v1/push
+
+  - name: prometheus
+    type: prometheus
+    url: http://10.10.30.102:9090/api/v1/write
+
+  - name: tempo
+    type: otlp
+    protocol: grpc
+    url: 10.10.30.102:4317
+    tls:
+      insecure: true
+    metrics:
+      enabled: false
+    logs:
+      enabled: false
+    traces:
+      enabled: true
+    processors:
+      serviceGraphMetrics:
+        enabled: true
+        destinations: ["prometheus"]
+
+clusterMetrics:
+  enabled: true
+
+podLogs:
+  enabled: true
+
+annotationAutodiscovery:
+  enabled: true
+
+applicationObservability:
+  enabled: true
+  collector: alloy-receiver
+  destinations: ["loki", "prometheus", "tempo"]
+  receivers:
+    otlp:
+      grpc:
+        enabled: true
+      http:
+        enabled: true
+  connectors:
+    grafanaCloudMetrics:
+      enabled: false
+    spanMetrics:
+      enabled: true
+
+alloy-metrics:
+  enabled: true
+
+alloy-logs:
+  enabled: true
+
+alloy-receiver:
+  enabled: true
+  extraService:
+    enabled: true
+    fullname: otel-collector

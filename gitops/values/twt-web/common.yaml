@@ -1,0 +1,4 @@
+# Shared default Helm values for twt-web.
+# This file is intentionally empty until this repo needs cross-cluster defaults for the external Tastings with Tay chart.
+# Put cluster-specific overrides in gitops/values/twt-web/<cluster>.yaml.
+{}

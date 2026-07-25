@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-metallb-config
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: platform-metallb-config
+    app.kubernetes.io/part-of: dsqr-gitops
+    homelab.dev/tier: platform
+spec:
+  description: MetalLB address and advertisement configuration
+  sourceRepos:
+    - https://github.com/0xdsqr/infrastructure.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: metallb-system
+  namespaceResourceWhitelist:
+    - group: metallb.io
+      kind: IPAddressPool
+    - group: metallb.io
+      kind: L2Advertisement

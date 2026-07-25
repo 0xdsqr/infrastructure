@@ -1,0 +1,15 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - dsqr-home-root-ca.configmap.yaml
+  - vault-hub-a.clustersecretstore.yaml
+  - ghcr-pull.clusterexternalsecret.yaml
+  - dotdev-web.externalsecret.yaml
+  - dotdev-studio.externalsecret.yaml
+  - fidara-api.externalsecret.yaml
+  - fidara-web.externalsecret.yaml
+  - twt-admin.externalsecret.yaml
+  - twt-web.externalsecret.yaml
+  - hub-a-traefik-origin.vaultdynamicsecret.yaml
+  - hub-a-traefik-origin.externalsecret.yaml

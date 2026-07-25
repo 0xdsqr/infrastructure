@@ -1,0 +1,5 @@
+# hub-a Helm value overrides for metrics-server.
+# The chart already prefers node InternalIP scraping by default.
+# kubelet-insecure-tls avoids failures when kubelet serving certs do not include node IP SANs.
+args:
+  - --kubelet-insecure-tls
