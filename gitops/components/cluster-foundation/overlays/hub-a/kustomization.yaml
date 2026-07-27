@@ -5,6 +5,7 @@ resources:
   - namespaces.yaml
   - app-default-deny.networkpolicies.yaml
   - internal-ca.configmaps.yaml
+  - platform-admins.clusterrolebinding.yaml
 
 labels:
   - pairs:
