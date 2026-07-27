@@ -21,9 +21,3 @@ const tailscale = runPulumiProgram(
 )
 
 export const tailscalePolicy = tailscale.policy
-export const proxmoxControlPlaneAuthKey = tailscale.authKeys.proxmoxControlPlane
-export const homelabServerAuthKey = tailscale.authKeys.homelabServer
-export const homelabBackupAuthKey = tailscale.authKeys.homelabBackup
-export const opnsenseExitNodeAuthKey = tailscale.authKeys.opnsenseExitNode
-export const hetznerMailAuthKey = tailscale.authKeys.hetznerMail
-export const awsServerAuthKey = tailscale.authKeys.awsServer

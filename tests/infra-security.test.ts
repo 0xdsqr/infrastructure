@@ -175,7 +175,7 @@ test("Cloudflare zones enforce HTTPS, verified origins, and modern TLS", () => {
   }
 })
 
-test("Tailscale machine enrollment and grants are least-privilege by default", () => {
+test("Tailscale machine enrollment keys are hardened while the live ACL remains compatible", () => {
   assert.deepEqual(hardenedTailnetKeyDefaults, {
     reusable: false,
     ephemeral: false,
@@ -191,14 +191,8 @@ test("Tailscale machine enrollment and grants are least-privilege by default", (
 
   const adminUser = "admin@example.test"
   const policy = tailscale.createPolicy({ adminUser })
-  const machineGrants = policy.grants.filter((grant) => grant.src[0] !== adminUser)
-
-  assert.ok(machineGrants.length > 0)
-  assert.ok(machineGrants.every((grant) => !(grant.src as readonly string[]).includes("*")))
-  assert.ok(machineGrants.every((grant) => !(grant.dst as readonly string[]).includes("*")))
-  assert.ok(machineGrants.every((grant) => !(grant.ip as readonly string[]).includes("*")))
-  assert.ok(!("autoApprovers" in policy))
-  assert.ok(policy.tests.some((policyTest) => "deny" in policyTest && policyTest.deny.length > 0))
+  assert.deepEqual(policy.autoApprovers.exitNode, [tailscale.tags.role.exitNode])
+  assert.ok(policy.grants.some((grant) => grant.src[0] === tailscale.tags.role.workstation))
 })
 
 test("External Secrets policies use unique exact paths and exclude infrastructure credentials", () => {

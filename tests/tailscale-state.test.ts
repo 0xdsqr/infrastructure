@@ -38,7 +38,7 @@ const resolveOutput = <Value>(output: pulumi.Output<Value>) =>
     }
   ).promise()
 
-test("Tailscale infrastructure preserves every live logical name and setting", async () => {
+test("Tailscale infrastructure manages the tailnet policy without persistent bootstrap keys", async () => {
   const deployed = Effect.runSync(
     createTailscalePlatformEffect({
       policyResourceName: tailscale.policyResourceName,
@@ -48,24 +48,14 @@ test("Tailscale infrastructure preserves every live logical name and setting", a
       keySpecs: tailscale.keySpecs,
     }),
   )
-  const authKeys = deployed.authKeys
-
-  await Promise.all([resolveOutput(deployed.policy), ...Object.values(authKeys).map(resolveOutput)])
+  await resolveOutput(deployed.policy)
 
   const registered = resources
     .filter((resource) => resource.type.startsWith("tailscale:"))
     .map((resource) => [resource.type, resource.name] as const)
     .sort((left, right) => left[1].localeCompare(right[1]))
 
-  assert.deepEqual(registered, [
-    ["tailscale:index/tailnetKey:TailnetKey", "aws-server-key"],
-    ["tailscale:index/tailnetKey:TailnetKey", "hetzner-mail-key"],
-    ["tailscale:index/tailnetKey:TailnetKey", "homelab-backup-key"],
-    ["tailscale:index/tailnetKey:TailnetKey", "homelab-server-key"],
-    ["tailscale:index/tailnetKey:TailnetKey", "opnsense-exit-node-key"],
-    ["tailscale:index/tailnetKey:TailnetKey", "proxmox-control-plane-key"],
-    ["tailscale:index/acl:Acl", "tailnet-policy"],
-  ])
+  assert.deepEqual(registered, [["tailscale:index/acl:Acl", "tailnet-policy"]])
 
   const policy = resources.find((resource) => resource.name === tailscale.policyResourceName)
   assert.ok(policy)
@@ -76,25 +66,7 @@ test("Tailscale infrastructure preserves every live logical name and setting", a
     resetAclOnDestroy: false,
   })
 
-  for (const [key, spec] of Object.entries(tailscale.keySpecs)) {
-    const resource = resources.find((candidate) => candidate.name === spec.resourceName)
-    assert.ok(resource, `missing ${spec.resourceName}`)
-    assert.equal(resource.provider, "")
-    assert.deepEqual(resource.inputs, {
-      description: spec.description,
-      ephemeral: false,
-      expiry: 3_600,
-      preauthorized: false,
-      recreateIfInvalid: "never",
-      reusable: false,
-      tags: [...spec.tags],
-    })
-    assert.equal(
-      await resolveOutput(authKeys[key as keyof typeof authKeys]),
-      `mock-${spec.resourceName}`,
-    )
-    assert.equal(await pulumi.isSecret(authKeys[key as keyof typeof authKeys]), true)
-  }
+  assert.deepEqual(deployed.authKeys, {})
 })
 
 test("Tailscale generic key specs reject duplicate logical names before registration", async () => {
