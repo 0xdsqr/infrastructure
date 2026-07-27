@@ -9,9 +9,9 @@ let
     root = ../..;
     fileset = lib.fileset.unions [
       ../../.github
-      ../packages/infra.sh
-      ../../tools/proxmox/install.sh
-      ../../tools/proxmox/install-vault-certificate.sh
+      ../scripts/infra.sh
+      ../scripts/proxmox/install.sh
+      ../scripts/proxmox/install-vault-certificate.sh
     ];
   };
 in
@@ -31,10 +31,10 @@ stdenvNoCC.mkDerivation {
     runHook preInstall
 
     actionlint -no-color .github/workflows/*.yml
-    tail -n +2 nix/packages/infra.sh | shellcheck --shell=sh -
+    tail -n +2 nix/scripts/infra.sh | shellcheck --shell=sh -
     shellcheck \
-      tools/proxmox/install.sh \
-      tools/proxmox/install-vault-certificate.sh
+      nix/scripts/proxmox/install.sh \
+      nix/scripts/proxmox/install-vault-certificate.sh
 
     mkdir -p "$out"
     touch "$out/workflows-check"

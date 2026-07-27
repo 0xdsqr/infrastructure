@@ -10,7 +10,6 @@ pkgs.mkShell {
     kubectl
     kubernetes-helm
     nodejs_24
-    oxfmt
     oxlint
     pulumi
     treefmtWrapper

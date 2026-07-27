@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs"
 import test from "node:test"
 import { fileURLToPath } from "node:url"
 
-const hostRoot = new URL("../tools/proxmox/", import.meta.url)
+const hostRoot = new URL("../nix/scripts/proxmox/", import.meta.url)
 
 const readHostFile = (name: string) => readFileSync(new URL(name, hostRoot), "utf8")
 

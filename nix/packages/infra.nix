@@ -69,7 +69,7 @@ pkgs.stdenvNoCC.mkDerivation {
       ln -s "$runtimeRoot/$packageDirectory" "$packageLink"
     done < <(find "$runtimeRoot/packages" -name package.json -type f | sort)
 
-    substituteAll ${./infra.sh} "$out/bin/infra"
+    substituteAll ${../scripts/infra.sh} "$out/bin/infra"
     chmod +x "$out/bin/infra"
   '';
 }
