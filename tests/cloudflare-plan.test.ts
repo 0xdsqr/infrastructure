@@ -21,13 +21,7 @@ const validArgs = {
     primary: "example.com",
   },
   zoneSecurity: {
-    primary: {
-      strictTransportSecurity: {
-        includeSubdomains: false,
-        maxAge: 300,
-        preload: false,
-      },
-    },
+    primary: {},
   },
   tunnel: {
     name: "gateway",

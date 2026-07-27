@@ -49,7 +49,7 @@ export type CloudflareAccessApplication = {
 }
 
 export type CloudflareZoneSecurityPolicy = {
-  readonly strictTransportSecurity: {
+  readonly strictTransportSecurity?: {
     readonly includeSubdomains: boolean
     readonly maxAge: number
     readonly preload: boolean
@@ -126,7 +126,7 @@ export type CloudflareEdgePlan<
 }
 
 export function cloudflareZoneSecuritySettings(policy: CloudflareZoneSecurityPolicy) {
-  return {
+  const settings = {
     alwaysUseHttps: {
       settingId: "always_use_https",
       value: "on",
@@ -147,6 +147,14 @@ export function cloudflareZoneSecuritySettings(policy: CloudflareZoneSecurityPol
       settingId: "ssl",
       value: "strict",
     },
+  } as const
+
+  if (!policy.strictTransportSecurity) {
+    return settings
+  }
+
+  return {
+    ...settings,
     strictTransportSecurity: {
       settingId: "security_header",
       value: {
@@ -470,13 +478,15 @@ export function planCloudflareEdgeEffect<DirectRecord extends CloudflareDnsRecor
     const zoneSecurityPolicies = yield* Effect.forEach(configuredZoneNames, (zone) =>
       Effect.gen(function* () {
         const policy = args.zoneSecurity[zone]!
-        const maxAge = policy.strictTransportSecurity.maxAge
+        const maxAge = policy.strictTransportSecurity?.maxAge
 
-        yield* requireResourceConfigEffect(
-          Number.isInteger(maxAge) && maxAge >= 0,
-          `zone-security:${zone}`,
-          `Cloudflare zone "${zone}" HSTS maxAge must be a non-negative integer.`,
-        )
+        if (maxAge !== undefined) {
+          yield* requireResourceConfigEffect(
+            Number.isInteger(maxAge) && maxAge >= 0,
+            `zone-security:${zone}`,
+            `Cloudflare zone "${zone}" HSTS maxAge must be a non-negative integer.`,
+          )
+        }
 
         return {
           zone,

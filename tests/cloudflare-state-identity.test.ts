@@ -77,7 +77,7 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
     resource.type.startsWith("cloudflare:"),
   )
 
-  assert.equal(resources.length, 36)
+  assert.equal(resources.length, 33)
   assert.deepEqual(
     resources
       .map((resource) => [resource.type, resource.name] as const)
@@ -97,14 +97,12 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
       [zoneSettingToken, "dsqrDev-always-use-https"],
       [zoneSettingToken, "dsqrDev-automatic-https-rewrites"],
       [zoneSettingToken, "dsqrDev-min-tls-version"],
-      [zoneSettingToken, "dsqrDev-security-header"],
       [zoneSettingToken, "dsqrDev-ssl"],
       [zoneSettingToken, "dsqrDev-tls-1-3"],
       [dnsToken, "fidara-io"],
       [zoneSettingToken, "fidaraIo-always-use-https"],
       [zoneSettingToken, "fidaraIo-automatic-https-rewrites"],
       [zoneSettingToken, "fidaraIo-min-tls-version"],
-      [zoneSettingToken, "fidaraIo-security-header"],
       [zoneSettingToken, "fidaraIo-ssl"],
       [zoneSettingToken, "fidaraIo-tls-1-3"],
       [tunnelToken, "gateway"],
@@ -116,7 +114,6 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
       [zoneSettingToken, "tastingswithtayCom-always-use-https"],
       [zoneSettingToken, "tastingswithtayCom-automatic-https-rewrites"],
       [zoneSettingToken, "tastingswithtayCom-min-tls-version"],
-      [zoneSettingToken, "tastingswithtayCom-security-header"],
       [zoneSettingToken, "tastingswithtayCom-ssl"],
       [zoneSettingToken, "tastingswithtayCom-tls-1-3"],
     ].sort((left, right) => left[1].localeCompare(right[1])),
@@ -180,17 +177,6 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
     value: "strict",
     zoneId: "zone-dsqr",
   })
-  const hsts = byName(resources, "dsqrDev-security-header")
-  assert.deepEqual(hsts.inputs.value, {
-    strictTransportSecurity: {
-      enabled: true,
-      includeSubdomains: false,
-      maxAge: 300,
-      nosniff: true,
-      preload: false,
-    },
-  })
-
   assert.deepEqual(
     deployment.calls.map((call) => call.token),
     [tunnelTokenInvoke],

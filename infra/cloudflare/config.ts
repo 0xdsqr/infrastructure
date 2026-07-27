@@ -29,30 +29,10 @@ export const cloudflare = {
     tastingswithtayCom: "tastingswithtay.com",
   },
   zoneSecurity: {
-    // Stage HSTS before increasing the lifetime or covering every subdomain.
-    // A five-minute host-only policy is immediately reversible while the
-    // complete public-hostname inventory is exercised in production.
-    dsqrDev: {
-      strictTransportSecurity: {
-        includeSubdomains: false,
-        maxAge: 300,
-        preload: false,
-      },
-    },
-    fidaraIo: {
-      strictTransportSecurity: {
-        includeSubdomains: false,
-        maxAge: 300,
-        preload: false,
-      },
-    },
-    tastingswithtayCom: {
-      strictTransportSecurity: {
-        includeSubdomains: false,
-        maxAge: 300,
-        preload: false,
-      },
-    },
+    // HSTS stays opt-in until the provider can safely import and read security_header.
+    dsqrDev: {},
+    fidaraIo: {},
+    tastingswithtayCom: {},
   },
   mailHostname: "mx.dsqr.dev",
   dnsRecords: [
