@@ -47,6 +47,9 @@ spec:
     - group: ""
       kind: Namespace
       name: external-secrets
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: hub-a-platform-admins
   namespaceResourceWhitelist:
     - group: ""
       kind: ConfigMap
