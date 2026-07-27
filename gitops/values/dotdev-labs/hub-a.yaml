@@ -1,7 +1,4 @@
-# hub-a deployment pin and cluster-specific overrides for dotdev-labs.
-image:
-  version: 0.0.5
-  digest: sha256:f27a9d6be0d0d1357c053ebb196223b8592ed5ede5da48026bc93f75b73f9888
+# hub-a Helm value overrides for dotdev-labs.
 additionalTrustedCa:
   enabled: true
   configMapName: dsqr-home-root-ca
