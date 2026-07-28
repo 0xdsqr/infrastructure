@@ -139,16 +139,22 @@ export const cloudflare = {
     {
       hostname: "s3.dsqr.dev",
       zone: "dsqrDev",
-      service: "http://10.10.30.107:9000",
-      insecureOriginReason:
-        "The private object-store endpoint does not yet terminate TLS; keep this tunnel-only exception until origin TLS is enabled.",
+      service: "https://10.10.30.107:9000",
+      originRequest: {
+        http2Origin: false,
+        httpHostHeader: "s3.dsqr.dev",
+        originServerName: "rustfs.service.home.arpa",
+      },
     },
     {
       hostname: "cdn.dsqr.dev",
       zone: "dsqrDev",
-      service: "http://10.10.30.107:9000",
-      insecureOriginReason:
-        "The private object-store endpoint does not yet terminate TLS; keep this tunnel-only exception until origin TLS is enabled.",
+      service: "https://10.10.30.107:9000",
+      originRequest: {
+        http2Origin: false,
+        httpHostHeader: "cdn.dsqr.dev",
+        originServerName: "rustfs.service.home.arpa",
+      },
     },
     {
       hostname: "tastingswithtay.com",

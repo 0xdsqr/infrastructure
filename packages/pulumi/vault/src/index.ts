@@ -67,6 +67,7 @@ export type VaultHumanAdminPolicyConfig = {
 export type VaultPkiAppRoleConfig = {
   readonly backend: string
   readonly roleName: string
+  readonly roleId?: string | undefined
   readonly secretIdBoundCidrs: readonly string[]
   readonly tokenBoundCidrs: readonly string[]
   readonly secretIdNumUses: number
@@ -1082,6 +1083,7 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
                   {
                     backend: issuer.appRole!.backend,
                     roleName: issuer.appRole!.roleName,
+                    roleId: issuer.appRole!.roleId,
                     bindSecretId: true,
                     localSecretIds: false,
                     secretIdBoundCidrs: [...issuer.appRole!.secretIdBoundCidrs],

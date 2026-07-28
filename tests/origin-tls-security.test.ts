@@ -32,6 +32,30 @@ test("Cloudflare Traefik origins use exact SNI names covered by the Vault issuer
   }
 })
 
+test("Cloudflare RustFS origins verify the dedicated Vault listener identity", () => {
+  const rustfsRules = cloudflare.ingressRules.filter(
+    (rule) => rule.service === "https://10.10.30.107:9000",
+  )
+
+  assert.deepEqual(rustfsRules.map((rule) => rule.hostname).sort(), ["cdn.dsqr.dev", "s3.dsqr.dev"])
+
+  for (const rule of rustfsRules) {
+    assert.deepEqual(rule.originRequest, {
+      http2Origin: false,
+      httpHostHeader: rule.hostname,
+      originServerName: "rustfs.service.home.arpa",
+    })
+  }
+
+  assert.deepEqual(vault.pkiIssuers.rustfsKhaosListener.allowedDomains, [
+    "rustfs.service.home.arpa",
+  ])
+  assert.equal(
+    vault.pkiIssuers.rustfsKhaosListener.appRole.roleId,
+    "e8b1c7b0-da79-456a-b59b-60c9c849386b",
+  )
+})
+
 test("Traefik certificate issuance uses a dedicated exact Kubernetes identity", () => {
   const traefikKubernetesAuthRole = vault.pkiIssuers.hubATraefikOrigin.kubernetesAuthRole
 

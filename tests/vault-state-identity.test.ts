@@ -37,6 +37,7 @@ const issuerKeys = [
   "hubATraefikOrigin",
   "postgresKnoxListener",
   "proxmoxListener",
+  "rustfsKhaosListener",
   "vaultListener",
 ] as const
 
@@ -87,14 +88,20 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
       [pkiRoleToken, `pki-issuer-role-${key}`] as const,
       [policyToken, `pki-issuer-policy-${key}`] as const,
     ]),
-    ...(["gatewayCaddy", "postgresKnoxListener", "proxmoxListener", "vaultListener"] as const).map(
-      (key) => [appRoleToken, `pki-issuer-approle-${key}`] as const,
-    ),
+    ...(
+      [
+        "gatewayCaddy",
+        "postgresKnoxListener",
+        "proxmoxListener",
+        "rustfsKhaosListener",
+        "vaultListener",
+      ] as const
+    ).map((key) => [appRoleToken, `pki-issuer-approle-${key}`] as const),
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-hubATraefikOrigin"],
     [providerToken, "vault"],
   ].sort((left, right) => left[1].localeCompare(right[1]))
 
-  assert.equal(resources.length, 33)
+  assert.equal(resources.length, expectedResources.length)
   assert.deepEqual(
     resources
       .map((resource) => [resource.type, resource.name] as const)
@@ -160,6 +167,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     "gatewayCaddy",
     "postgresKnoxListener",
     "proxmoxListener",
+    "rustfsKhaosListener",
     "vaultListener",
   ] as const) {
     lifecycle(`pki-issuer-approle-${key}`, {
@@ -271,11 +279,13 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     "gatewayCaddy",
     "postgresKnoxListener",
     "proxmoxListener",
+    "rustfsKhaosListener",
     "vaultListener",
   ] as const) {
     const config = vault.pkiIssuers[key].appRole!
     const appRole = byName(resources, `pki-issuer-approle-${key}`)
     assert.equal(appRole.inputs.roleName, config.roleName)
+    assert.equal(appRole.inputs.roleId, config.roleId)
     assert.equal(appRole.inputs.tokenType, "batch")
     assert.equal(appRole.inputs.tokenTtl, 900)
     assert.equal(appRole.inputs.tokenMaxTtl, 900)

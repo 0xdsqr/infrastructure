@@ -301,6 +301,23 @@ const pkiIssuers = {
       tokenBoundCidrs: ["10.10.10.109/32"],
     },
   },
+  rustfsKhaosListener: {
+    backend: "pki_int",
+    roleName: "rustfs-khaos-listener",
+    policyName: "homelab-pki-rustfs-khaos-listener",
+    allowedDomains: ["rustfs.service.home.arpa"],
+    allowWildcardCertificates: false,
+    generateLease: false,
+    ttlHours: 720,
+    maxTtlHours: 720,
+    appRole: {
+      ...renewableAppRoleDefaults,
+      roleName: "rustfs-khaos-listener-renewer",
+      roleId: "e8b1c7b0-da79-456a-b59b-60c9c849386b",
+      secretIdBoundCidrs: ["10.10.30.107/32"],
+      tokenBoundCidrs: ["10.10.30.107/32"],
+    },
+  },
   gatewayCaddy: {
     backend: "pki_int",
     roleName: "gateway-caddy-home-arpa",
