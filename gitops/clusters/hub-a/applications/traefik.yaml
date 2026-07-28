@@ -48,3 +48,4 @@ spec:
     syncOptions:
       - ApplyOutOfSyncOnly=true
       - FailOnSharedResource=true
+      - ServerSideApply=true

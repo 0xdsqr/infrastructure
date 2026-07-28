@@ -4,6 +4,10 @@
 deployment:
   replicas: 1
 
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
 api:
   dashboard: false
 
