@@ -69,7 +69,7 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
 
   const vmContracts = [
     ["gateway", "gateway", 1000, 2, 4096, 32, 60, undefined],
-    ["observability", "beacon", 1050, 4, 4096, 64, 30, undefined],
+    ["observability", "beacon", 1050, 4, 8192, 128, 30, undefined],
     ["khaos", "khaos", 1100, 8, 8192, 200, 30, undefined],
     ["knox", "knox", 1120, 4, 16384, 200, 30, "02:00:00:00:11:20"],
     ["k8s-main-cp-01", "k8s-main-cp-01", 1200, 4, 16384, 100, 30, undefined],
