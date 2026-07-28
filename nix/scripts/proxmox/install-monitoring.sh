@@ -46,7 +46,7 @@ install -o root -g root -m 0644 \
   "$script_directory/prometheus-lvm-thin-collector.timer" \
   /etc/systemd/system/prometheus-lvm-thin-collector.timer
 
-if ! grep --quiet --fixed-strings "$textfile_argument" "$exporter_environment"; then
+if ! grep --quiet --fixed-strings -- "$textfile_argument" "$exporter_environment"; then
   sed -i \
     -E \
     "s|^ARGS=\"(.*)\"$|ARGS=\"\\1 ${textfile_argument}\"|" \
@@ -58,11 +58,16 @@ systemctl restart prometheus-node-exporter.service
 systemctl enable --now prometheus-lvm-thin-collector.timer
 systemctl start prometheus-lvm-thin-collector.service
 
+metrics_response="$(mktemp)"
+readonly metrics_response
+trap 'rm -f "$metrics_response"' EXIT
+
 curl \
   --fail \
+  --output "$metrics_response" \
   --silent \
   --show-error \
-  http://127.0.0.1:9100/metrics \
-| grep --quiet '^pve_lvmthin_metadata_percent{'
+  http://127.0.0.1:9100/metrics
+grep --quiet '^pve_lvmthin_metadata_percent{' "$metrics_response"
 
 echo "Proxmox LVM-thin metrics are available through the existing node exporter."

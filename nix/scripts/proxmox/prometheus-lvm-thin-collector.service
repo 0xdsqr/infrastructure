@@ -9,6 +9,6 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectHome=true
 ProtectSystem=strict
-ReadWritePaths=/var/lib/prometheus/node-exporter
+ReadWritePaths=/var/lib/prometheus/node-exporter /run/lock/lvm /run/lvm
 RestrictAddressFamilies=AF_UNIX
 SystemCallArchitectures=native
