@@ -3,20 +3,21 @@
 # Put cluster-specific identity, destinations, collectors, or pod settings in gitops/values/k8s-monitoring/<cluster>.yaml.
 
 destinations:
-  - name: loki
+  loki:
     type: loki
     url: http://10.10.30.102:3100/loki/api/v1/push
 
-  - name: prometheus
+  prometheus:
     type: prometheus
     url: http://10.10.30.102:9090/api/v1/write
 
-  - name: tempo
+  tempo:
     type: otlp
     protocol: grpc
     url: 10.10.30.102:4317
     tls:
       insecure: true
+      insecureSkipVerify: true
     metrics:
       enabled: false
     logs:
@@ -30,12 +31,25 @@ destinations:
 
 clusterMetrics:
   enabled: true
+  collector: alloy-metrics
+  kube-state-metrics:
+    namespace: kube-system
+    labelMatchers:
+      app.kubernetes.io/name: kube-state-metrics
 
-podLogs:
+hostMetrics:
   enabled: true
+  collector: alloy-metrics
+  linuxHosts:
+    enabled: true
+
+podLogsViaLoki:
+  enabled: true
+  collector: alloy-logs
 
 annotationAutodiscovery:
   enabled: true
+  collector: alloy-metrics
 
 applicationObservability:
   enabled: true
@@ -53,14 +67,21 @@ applicationObservability:
     spanMetrics:
       enabled: true
 
-alloy-metrics:
-  enabled: true
+collectors:
+  alloy-metrics:
+    presets: [clustered, statefulset]
 
-alloy-logs:
-  enabled: true
+  alloy-logs:
+    presets: [filesystem-log-reader, daemonset]
 
-alloy-receiver:
-  enabled: true
-  extraService:
-    enabled: true
-    fullname: otel-collector
+  alloy-receiver:
+    presets: [daemonset]
+    extraService:
+      enabled: true
+      fullname: otel-collector
+
+telemetryServices:
+  kube-state-metrics:
+    deploy: false
+  node-exporter:
+    deploy: true

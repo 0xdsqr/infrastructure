@@ -69,7 +69,7 @@ const helmReleases = {
     chart: "kube-state-metrics",
     enabled: false,
     repository: "https://prometheus-community.github.io/helm-charts",
-    version: "7.2.2",
+    version: "8.0.0",
     valueYamlFiles: [
       "../../gitops/values/kube-state-metrics/common.yaml",
       "../../gitops/values/kube-state-metrics/hub-a.yaml",
@@ -82,7 +82,7 @@ const helmReleases = {
     chart: "k8s-monitoring",
     enabled: false,
     repository: "https://grafana.github.io/helm-charts",
-    version: "3.5.3",
+    version: "4.3.1",
     valueYamlFiles: [
       "../../gitops/values/k8s-monitoring/common.yaml",
       "../../gitops/values/k8s-monitoring/hub-a.yaml",

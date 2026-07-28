@@ -30,17 +30,11 @@ spec:
       kind: ClusterRole
       name: k8s-monitoring-alloy-operator-alloy-manager
     - group: rbac.authorization.k8s.io
-      kind: ClusterRole
-      name: k8s-monitoring-kube-state-metrics
-    - group: rbac.authorization.k8s.io
       kind: ClusterRoleBinding
       name: k8s-monitoring-alloy-operator
     - group: rbac.authorization.k8s.io
       kind: ClusterRoleBinding
       name: k8s-monitoring-alloy-operator-alloy-manager
-    - group: rbac.authorization.k8s.io
-      kind: ClusterRoleBinding
-      name: k8s-monitoring-kube-state-metrics
   namespaceResourceWhitelist:
     - group: ""
       kind: ConfigMap
