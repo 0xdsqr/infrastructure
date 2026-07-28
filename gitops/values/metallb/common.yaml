@@ -12,3 +12,8 @@ speaker:
     requests:
       cpu: 100m
       memory: 128Mi
+
+# hub-a uses L2Advertisement resources only. MetalLB 0.16 enables the
+# FRR-K8s BGP backend by default; keep that unused control plane absent.
+frrk8s:
+  enabled: false

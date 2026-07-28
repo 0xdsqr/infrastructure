@@ -31,7 +31,7 @@ const helmReleases = {
     chart: "cilium",
     enabled: false,
     repository: "https://helm.cilium.io/",
-    version: "1.19.1",
+    version: "1.19.6",
     valueYamlFiles: [
       "../../gitops/values/cilium/common.yaml",
       "../../gitops/values/cilium/hub-a.yaml",
@@ -43,7 +43,7 @@ const helmReleases = {
     chart: "metallb",
     enabled: false,
     repository: "https://metallb.github.io/metallb",
-    version: "0.15.3",
+    version: "0.16.1",
     valueYamlFiles: [
       "../../gitops/values/metallb/common.yaml",
       "../../gitops/values/metallb/hub-a.yaml",
@@ -56,7 +56,7 @@ const helmReleases = {
     chart: "traefik",
     enabled: false,
     repository: "https://traefik.github.io/charts",
-    version: "39.0.7",
+    version: "41.0.2",
     valueYamlFiles: [
       "../../gitops/values/traefik/common.yaml",
       "../../gitops/values/traefik/hub-a.yaml",
@@ -94,7 +94,7 @@ const helmReleases = {
     namespace: "argocd",
     chart: "argo-cd",
     repository: "https://argoproj.github.io/argo-helm",
-    version: "9.5.22",
+    version: "10.2.1",
     valueYamlFiles: [
       "../../gitops/values/argocd/common.yaml",
       "../../gitops/values/argocd/hub-a.yaml",

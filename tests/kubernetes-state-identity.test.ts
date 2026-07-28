@@ -86,7 +86,7 @@ test("Kubernetes preserves the Pulumi-owned Argo namespace and release contract"
       repositoryOpts: {
         repo: "https://argoproj.github.io/argo-helm",
       },
-      version: "9.5.22",
+      version: "10.2.1",
     },
   )
   assert.deepEqual(kubernetes.helmReleases.argoCd.valueYamlFiles, [

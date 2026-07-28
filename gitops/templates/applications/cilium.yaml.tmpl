@@ -12,7 +12,7 @@ metadata:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/name: cilium
     app.kubernetes.io/part-of: cluster-networking
-    app.kubernetes.io/version: 1.19.1
+    app.kubernetes.io/version: 1.19.6
     homelab.dev/owner: platform
     homelab.dev/tier: platform-addon
 spec:
@@ -20,7 +20,7 @@ spec:
   sources:
     - repoURL: https://helm.cilium.io/
       chart: cilium
-      targetRevision: 1.19.1
+      targetRevision: 1.19.6
       helm:
         releaseName: cilium
         valueFiles:
