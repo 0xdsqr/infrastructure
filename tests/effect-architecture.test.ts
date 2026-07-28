@@ -88,8 +88,10 @@ test("production shell remains limited to documented process-boundary adapters",
 
   assert.deepEqual(shellFiles(root.pathname).sort(), [
     "nix/scripts/infra.sh",
+    "nix/scripts/proxmox/install-monitoring.sh",
     "nix/scripts/proxmox/install-vault-certificate.sh",
     "nix/scripts/proxmox/install.sh",
+    "nix/scripts/proxmox/prometheus-lvm-thin-collector.sh",
   ])
 })
 

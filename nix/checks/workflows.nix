@@ -10,8 +10,10 @@ let
     fileset = lib.fileset.unions [
       ../../.github
       ../scripts/infra.sh
+      ../scripts/proxmox/install-monitoring.sh
       ../scripts/proxmox/install.sh
       ../scripts/proxmox/install-vault-certificate.sh
+      ../scripts/proxmox/prometheus-lvm-thin-collector.sh
     ];
   };
 in
@@ -33,8 +35,10 @@ stdenvNoCC.mkDerivation {
     actionlint -no-color .github/workflows/*.yml
     tail -n +2 nix/scripts/infra.sh | shellcheck --shell=sh -
     shellcheck \
+      nix/scripts/proxmox/install-monitoring.sh \
       nix/scripts/proxmox/install.sh \
-      nix/scripts/proxmox/install-vault-certificate.sh
+      nix/scripts/proxmox/install-vault-certificate.sh \
+      nix/scripts/proxmox/prometheus-lvm-thin-collector.sh
 
     mkdir -p "$out"
     touch "$out/workflows-check"

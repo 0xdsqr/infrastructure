@@ -2,7 +2,7 @@
 # Keep values here when every cluster should use the same Argo CD defaults.
 # Put cluster-specific changes in gitops/values/argocd/<cluster>.yaml.
 global:
-  addPrometheusAnnotations: true
+  addPrometheusAnnotations: false
   networkPolicy:
     # The chart's server policy permits every ingress source and its metrics
     # rules permit every namespace. Explicit policies below define each flow.
@@ -56,6 +56,10 @@ crds:
 controller:
   metrics:
     enabled: true
+    service:
+      annotations:
+        k8s.grafana.com/scrape: "true"
+        k8s.grafana.com/metrics.portName: http-metrics
   resources:
     requests:
       cpu: 50m
@@ -93,6 +97,10 @@ redisSecretInit:
 repoServer:
   metrics:
     enabled: true
+    service:
+      annotations:
+        k8s.grafana.com/scrape: "true"
+        k8s.grafana.com/metrics.portName: http-metrics
   resources:
     requests:
       cpu: 50m
@@ -106,6 +114,10 @@ repoServer:
 server:
   metrics:
     enabled: true
+    service:
+      annotations:
+        k8s.grafana.com/scrape: "true"
+        k8s.grafana.com/metrics.portName: http-metrics
   resources:
     requests:
       cpu: 25m

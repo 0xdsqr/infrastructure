@@ -38,10 +38,9 @@ clusterMetrics:
       app.kubernetes.io/name: kube-state-metrics
 
 hostMetrics:
-  enabled: true
-  collector: alloy-metrics
-  linuxHosts:
-    enabled: true
+  # NixOS Alloy owns host metrics for every Linux machine, including the
+  # Kubernetes nodes. Keep this chart focused on cluster and workload signals.
+  enabled: false
 
 podLogsViaLoki:
   enabled: true
@@ -84,4 +83,4 @@ telemetryServices:
   kube-state-metrics:
     deploy: false
   node-exporter:
-    deploy: true
+    deploy: false

@@ -1,0 +1,14 @@
+[Unit]
+Description=Export Proxmox LVM-thin capacity metrics
+After=local-fs.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/prometheus-lvm-thin-collector
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/prometheus/node-exporter
+RestrictAddressFamilies=AF_UNIX
+SystemCallArchitectures=native

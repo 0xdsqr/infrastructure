@@ -1,0 +1,12 @@
+[Unit]
+Description=Refresh Proxmox LVM-thin capacity metrics
+
+[Timer]
+OnBootSec=1m
+OnUnitActiveSec=5m
+RandomizedDelaySec=30s
+Persistent=true
+Unit=prometheus-lvm-thin-collector.service
+
+[Install]
+WantedBy=timers.target
