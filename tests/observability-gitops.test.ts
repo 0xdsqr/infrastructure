@@ -16,3 +16,16 @@ test("Kubernetes logs use durable delivery and collect cluster events", () => {
   assert.match(values, /alloy-singleton:\n\s+presets: \[small, deployment\]/)
   assert.match(values, /stabilityLevel: experimental/)
 })
+
+test("Kubernetes profiling is application-scoped and least-privilege", () => {
+  assert.match(values, /pyroscope:\n\s+type: pyroscope\n\s+url: http:\/\/10\.10\.30\.102:4040/)
+  assert.match(values, /profiling:\n\s+enabled: true\n\s+collector: alloy-profiles/)
+  assert.match(values, /namespaces: \["dsqr", "fidara", "twt"\]/)
+  assert.match(values, /presets: \[small, daemonset, host-tracefs\]/)
+  assert.match(values, /allowPrivilegeEscalation: false/)
+  assert.match(values, /privileged: false/)
+  assert.match(values, /drop: \["ALL"\]/)
+  assert.match(values, /- BPF/)
+  assert.match(values, /- PERFMON/)
+  assert.match(values, /hostPID: true/)
+})

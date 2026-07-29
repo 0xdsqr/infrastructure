@@ -22,6 +22,13 @@ destinations:
     type: prometheus
     url: http://10.10.30.102:9090/api/v1/write
 
+  pyroscope:
+    type: pyroscope
+    url: http://10.10.30.102:4040
+    minBackoffPeriod: 500ms
+    maxBackoffPeriod: 30s
+    maxBackoffRetries: 20
+
   tempo:
     type: otlp
     protocol: grpc
@@ -90,6 +97,23 @@ applicationObservability:
     spanMetrics:
       enabled: true
 
+profiling:
+  enabled: true
+  collector: alloy-profiles
+  destinations: ["pyroscope"]
+  ebpf:
+    enabled: true
+    targetingScheme: all
+    namespaces: ["dsqr", "fidara", "twt"]
+    sampleRate: 19
+    dotnetEnabled: false
+    hotspotEnabled: false
+    perlEnabled: false
+    phpEnabled: false
+    pythonEnabled: false
+    rubyEnabled: false
+    v8Enabled: true
+
 collectors:
   alloy-metrics:
     presets: [clustered, statefulset]
@@ -105,6 +129,27 @@ collectors:
 
   alloy-singleton:
     presets: [small, deployment]
+
+  alloy-profiles:
+    presets: [small, daemonset, host-tracefs]
+    alloy:
+      securityContext:
+        allowPrivilegeEscalation: false
+        privileged: false
+        runAsGroup: 0
+        runAsUser: 0
+        capabilities:
+          drop: ["ALL"]
+          add:
+            - BPF
+            - CHECKPOINT_RESTORE
+            - DAC_READ_SEARCH
+            - PERFMON
+            - SYSLOG
+            - SYS_PTRACE
+            - SYS_RESOURCE
+    controller:
+      hostPID: true
 
 collectorCommon:
   alloy:
