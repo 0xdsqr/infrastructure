@@ -18,6 +18,10 @@ const tags = {
   },
 } as const
 
+const hosts = {
+  beaconObservability: "100.97.79.78",
+} as const
+
 type PolicyArgs = {
   adminUser: string
 }
@@ -55,10 +59,18 @@ function createPolicy(args: PolicyArgs) {
       dst: [tags.role.server],
       ip: ["*"],
     },
+    {
+      src: [tags.role.mail],
+      dst: ["beacon-observability"],
+      ip: ["tcp:9090", "tcp:3100"],
+    },
   ] as const
 
   return {
     tagOwners: tagOwners(args.adminUser),
+    hosts: {
+      "beacon-observability": hosts.beaconObservability,
+    },
     grants,
     autoApprovers: {
       exitNode: [tags.role.exitNode],
@@ -68,6 +80,7 @@ function createPolicy(args: PolicyArgs) {
 
 export const tailscale = {
   tags,
+  hosts,
   policyResourceName: "tailnet-policy",
   keySpecs: {},
   createPolicy,

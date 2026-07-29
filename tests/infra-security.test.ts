@@ -193,6 +193,17 @@ test("Tailscale machine enrollment keys are hardened while the live ACL remains 
   const policy = tailscale.createPolicy({ adminUser })
   assert.deepEqual(policy.autoApprovers.exitNode, [tailscale.tags.role.exitNode])
   assert.ok(policy.grants.some((grant) => grant.src[0] === tailscale.tags.role.workstation))
+  assert.deepEqual(policy.hosts, {
+    "beacon-observability": tailscale.hosts.beaconObservability,
+  })
+  assert.ok(
+    policy.grants.some(
+      (grant) =>
+        grant.src[0] === tailscale.tags.role.mail &&
+        grant.dst[0] === "beacon-observability" &&
+        grant.ip.join(",") === "tcp:9090,tcp:3100",
+    ),
+  )
 })
 
 test("External Secrets policies use unique exact paths and exclude infrastructure credentials", () => {
