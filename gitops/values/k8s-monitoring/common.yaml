@@ -6,6 +6,17 @@ destinations:
   loki:
     type: loki
     url: http://10.10.30.102:3100/loki/api/v1/push
+    timeout: 10s
+    minBackoffPeriod: 500ms
+    maxBackoffPeriod: 30s
+    maxBackoffRetries: 20
+    retryOnHttp429: true
+    writeAheadLog:
+      enabled: true
+      drainTimeout: 30s
+      minReadFrequency: 250ms
+      maxReadFrequency: 1s
+      maxSegmentAge: 1h
 
   prometheus:
     type: prometheus
@@ -41,6 +52,19 @@ hostMetrics:
   # NixOS Alloy owns host metrics for every Linux machine, including the
   # Kubernetes nodes. Keep this chart focused on cluster and workload signals.
   enabled: false
+
+clusterEvents:
+  enabled: true
+  collector: alloy-singleton
+  destinations: ["loki"]
+  logFormat: json
+  labels:
+    reason: reason
+  structuredMetadata:
+    component: component
+    kind: kind
+    name: name
+    node: node
 
 podLogsViaLoki:
   enabled: true
@@ -78,6 +102,13 @@ collectors:
     extraService:
       enabled: true
       fullname: otel-collector
+
+  alloy-singleton:
+    presets: [small, deployment]
+
+collectorCommon:
+  alloy:
+    stabilityLevel: experimental
 
 telemetryServices:
   kube-state-metrics:
