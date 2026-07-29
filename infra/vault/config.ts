@@ -163,9 +163,9 @@ const secretPaths = {
     description: "RustFS endpoint and root access credentials.",
     fields: ["S3_ENDPOINT", "S3_REGION", "S3_ACCESS_KEY", "S3_SECRET_KEY"],
   },
-  vaultKhaos: {
-    path: "homelab/infra/vault/srv-lx-khaos",
-    description: "Vault endpoint metadata only. Do not store root token or unseal keys here.",
+  vaultServer: {
+    path: "homelab/infra/vault/srv-lx-vault",
+    description: "Dedicated Vault endpoint metadata. Do not store root token or unseal keys here.",
     fields: ["VAULT_ADDR"],
   },
 } satisfies VaultSecretPathInventory
