@@ -48,6 +48,7 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
       .map((resource) => [resource.type, resource.name] as const)
       .sort((left, right) => left[1].localeCompare(right[1])),
     [
+      [vmToken, "backup"],
       [vmToken, "gateway"],
       [vmToken, "k8s-main-cp-01"],
       [vmToken, "k8s-main-w-01"],
@@ -56,6 +57,7 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
       [vmToken, "knox"],
       [vmToken, "observability"],
       ["pulumi:providers:proxmoxve", "proxmoxve"],
+      [vmToken, "vault"],
     ],
   )
 
@@ -68,13 +70,15 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
   assert.equal(providerState.inputs.insecure, "false")
 
   const vmContracts = [
-    ["gateway", "gateway", 1000, 2, 4096, 32, 60, undefined],
-    ["observability", "beacon", 1050, 4, 8192, 128, 30, undefined],
-    ["khaos", "khaos", 1100, 8, 8192, 200, 30, undefined],
-    ["knox", "knox", 1120, 4, 16384, 200, 30, "02:00:00:00:11:20"],
-    ["k8s-main-cp-01", "k8s-main-cp-01", 1200, 4, 16384, 100, 30, undefined],
-    ["k8s-main-w-01", "k8s-main-w-01", 1210, 4, 8192, 100, 30, undefined],
-    ["k8s-main-w-02", "k8s-main-w-02", 1220, 4, 8192, 100, 30, undefined],
+    ["gateway", "gateway", 1000, 2, 4096, 32, "ssd-dsqr-raid-001", 60, undefined],
+    ["observability", "beacon", 1050, 4, 8192, 128, "ssd-dsqr-raid-001", 30, undefined],
+    ["khaos", "khaos", 1100, 8, 8192, 200, "ssd-dsqr-raid-001", 30, undefined],
+    ["knox", "knox", 1120, 4, 16384, 200, "ssd-dsqr-raid-001", 30, "02:00:00:00:11:20"],
+    ["vault", "vault", 1140, 2, 4096, 64, "ssd-dsqr-raid-002", 30, "02:00:00:00:11:40"],
+    ["backup", "backup", 1160, 2, 4096, 64, "ssd-dsqr-raid-002", 30, "02:00:00:00:11:60"],
+    ["k8s-main-cp-01", "k8s-main-cp-01", 1200, 4, 16384, 100, "ssd-dsqr-raid-001", 30, undefined],
+    ["k8s-main-w-01", "k8s-main-w-01", 1210, 4, 8192, 100, "ssd-dsqr-raid-001", 30, undefined],
+    ["k8s-main-w-02", "k8s-main-w-02", 1220, 4, 8192, 100, "ssd-dsqr-raid-001", 30, undefined],
   ] as const
 
   for (const [
@@ -84,6 +88,7 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
     cores,
     memory,
     diskSize,
+    datastoreId,
     vlanId,
     macAddress,
   ] of vmContracts) {
@@ -105,14 +110,14 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
     assert.equal(vmState.inputs.started, true)
     assert.equal(vmState.inputs.onBoot, true)
     assert.deepEqual(vmState.inputs.clone, {
-      datastoreId: "ssd-dsqr-raid-001",
+      datastoreId,
       full: true,
       nodeName: "pve",
       vmId: 9000,
     })
     assert.deepEqual(vmState.inputs.disks, [
       {
-        datastoreId: "ssd-dsqr-raid-001",
+        datastoreId,
         interface: "scsi0",
         size: diskSize,
       },
