@@ -265,8 +265,8 @@ const pkiIssuers = {
     appRole: {
       ...renewableAppRoleDefaults,
       roleName: "vault-listener-renewer",
-      secretIdBoundCidrs: ["127.0.0.1/32", "::1/128", "10.10.30.107/32", "10.10.30.110/32"],
-      tokenBoundCidrs: ["127.0.0.1/32", "::1/128", "10.10.30.107/32", "10.10.30.110/32"],
+      secretIdBoundCidrs: ["127.0.0.1/32", "::1/128", "10.10.30.110/32"],
+      tokenBoundCidrs: ["127.0.0.1/32", "::1/128", "10.10.30.110/32"],
     },
   },
   postgresKnoxListener: {
