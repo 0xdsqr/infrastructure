@@ -42,6 +42,7 @@ done
 
 for file in \
   "$root_ca_source" \
+  "$script_directory/export-backup.sh" \
   "$script_directory/install-vault-certificate.sh" \
   "$script_directory/proxmox-vault-agent.service" \
   "$script_directory/vault-agent.hcl"; do
@@ -131,6 +132,9 @@ chmod 0600 "$configuration_directory/role-id" "$configuration_directory/secret-i
 install -o root -g root -m 0600 \
   "$script_directory/vault-agent.hcl" \
   "$configuration_directory/vault-agent.hcl"
+install -o root -g root -m 0755 \
+  "$script_directory/export-backup.sh" \
+  /usr/local/libexec/proxmox-backup-export
 install -o root -g root -m 0755 \
   "$script_directory/install-vault-certificate.sh" \
   /usr/local/libexec/install-proxmox-vault-certificate

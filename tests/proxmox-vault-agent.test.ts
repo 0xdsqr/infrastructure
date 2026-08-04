@@ -13,6 +13,7 @@ test("Proxmox uses Vault Agent for exact, verified PKI rotation", () => {
   const agent = readHostFile("vault-agent.hcl")
   const service = readHostFile("proxmox-vault-agent.service")
   const certificateInstaller = readHostFile("install-vault-certificate.sh")
+  const backupExporter = readHostFile("export-backup.sh")
 
   assert.match(installer, /readonly vault_version="2\.0\.3"/)
   assert.match(installer, /readonly vault_archive_sha256="[a-f0-9]{64}"/)
@@ -42,7 +43,11 @@ test("Proxmox uses Vault Agent for exact, verified PKI rotation", () => {
   assert.match(service, /ReadWritePaths=\/etc\/pve\/nodes\/pve/)
   assert.match(service, /RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX/)
 
-  for (const script of ["install.sh", "install-vault-certificate.sh"]) {
+  assert.match(backupExporter, /exec tar/)
+  assert.match(backupExporter, /\/etc\/pve/)
+  assert.doesNotMatch(backupExporter, /SSH_ORIGINAL_COMMAND|eval/)
+
+  for (const script of ["export-backup.sh", "install.sh", "install-vault-certificate.sh"]) {
     execFileSync("bash", ["-n", fileURLToPath(new URL(script, hostRoot))])
   }
 })

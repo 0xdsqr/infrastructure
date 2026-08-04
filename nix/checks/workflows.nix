@@ -11,6 +11,7 @@ let
       ../../.github
       ../scripts/infra.sh
       ../scripts/proxmox/install-monitoring.sh
+      ../scripts/proxmox/export-backup.sh
       ../scripts/proxmox/install.sh
       ../scripts/proxmox/install-vault-certificate.sh
       ../scripts/proxmox/prometheus-lvm-thin-collector.sh
@@ -35,6 +36,7 @@ stdenvNoCC.mkDerivation {
     actionlint -no-color .github/workflows/*.yml
     tail -n +2 nix/scripts/infra.sh | shellcheck --shell=sh -
     shellcheck \
+      nix/scripts/proxmox/export-backup.sh \
       nix/scripts/proxmox/install-monitoring.sh \
       nix/scripts/proxmox/install.sh \
       nix/scripts/proxmox/install-vault-certificate.sh \
