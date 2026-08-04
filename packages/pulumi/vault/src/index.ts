@@ -64,6 +64,18 @@ export type VaultHumanAdminPolicyConfig = {
   readonly name: string
 }
 
+export type VaultRaftSnapshotAppRoleConfig = {
+  readonly backend: string
+  readonly roleName: string
+  readonly roleId: string
+  readonly policyName: string
+  readonly secretIdBoundCidrs: readonly string[]
+  readonly tokenBoundCidrs: readonly string[]
+  readonly tokenTtlSeconds: number
+  readonly tokenMaxTtlSeconds: number
+  readonly tokenExplicitMaxTtlSeconds: number
+}
+
 export type VaultPkiAppRoleConfig = {
   readonly backend: string
   readonly roleName: string
@@ -141,6 +153,7 @@ export type VaultFoundationArgs = {
   readonly humanAdminPolicy: VaultHumanAdminPolicyConfig
   readonly externalSecretsPolicies: Readonly<Record<string, VaultExternalSecretsPolicyConfig>>
   readonly externalSecretsKubernetesRole: VaultKubernetesAuthRoleConfig
+  readonly raftSnapshotAppRole?: VaultRaftSnapshotAppRoleConfig | undefined
   readonly pkiIssuers: VaultPkiIssuerInventory
   readonly audit: VaultAuditConfig
   readonly resourceNames: VaultFoundationResourceNames
@@ -300,6 +313,49 @@ export function renderTokenSelfPolicy() {
     policyRule("auth/token/renew-self", ["update"]),
     policyRule("auth/token/revoke-self", ["update"]),
   ].join("\n\n")
+}
+
+export function renderRaftSnapshotPolicy() {
+  return policyRule("sys/storage/raft/snapshot", ["read"])
+}
+
+export function validateRaftSnapshotAppRoleEffect(
+  role: VaultRaftSnapshotAppRoleConfig,
+): Effect.Effect<void, PulumiResourceConfigError> {
+  return Effect.gen(function* () {
+    const resource = "vault:raft-snapshot-approle"
+
+    yield* requireResourceConfigEffect(
+      isNormalizedMountName(role.backend) && role.roleName.length > 0 && role.policyName.length > 0,
+      resource,
+      "Raft snapshot AppRole names and backend must be normalized and non-empty.",
+    )
+    yield* requireResourceConfigEffect(
+      role.roleId.length > 0,
+      resource,
+      "Raft snapshot AppRole requires a stable explicit role ID.",
+    )
+    yield* requireResourceConfigEffect(
+      isUniqueNonEmpty(role.secretIdBoundCidrs) &&
+        isUniqueNonEmpty(role.tokenBoundCidrs) &&
+        role.secretIdBoundCidrs.every(isValidCidr) &&
+        role.tokenBoundCidrs.every(isValidCidr) &&
+        !role.secretIdBoundCidrs.some(isBroadCidr) &&
+        !role.tokenBoundCidrs.some(isBroadCidr),
+      resource,
+      "Raft snapshot AppRole must bind secret IDs and tokens to explicit source CIDRs.",
+    )
+    yield* requireResourceConfigEffect(
+      isPositiveInteger(role.tokenTtlSeconds) &&
+        isPositiveInteger(role.tokenMaxTtlSeconds) &&
+        isPositiveInteger(role.tokenExplicitMaxTtlSeconds) &&
+        role.tokenMaxTtlSeconds >= role.tokenTtlSeconds &&
+        role.tokenExplicitMaxTtlSeconds >= role.tokenMaxTtlSeconds &&
+        role.tokenExplicitMaxTtlSeconds <= 3_600,
+      resource,
+      "Raft snapshot AppRole token lifetimes must be ordered and capped at one hour.",
+    )
+  })
 }
 
 function isDnsName(value: string) {
@@ -755,6 +811,9 @@ export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(funct
 ) {
   yield* validateExternalSecretsPoliciesEffect(args.externalSecretsPolicies, args.secretPaths)
   yield* validateExternalSecretsKubernetesRoleEffect(args.externalSecretsKubernetesRole)
+  if (args.raftSnapshotAppRole) {
+    yield* validateRaftSnapshotAppRoleEffect(args.raftSnapshotAppRole)
+  }
   yield* validatePkiIssuerInventoryEffect(args.pkiIssuers)
 
   yield* requireResourceConfigEffect(
@@ -824,6 +883,7 @@ export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(funct
   const physicalPolicyNames = [
     args.humanAdminPolicy.name,
     args.externalSecretsKubernetesRole.tokenSelfPolicyName,
+    ...(args.raftSnapshotAppRole ? [args.raftSnapshotAppRole.policyName] : []),
     ...externalSecretsPolicyEntries.map(({ policy }) => policy.name),
     ...pkiIssuerEntries.map(({ issuer }) => issuer.policyName),
   ]
@@ -1018,6 +1078,51 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
       ),
   )
 
+  const raftSnapshotPolicy = args.raftSnapshotAppRole
+    ? yield* registerPulumiResource(
+        "raft-snapshot-policy",
+        () =>
+          new vault.Policy(
+            "raft-snapshot-policy",
+            {
+              name: args.raftSnapshotAppRole!.policyName,
+              policy: renderRaftSnapshotPolicy(),
+            },
+            { ...resourceOptions, protect: true },
+          ),
+      )
+    : undefined
+
+  const raftSnapshotAppRole =
+    args.raftSnapshotAppRole && raftSnapshotPolicy
+      ? yield* registerPulumiResource(
+          "raft-snapshot-approle",
+          () =>
+            new vault.approle.AuthBackendRole(
+              "raft-snapshot-approle",
+              {
+                backend: args.raftSnapshotAppRole!.backend,
+                roleName: args.raftSnapshotAppRole!.roleName,
+                roleId: args.raftSnapshotAppRole!.roleId,
+                bindSecretId: true,
+                localSecretIds: false,
+                secretIdBoundCidrs: [...args.raftSnapshotAppRole!.secretIdBoundCidrs],
+                secretIdNumUses: 0,
+                secretIdTtl: 0,
+                tokenBoundCidrs: [...args.raftSnapshotAppRole!.tokenBoundCidrs],
+                tokenExplicitMaxTtl: args.raftSnapshotAppRole!.tokenExplicitMaxTtlSeconds,
+                tokenMaxTtl: args.raftSnapshotAppRole!.tokenMaxTtlSeconds,
+                tokenNoDefaultPolicy: true,
+                tokenNumUses: 0,
+                tokenPolicies: [raftSnapshotPolicy.name],
+                tokenTtl: args.raftSnapshotAppRole!.tokenTtlSeconds,
+                tokenType: "service",
+              },
+              { ...resourceOptions, protect: true, dependsOn: [raftSnapshotPolicy] },
+            ),
+        )
+      : undefined
+
   const pkiIssuers = Object.fromEntries(
     yield* Effect.forEach(pkiIssuerEntries, ({ key, issuer, resourceNames: issuerResourceNames }) =>
       Effect.gen(function* () {
@@ -1188,6 +1293,7 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
       humanAdmin: adminPolicy.name,
       externalSecrets: externalSecretsPolicies,
       externalSecretsTokenSelf: externalSecretsTokenSelfPolicy.name,
+      raftSnapshot: raftSnapshotPolicy?.name,
       pkiIssuers: Object.fromEntries(
         Object.entries(pkiIssuers).map(([key, issuer]) => [key, issuer.policyName]),
       ),
@@ -1196,6 +1302,12 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
       backend: externalSecretsKubernetesRole.backend,
       roleName: externalSecretsKubernetesRole.roleName,
       policies: externalSecretsKubernetesRole.tokenPolicies,
+    },
+    raftSnapshotAppRole: {
+      backend: raftSnapshotAppRole?.backend,
+      roleName: raftSnapshotAppRole?.roleName,
+      roleId: raftSnapshotAppRole?.roleId,
+      policies: raftSnapshotAppRole?.tokenPolicies,
     },
     pkiIssuers,
     audit: {

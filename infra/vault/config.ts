@@ -5,6 +5,7 @@ import type {
   VaultKubernetesAuthRoleConfig,
   VaultKvMountConfig,
   VaultPkiIssuerInventory,
+  VaultRaftSnapshotAppRoleConfig,
   VaultFoundationResourceNames,
   VaultSecretPathInventory,
 } from "@dsqr/pulumi-vault"
@@ -252,6 +253,18 @@ const renewableAppRoleDefaults = {
   tokenNumUses: 0,
 } as const
 
+const raftSnapshotAppRole = {
+  backend: "approle",
+  roleName: "vault-raft-snapshot",
+  roleId: "87b5b960-f1e8-4cc0-8d23-9ba8fcb07611",
+  policyName: "homelab-vault-raft-snapshot",
+  secretIdBoundCidrs: ["127.0.0.1/32", "::1/128", "10.10.30.110/32"],
+  tokenBoundCidrs: ["127.0.0.1/32", "::1/128", "10.10.30.110/32"],
+  tokenTtlSeconds: 900,
+  tokenMaxTtlSeconds: 900,
+  tokenExplicitMaxTtlSeconds: 900,
+} satisfies VaultRaftSnapshotAppRoleConfig
+
 const pkiIssuers = {
   vaultListener: {
     backend: "pki_int",
@@ -383,6 +396,7 @@ export const vault = {
     externalSecrets: externalSecretsPolicies,
   },
   externalSecretsKubernetesRole,
+  raftSnapshotAppRole,
   pkiIssuers,
   audit,
 } as const

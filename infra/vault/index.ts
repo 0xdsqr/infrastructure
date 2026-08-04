@@ -18,6 +18,7 @@ export const foundation = runPulumiProgram(
       humanAdminPolicy: infrastructure.vault.policies.humanAdmin,
       externalSecretsPolicies: infrastructure.vault.policies.externalSecrets,
       externalSecretsKubernetesRole: infrastructure.vault.externalSecretsKubernetesRole,
+      raftSnapshotAppRole: infrastructure.vault.raftSnapshotAppRole,
       pkiIssuers: infrastructure.vault.pkiIssuers,
       audit: infrastructure.vault.audit,
     })
@@ -27,6 +28,7 @@ export const foundation = runPulumiProgram(
 export const kvMount = foundation.mounts.kv
 export const policies = foundation.policies
 export const externalSecretsKubernetesRole = foundation.externalSecretsKubernetesRole
+export const raftSnapshotAppRole = foundation.raftSnapshotAppRole
 export const pkiIssuers = foundation.pkiIssuers
 export const audit = foundation.audit
 export const secretPaths = foundation.secretPaths
