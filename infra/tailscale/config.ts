@@ -64,6 +64,11 @@ function createPolicy(args: PolicyArgs) {
       dst: ["beacon-observability"],
       ip: ["tcp:9090", "tcp:3100"],
     },
+    {
+      src: [tags.role.mail],
+      dst: [tags.role.backup],
+      ip: ["tcp:22"],
+    },
   ] as const
 
   return {
