@@ -74,7 +74,18 @@ export const cloudflare = {
       ttl: 1,
     },
   ],
-  r2Buckets: [],
+  r2Buckets: [
+    {
+      resourceName: "homelab-backups",
+      name: "dsqr-homelab-backups",
+      location: "enam",
+      jurisdiction: "default",
+      storageClass: "Standard",
+      lock: {
+        retentionDays: 30,
+      },
+    },
+  ],
   ingressRules: [
     {
       hostname: "argocd-hooks-hub-a.dsqr.dev",

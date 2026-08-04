@@ -12,6 +12,8 @@ const tunnelConfigToken =
   "cloudflare:index/zeroTrustTunnelCloudflaredConfig:ZeroTrustTunnelCloudflaredConfig"
 const dnsToken = "cloudflare:index/dnsRecord:DnsRecord"
 const zoneSettingToken = "cloudflare:index/zoneSetting:ZoneSetting"
+const r2BucketToken = "cloudflare:index/r2Bucket:R2Bucket"
+const r2BucketLockToken = "cloudflare:index/r2BucketLock:R2BucketLock"
 const tunnelTokenInvoke =
   "cloudflare:index/getZeroTrustTunnelCloudflaredToken:getZeroTrustTunnelCloudflaredToken"
 
@@ -77,7 +79,7 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
     resource.type.startsWith("cloudflare:"),
   )
 
-  assert.equal(resources.length, 33)
+  assert.equal(resources.length, 35)
   assert.deepEqual(
     resources
       .map((resource) => [resource.type, resource.name] as const)
@@ -107,6 +109,8 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
       [zoneSettingToken, "fidaraIo-tls-1-3"],
       [tunnelToken, "gateway"],
       [tunnelConfigToken, "gateway-config"],
+      [r2BucketToken, "homelab-backups"],
+      [r2BucketLockToken, "homelab-backups-lock"],
       [dnsToken, "labs-dsqr-dev"],
       [dnsToken, "s3-dsqr-dev"],
       [dnsToken, "studio-dsqr-dev"],
@@ -120,9 +124,40 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
   )
 
   for (const resource of resources) {
-    rootOptionsAreStable(deployment, resource.name)
+    if (resource.name === "homelab-backups" || resource.name === "homelab-backups-lock") {
+      assert.equal(byName(deployment.captured, resource.name).opts.protect, true)
+    } else {
+      rootOptionsAreStable(deployment, resource.name)
+    }
     assert.equal(resource.provider, "")
   }
+
+  const backupBucket = byName(resources, "homelab-backups")
+  assert.deepEqual(backupBucket.inputs, {
+    accountId: "account-id",
+    jurisdiction: "default",
+    location: "enam",
+    name: "dsqr-homelab-backups",
+    storageClass: "Standard",
+  })
+
+  const backupLock = byName(resources, "homelab-backups-lock")
+  assert.deepEqual(backupLock.inputs, {
+    accountId: "account-id",
+    bucketName: "dsqr-homelab-backups",
+    jurisdiction: "default",
+    rules: [
+      {
+        condition: {
+          maxAgeSeconds: 2_592_000,
+          type: "Age",
+        },
+        enabled: true,
+        id: "retain-all-objects",
+        prefix: "",
+      },
+    ],
+  })
 
   const tunnel = byName(resources, "gateway")
   assert.equal(tunnel.inputs.accountId, "account-id")

@@ -255,6 +255,25 @@ test("Cloudflare preflight rejects duplicate physical R2 and Access identities",
   )
 })
 
+test("Cloudflare preflight rejects invalid R2 lock retention", () => {
+  assert.throws(
+    () =>
+      Effect.runSync(
+        plan({
+          r2Buckets: [
+            {
+              name: "backups",
+              lock: {
+                retentionDays: 0,
+              },
+            },
+          ],
+        }),
+      ),
+    /lock retention must be a positive whole number of days/i,
+  )
+})
+
 test("Cloudflare preflight validates DNS TTL, proxying, priority, and static content", () => {
   const invalidRecords = [
     {

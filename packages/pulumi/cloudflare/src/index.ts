@@ -38,6 +38,9 @@ export type CloudflareR2Bucket = {
   readonly location?: "apac" | "eeur" | "enam" | "weur" | "wnam" | "oc"
   readonly jurisdiction?: "default" | "eu" | "fedramp"
   readonly storageClass?: "Standard" | "InfrequentAccess"
+  readonly lock?: {
+    readonly retentionDays: number
+  }
 }
 
 export type CloudflareAccessApplication = {
@@ -580,16 +583,26 @@ export function planCloudflareEdgeEffect<DirectRecord extends CloudflareDnsRecor
     )
 
     const r2Buckets = yield* Effect.forEach(args.r2Buckets ?? [], (bucket) =>
-      requireResourceConfigEffect(
-        bucket.name.trim().length > 0,
-        "cloudflare:r2",
-        "Cloudflare R2 bucket names must not be empty.",
-      ).pipe(
-        Effect.map(() => ({
+      Effect.gen(function* () {
+        yield* requireResourceConfigEffect(
+          bucket.name.trim().length > 0,
+          "cloudflare:r2",
+          "Cloudflare R2 bucket names must not be empty.",
+        )
+
+        if (bucket.lock) {
+          yield* requireResourceConfigEffect(
+            Number.isSafeInteger(bucket.lock.retentionDays) && bucket.lock.retentionDays > 0,
+            `r2:${bucket.name}`,
+            `Cloudflare R2 bucket "${bucket.name}" lock retention must be a positive whole number of days.`,
+          )
+        }
+
+        return {
           bucket,
           logicalName: logicalResourceName(bucket.resourceName, bucket.name),
-        })),
-      ),
+        }
+      }),
     )
     yield* validateUniqueValuesEffect(
       r2Buckets.map(({ bucket }) => bucket.name.trim().toLowerCase()),
@@ -604,7 +617,9 @@ export function planCloudflareEdgeEffect<DirectRecord extends CloudflareDnsRecor
       tunnelConfigResourceName,
       ...ingressRules.map(({ logicalName }) => logicalName),
       ...directRecords.map(({ logicalName }) => logicalName),
-      ...r2Buckets.map(({ logicalName }) => logicalName),
+      ...r2Buckets.flatMap(({ bucket, logicalName }) =>
+        bucket.lock ? [logicalName, `${logicalName}-lock`] : [logicalName],
+      ),
       ...accessApplications.map(({ logicalName }) => logicalName),
       ...zoneSecurityPolicies.flatMap(({ zone, policy }) =>
         Object.values(cloudflareZoneSecuritySettings(policy)).map((setting) =>
@@ -771,36 +786,72 @@ export const createCloudflareEdgeEffect = Effect.fn("Cloudflare.createEdge")(fun
   )
 
   const r2Buckets = Object.fromEntries(
-    yield* Effect.forEach(r2BucketSpecs, ({ bucket, logicalName }) => {
-      return registerPulumiResource(
-        logicalName,
-        () =>
-          new cloudflare.R2Bucket(
-            logicalName,
-            {
-              accountId: args.accountId,
-              name: bucket.name,
-              ...(bucket.location ? { location: bucket.location } : {}),
-              ...(bucket.jurisdiction ? { jurisdiction: bucket.jurisdiction } : {}),
-              ...(bucket.storageClass ? { storageClass: bucket.storageClass } : {}),
-            },
-            args.resourceOptions,
-          ),
-      ).pipe(
-        Effect.map(
-          (r2Bucket) =>
-            [
-              bucket.name,
+    yield* Effect.forEach(r2BucketSpecs, ({ bucket, logicalName }) =>
+      Effect.gen(function* () {
+        const r2Bucket = yield* registerPulumiResource(
+          logicalName,
+          () =>
+            new cloudflare.R2Bucket(
+              logicalName,
               {
-                name: r2Bucket.name,
-                location: r2Bucket.location,
-                jurisdiction: r2Bucket.jurisdiction,
-                storageClass: r2Bucket.storageClass,
+                accountId: args.accountId,
+                name: bucket.name,
+                ...(bucket.location ? { location: bucket.location } : {}),
+                ...(bucket.jurisdiction ? { jurisdiction: bucket.jurisdiction } : {}),
+                ...(bucket.storageClass ? { storageClass: bucket.storageClass } : {}),
               },
-            ] as const,
-        ),
-      )
-    }),
+              {
+                ...args.resourceOptions,
+                protect: true,
+              },
+            ),
+        )
+
+        const lock = bucket.lock
+
+        if (lock) {
+          const lockName = `${logicalName}-lock`
+
+          yield* registerPulumiResource(
+            lockName,
+            () =>
+              new cloudflare.R2BucketLock(
+                lockName,
+                {
+                  accountId: args.accountId,
+                  bucketName: r2Bucket.name,
+                  ...(bucket.jurisdiction ? { jurisdiction: bucket.jurisdiction } : {}),
+                  rules: [
+                    {
+                      id: "retain-all-objects",
+                      enabled: true,
+                      prefix: "",
+                      condition: {
+                        type: "Age",
+                        maxAgeSeconds: lock.retentionDays * 24 * 60 * 60,
+                      },
+                    },
+                  ],
+                },
+                {
+                  ...args.resourceOptions,
+                  protect: true,
+                },
+              ),
+          )
+        }
+
+        return [
+          bucket.name,
+          {
+            name: r2Bucket.name,
+            location: r2Bucket.location,
+            jurisdiction: r2Bucket.jurisdiction,
+            storageClass: r2Bucket.storageClass,
+          },
+        ] as const
+      }),
+    ),
   )
 
   const accessApplications = Object.fromEntries(
