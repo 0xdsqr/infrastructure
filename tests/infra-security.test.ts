@@ -212,6 +212,14 @@ test("Tailscale machine enrollment keys are hardened while the live ACL remains 
         grant.ip.join(",") === "tcp:22",
     ),
   )
+  assert.ok(
+    policy.grants.some(
+      (grant) =>
+        grant.src[0] === tailscale.tags.role.backup &&
+        grant.dst[0] === tailscale.tags.location.proxmox &&
+        grant.ip.join(",") === "tcp:22",
+    ),
+  )
 })
 
 test("External Secrets policies use unique exact paths and exclude infrastructure credentials", () => {

@@ -69,6 +69,11 @@ function createPolicy(args: PolicyArgs) {
       dst: [tags.role.backup],
       ip: ["tcp:22"],
     },
+    {
+      src: [tags.role.backup],
+      dst: [tags.location.proxmox],
+      ip: ["tcp:22"],
+    },
   ] as const
 
   return {
