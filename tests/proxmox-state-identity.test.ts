@@ -94,6 +94,20 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
   ] of vmContracts) {
     const vm = byName(deployment.captured, resourceName)
     const vmState = byName(deployment.resources, resourceName)
+    const dataDisks =
+      resourceName === "backup"
+        ? [
+            {
+              backup: false,
+              datastoreId: "local-lvm",
+              discard: "on",
+              interface: "scsi1",
+              replicate: false,
+              serial: "backup-data",
+              size: 512,
+            },
+          ]
+        : []
     assert.equal(vm.type, vmToken)
     assert.equal(vm.opts.parent, undefined)
     assert.equal(vm.opts.provider, provider.resource)
@@ -122,6 +136,7 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
         size: diskSize,
         ...(resourceName === "khaos" ? { discard: "on" } : {}),
       },
+      ...dataDisks,
     ])
     assert.deepEqual(vmState.inputs.networkDevices, [
       {

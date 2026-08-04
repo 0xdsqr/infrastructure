@@ -92,6 +92,15 @@ export function createResolvedProxmoxVmEffect(args: ResolvedProxmoxVmArgs) {
                 size: spec.rootDiskSizeGiB,
                 ...(spec.discard ? { discard: "on" } : {}),
               },
+              ...(spec.dataDisks ?? []).map((disk) => ({
+                interface: disk.interface,
+                datastoreId: disk.datastoreId,
+                size: disk.sizeGiB,
+                ...(disk.backup === undefined ? {} : { backup: disk.backup }),
+                ...(disk.discard ? { discard: "on" } : {}),
+                ...(disk.replicate === undefined ? {} : { replicate: disk.replicate }),
+                ...(disk.serial === undefined ? {} : { serial: disk.serial }),
+              })),
             ],
             networkDevices: [
               {

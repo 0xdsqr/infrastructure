@@ -91,6 +91,33 @@ test("Proxmox planning resolves every VM before registration", () => {
   ])
 })
 
+test("Proxmox planning preserves explicitly isolated auxiliary data disks", () => {
+  const dataDisks = [
+    {
+      interface: "scsi1",
+      datastoreId: "local-lvm",
+      sizeGiB: 512,
+      backup: false,
+      discard: true,
+      replicate: false,
+      serial: "backup-data",
+    },
+  ] as const
+
+  const plan = Effect.runSync(
+    planProxmoxPlatform(
+      platformArgs({
+        first: {
+          ...baseVm,
+          dataDisks,
+        },
+      }),
+    ),
+  )
+
+  assert.deepEqual(plan.vms[0]?.spec.dataDisks, dataDisks)
+})
+
 for (const [label, inventory, expected] of [
   [
     "logical resource name",

@@ -100,6 +100,17 @@ const vms = {
     cpuCores: 2,
     memoryMiB: 4096,
     rootDiskSizeGiB: 128,
+    dataDisks: [
+      {
+        interface: "scsi1",
+        datastoreId: "local-lvm",
+        sizeGiB: 512,
+        backup: false,
+        discard: true,
+        replicate: false,
+        serial: "backup-data",
+      },
+    ],
     tags: tags("backup"),
   },
   k8sMainCp1: {
