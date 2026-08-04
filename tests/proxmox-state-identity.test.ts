@@ -75,7 +75,7 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
     ["khaos", "khaos", 1100, 8, 8192, 200, "ssd-dsqr-raid-001", 30, undefined],
     ["knox", "knox", 1120, 4, 16384, 200, "ssd-dsqr-raid-001", 30, "02:00:00:00:11:20"],
     ["vault", "vault", 1140, 2, 4096, 64, "ssd-dsqr-raid-002", 30, "02:00:00:00:11:40"],
-    ["backup", "backup", 1160, 2, 4096, 64, "ssd-dsqr-raid-002", 30, "02:00:00:00:11:60"],
+    ["backup", "backup", 1160, 2, 4096, 128, "ssd-dsqr-raid-001", 30, "02:00:00:00:11:60"],
     ["k8s-main-cp-01", "k8s-main-cp-01", 1200, 4, 16384, 100, "ssd-dsqr-raid-001", 30, undefined],
     ["k8s-main-w-01", "k8s-main-w-01", 1210, 4, 8192, 100, "ssd-dsqr-raid-001", 30, undefined],
     ["k8s-main-w-02", "k8s-main-w-02", 1220, 4, 8192, 100, "ssd-dsqr-raid-001", 30, undefined],
@@ -98,7 +98,7 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
     assert.equal(vm.opts.parent, undefined)
     assert.equal(vm.opts.provider, provider.resource)
     assert.deepEqual(vm.opts.dependsOn, undefined)
-    assert.deepEqual(vm.opts.ignoreChanges, ["disks[0].speed"])
+    assert.deepEqual(vm.opts.ignoreChanges, ["clone.datastoreId", "disks[0].speed"])
     assert.equal(vm.opts.protect, undefined)
     assert.equal(vm.opts.retainOnDelete, undefined)
 
@@ -120,6 +120,7 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
         datastoreId,
         interface: "scsi0",
         size: diskSize,
+        ...(resourceName === "khaos" ? { discard: "on" } : {}),
       },
     ])
     assert.deepEqual(vmState.inputs.networkDevices, [

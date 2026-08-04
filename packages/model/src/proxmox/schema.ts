@@ -18,6 +18,7 @@ export const VmSpecSchema = Schema.Struct({
   cpuCores: Schema.optional(PositiveInteger),
   memoryMiB: Schema.optional(PositiveInteger),
   rootDiskSizeGiB: Schema.optional(PositiveInteger),
+  discard: Schema.optional(Schema.Boolean),
   tags: Schema.optional(Schema.Array(Schema.NonEmptyString)),
 })
 

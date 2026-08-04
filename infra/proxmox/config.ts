@@ -51,6 +51,7 @@ const vms = {
     cpuCores: 8,
     memoryMiB: 8192,
     rootDiskSizeGiB: 200,
+    discard: true,
     tags: tags("compute"),
   },
   knox: {
@@ -90,7 +91,7 @@ const vms = {
     vmId: 1160,
     nodeName: "pve",
     templateVmId: 9000,
-    datastoreId: "ssd-dsqr-raid-002",
+    datastoreId: "ssd-dsqr-raid-001",
     bridge: "vmbr0",
     macAddress: "02:00:00:00:11:60",
     vlanTag: 30,
@@ -98,7 +99,7 @@ const vms = {
     cloudInitUserDataFileId: "local:snippets/user-data-test.yaml",
     cpuCores: 2,
     memoryMiB: 4096,
-    rootDiskSizeGiB: 64,
+    rootDiskSizeGiB: 128,
     tags: tags("backup"),
   },
   k8sMainCp1: {

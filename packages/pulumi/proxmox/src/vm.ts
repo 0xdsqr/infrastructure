@@ -90,6 +90,7 @@ export function createResolvedProxmoxVmEffect(args: ResolvedProxmoxVmArgs) {
                 interface: "scsi0",
                 datastoreId: spec.datastoreId,
                 size: spec.rootDiskSizeGiB,
+                ...(spec.discard ? { discard: "on" } : {}),
               },
             ],
             networkDevices: [
@@ -102,7 +103,7 @@ export function createResolvedProxmoxVmEffect(args: ResolvedProxmoxVmArgs) {
             ],
           },
           {
-            ignoreChanges: ["disks[0].speed"],
+            ignoreChanges: ["clone.datastoreId", "disks[0].speed"],
             provider,
           },
         ),
