@@ -74,6 +74,7 @@ export type CloudflareEdgeArgs = {
     readonly tunnelConfig?: string
   }
   readonly resourceOptions?: pulumi.CustomResourceOptions
+  readonly r2ResourceOptions?: pulumi.CustomResourceOptions
   readonly dnsRecords?: ReadonlyArray<
     Omit<CloudflareDnsRecord, "content"> & {
       readonly content: pulumi.Input<string>
@@ -801,7 +802,7 @@ export const createCloudflareEdgeEffect = Effect.fn("Cloudflare.createEdge")(fun
                 ...(bucket.storageClass ? { storageClass: bucket.storageClass } : {}),
               },
               {
-                ...args.resourceOptions,
+                ...(args.r2ResourceOptions ?? args.resourceOptions),
                 protect: true,
               },
             ),
@@ -834,7 +835,7 @@ export const createCloudflareEdgeEffect = Effect.fn("Cloudflare.createEdge")(fun
                   ],
                 },
                 {
-                  ...args.resourceOptions,
+                  ...(args.r2ResourceOptions ?? args.resourceOptions),
                   protect: true,
                 },
               ),

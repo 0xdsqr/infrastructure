@@ -1,3 +1,4 @@
+import * as cloudflare from "@pulumi/cloudflare"
 import * as pulumi from "@pulumi/pulumi"
 import { Effect, Redacted } from "effect"
 
@@ -47,9 +48,19 @@ export const cloudflareEdge = runPulumiProgram(
       () => new pulumi.StackReference(cloudflareConfig.hetznerMailStack),
     )
     const mailIpv4 = hetznerMail.getOutput("ipv4Address")
+    const r2Provider = yield* registerPulumiResource(
+      "cloudflare-r2",
+      () =>
+        new cloudflare.Provider("cloudflare-r2", {
+          apiToken: pulumi.secret(Redacted.value(cloudflareConfig.r2ApiToken)),
+        }),
+    )
 
     return yield* createCloudflareEdgeEffect({
       ...staticEdge,
+      r2ResourceOptions: {
+        provider: r2Provider,
+      },
       tunnelSecret: pulumi.secret(Redacted.value(cloudflareConfig.tunnelSecret)),
       dnsRecords: [
         {

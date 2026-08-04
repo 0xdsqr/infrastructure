@@ -10,6 +10,7 @@ import { loadTailscaleEnvironment } from "../infra/tailscale/environment.ts"
 const cloudflareEnvironment = new Map([
   ["CLOUDFLARE_ACCOUNT_ID", "account-id"],
   ["CLOUDFLARE_API_TOKEN", "api-token"],
+  ["CLOUDFLARE_R2_API_TOKEN", "r2-api-token"],
   ["CLOUDFLARE_DSQR_DEV_ZONE_ID", "dsqr-zone"],
   ["CLOUDFLARE_FIDARA_ZONE_ID", "fidara-zone"],
   ["CLOUDFLARE_TWT_ZONE_ID", "twt-zone"],
@@ -25,6 +26,7 @@ test("Cloudflare checks every ambient credential and identifier", () => {
 
   assert.equal(environment.accountId, "account-id")
   assert.equal(Redacted.value(environment.apiToken), "api-token")
+  assert.equal(Redacted.value(environment.r2ApiToken), "r2-api-token")
   assert.equal(Redacted.value(environment.tunnelSecret), "tunnel-secret")
 
   const emptyToken = new Map(cloudflareEnvironment)
@@ -33,6 +35,17 @@ test("Cloudflare checks every ambient credential and identifier", () => {
     Exit.isFailure(
       Effect.runSyncExit(
         loadCloudflareConfig().pipe(Effect.withConfigProvider(ConfigProvider.fromMap(emptyToken))),
+      ),
+    ),
+    true,
+  )
+
+  const emptyR2Token = new Map(cloudflareEnvironment)
+  emptyR2Token.set("CLOUDFLARE_R2_API_TOKEN", "")
+  assert.equal(
+    Exit.isFailure(
+      Effect.runSyncExit(
+        loadCloudflareConfig().pipe(Effect.withConfigProvider(ConfigProvider.fromMap(emptyR2Token))),
       ),
     ),
     true,

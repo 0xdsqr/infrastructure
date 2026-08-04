@@ -117,6 +117,7 @@ const secretPaths = {
     description: "Cloudflare account, zone, tunnel, and API token inputs.",
     fields: [
       "CLOUDFLARE_API_TOKEN",
+      "CLOUDFLARE_R2_API_TOKEN",
       "CLOUDFLARE_ACCOUNT_ID",
       "CLOUDFLARE_DSQR_DEV_ZONE_ID",
       "CLOUDFLARE_TWT_ZONE_ID",

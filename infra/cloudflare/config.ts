@@ -5,6 +5,7 @@ import { requiredRedacted, requiredString } from "../environment.ts"
 const environment = Config.all({
   accountId: requiredString("CLOUDFLARE_ACCOUNT_ID"),
   apiToken: requiredRedacted("CLOUDFLARE_API_TOKEN"),
+  r2ApiToken: requiredRedacted("CLOUDFLARE_R2_API_TOKEN"),
   dsqrDevZoneId: requiredString("CLOUDFLARE_DSQR_DEV_ZONE_ID"),
   fidaraZoneId: requiredString("CLOUDFLARE_FIDARA_ZONE_ID"),
   tastingswithtayZoneId: requiredString("CLOUDFLARE_TWT_ZONE_ID"),
