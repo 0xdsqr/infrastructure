@@ -38,7 +38,7 @@ const resolveOutput = <Value>(output: pulumi.Output<Value>) =>
     }
   ).promise()
 
-test("Tailscale infrastructure manages the tailnet policy without persistent bootstrap keys", async () => {
+test("Tailscale infrastructure manages its policy and rotating server bootstrap key", async () => {
   const deployed = Effect.runSync(
     createTailscalePlatformEffect({
       policyResourceName: tailscale.policyResourceName,
@@ -49,13 +49,17 @@ test("Tailscale infrastructure manages the tailnet policy without persistent boo
     }),
   )
   await resolveOutput(deployed.policy)
+  const serverAuthKey = await resolveOutput(deployed.authKeys.homelabServer)
 
   const registered = resources
     .filter((resource) => resource.type.startsWith("tailscale:"))
     .map((resource) => [resource.type, resource.name] as const)
     .sort((left, right) => left[1].localeCompare(right[1]))
 
-  assert.deepEqual(registered, [["tailscale:index/acl:Acl", "tailnet-policy"]])
+  assert.deepEqual(registered, [
+    ["tailscale:index/tailnetKey:TailnetKey", "homelab-server-key"],
+    ["tailscale:index/acl:Acl", "tailnet-policy"],
+  ])
 
   const policy = resources.find((resource) => resource.name === tailscale.policyResourceName)
   assert.ok(policy)
@@ -66,7 +70,20 @@ test("Tailscale infrastructure manages the tailnet policy without persistent boo
     resetAclOnDestroy: false,
   })
 
-  assert.deepEqual(deployed.authKeys, {})
+  const serverKey = resources.find((resource) => resource.name === "homelab-server-key")
+  assert.ok(serverKey)
+  assert.deepEqual(serverKey.inputs, {
+    description: "Reusable bootstrap enrollment for homelab servers",
+    reusable: true,
+    ephemeral: false,
+    preauthorized: true,
+    expiry: 7_776_000,
+    recreateIfInvalid: "always",
+    tags: [tailscale.tags.location.homelab, tailscale.tags.role.server],
+  })
+
+  assert.equal(serverAuthKey, "mock-homelab-server-key")
+  assert.equal(await deployed.authKeys.homelabServer.isSecret, true)
 })
 
 test("Tailscale generic key specs reject duplicate logical names before registration", async () => {

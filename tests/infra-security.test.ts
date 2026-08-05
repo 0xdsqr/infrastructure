@@ -15,6 +15,7 @@ import {
 } from "../packages/pulumi/proxmox/src/config.ts"
 import {
   hardenedTailnetKeyDefaults,
+  serverBootstrapTailnetKeyDefaults,
   tailnetPolicySafetyDefaults,
 } from "../packages/pulumi/tailscale/src/index.ts"
 import {
@@ -183,11 +184,24 @@ test("Tailscale machine enrollment keys are hardened while the live ACL remains 
     expiry: 3_600,
     recreateIfInvalid: "never",
   })
+  assert.deepEqual(serverBootstrapTailnetKeyDefaults, {
+    reusable: true,
+    ephemeral: false,
+    preauthorized: true,
+    expiry: 7_776_000,
+    recreateIfInvalid: "always",
+  })
   assert.deepEqual(tailnetPolicySafetyDefaults, {
     overwriteExistingContent: false,
     resetAclOnDestroy: false,
   })
   assert.ok(!("darwinWorkstation" in tailscale.keySpecs))
+  assert.deepEqual(tailscale.keySpecs.homelabServer, {
+    resourceName: "homelab-server-key",
+    description: "Reusable bootstrap enrollment for homelab servers",
+    tags: [tailscale.tags.location.homelab, tailscale.tags.role.server],
+    lifecycle: "server-bootstrap",
+  })
 
   const adminUser = "admin@example.test"
   const policy = tailscale.createPolicy({ adminUser })

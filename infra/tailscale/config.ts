@@ -92,6 +92,13 @@ export const tailscale = {
   tags,
   hosts,
   policyResourceName: "tailnet-policy",
-  keySpecs: {},
+  keySpecs: {
+    homelabServer: {
+      resourceName: "homelab-server-key",
+      description: "Reusable bootstrap enrollment for homelab servers",
+      tags: [tags.location.homelab, tags.role.server],
+      lifecycle: "server-bootstrap",
+    },
+  },
   createPolicy,
 } as const

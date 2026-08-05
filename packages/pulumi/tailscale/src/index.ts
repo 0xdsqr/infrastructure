@@ -11,7 +11,10 @@ export type TailscaleKeySpec = {
   readonly resourceName: string
   readonly description: string
   readonly tags: ReadonlyArray<string>
+  readonly lifecycle?: TailscaleKeyLifecycle | undefined
 }
+
+export type TailscaleKeyLifecycle = "one-time" | "server-bootstrap"
 
 export type TailscaleKeySpecs = Readonly<Record<string, TailscaleKeySpec>>
 
@@ -46,6 +49,14 @@ export const hardenedTailnetKeyDefaults = {
   recreateIfInvalid: "never",
 } as const
 
+export const serverBootstrapTailnetKeyDefaults = {
+  reusable: true,
+  ephemeral: false,
+  preauthorized: true,
+  expiry: 90 * 24 * 60 * 60,
+  recreateIfInvalid: "always",
+} as const
+
 export const tailnetPolicySafetyDefaults = {
   overwriteExistingContent: false,
   resetAclOnDestroy: false,
@@ -63,7 +74,9 @@ const createTailnetKeyEffect = (
         spec.resourceName,
         {
           description: spec.description,
-          ...hardenedTailnetKeyDefaults,
+          ...(spec.lifecycle === "server-bootstrap"
+            ? serverBootstrapTailnetKeyDefaults
+            : hardenedTailnetKeyDefaults),
           tags: [...spec.tags],
         },
         {
