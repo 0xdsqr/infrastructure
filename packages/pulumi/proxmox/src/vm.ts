@@ -112,7 +112,13 @@ export function createResolvedProxmoxVmEffect(args: ResolvedProxmoxVmArgs) {
             ],
           },
           {
-            ignoreChanges: ["clone.datastoreId", "disks[0].speed"],
+            ignoreChanges: [
+              "clone.datastoreId",
+              ...Array.from(
+                { length: 1 + (spec.dataDisks?.length ?? 0) },
+                (_, index) => `disks[${index}].speed`,
+              ),
+            ],
             provider,
           },
         ),
