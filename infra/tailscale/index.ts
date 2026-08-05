@@ -22,3 +22,5 @@ const tailscale = runPulumiProgram(
 
 export const tailscalePolicy = tailscale.policy
 export const homelabServerAuthKey = tailscale.authKeys.homelabServer
+export const homelabBackupAuthKey = tailscale.authKeys.homelabBackup
+export const mailServerAuthKey = tailscale.authKeys.mailServer

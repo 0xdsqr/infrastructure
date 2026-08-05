@@ -50,6 +50,8 @@ test("Tailscale infrastructure manages its policy and rotating server bootstrap 
   )
   await resolveOutput(deployed.policy)
   const serverAuthKey = await resolveOutput(deployed.authKeys.homelabServer)
+  const backupAuthKey = await resolveOutput(deployed.authKeys.homelabBackup)
+  const mailAuthKey = await resolveOutput(deployed.authKeys.mailServer)
 
   const registered = resources
     .filter((resource) => resource.type.startsWith("tailscale:"))
@@ -57,6 +59,8 @@ test("Tailscale infrastructure manages its policy and rotating server bootstrap 
     .sort((left, right) => left[1].localeCompare(right[1]))
 
   assert.deepEqual(registered, [
+    ["tailscale:index/tailnetKey:TailnetKey", "cloud-mail-key"],
+    ["tailscale:index/tailnetKey:TailnetKey", "homelab-backup-key"],
     ["tailscale:index/tailnetKey:TailnetKey", "homelab-server-key"],
     ["tailscale:index/acl:Acl", "tailnet-policy"],
   ])
@@ -83,7 +87,11 @@ test("Tailscale infrastructure manages its policy and rotating server bootstrap 
   })
 
   assert.equal(serverAuthKey, "mock-homelab-server-key")
+  assert.equal(backupAuthKey, "mock-homelab-backup-key")
+  assert.equal(mailAuthKey, "mock-cloud-mail-key")
   assert.equal(await deployed.authKeys.homelabServer.isSecret, true)
+  assert.equal(await deployed.authKeys.homelabBackup.isSecret, true)
+  assert.equal(await deployed.authKeys.mailServer.isSecret, true)
 })
 
 test("Tailscale generic key specs reject duplicate logical names before registration", async () => {

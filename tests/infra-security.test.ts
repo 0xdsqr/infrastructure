@@ -202,6 +202,22 @@ test("Tailscale machine enrollment keys are hardened while the live ACL remains 
     tags: [tailscale.tags.location.homelab, tailscale.tags.role.server],
     lifecycle: "server-bootstrap",
   })
+  assert.deepEqual(tailscale.keySpecs.homelabBackup, {
+    resourceName: "homelab-backup-key",
+    description: "Homelab backup server bootstrap",
+    tags: [tailscale.tags.location.homelab, tailscale.tags.role.backup],
+    lifecycle: "server-bootstrap",
+  })
+  assert.deepEqual(tailscale.keySpecs.mailServer, {
+    resourceName: "cloud-mail-key",
+    description: "Cloud mail server bootstrap",
+    tags: [
+      tailscale.tags.location.cloud,
+      tailscale.tags.location.hetzner,
+      tailscale.tags.role.mail,
+    ],
+    lifecycle: "server-bootstrap",
+  })
 
   const adminUser = "admin@example.test"
   const policy = tailscale.createPolicy({ adminUser })

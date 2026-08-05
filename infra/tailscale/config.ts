@@ -99,6 +99,18 @@ export const tailscale = {
       tags: [tags.location.homelab, tags.role.server],
       lifecycle: "server-bootstrap",
     },
+    homelabBackup: {
+      resourceName: "homelab-backup-key",
+      description: "Homelab backup server bootstrap",
+      tags: [tags.location.homelab, tags.role.backup],
+      lifecycle: "server-bootstrap",
+    },
+    mailServer: {
+      resourceName: "cloud-mail-key",
+      description: "Cloud mail server bootstrap",
+      tags: [tags.location.cloud, tags.location.hetzner, tags.role.mail],
+      lifecycle: "server-bootstrap",
+    },
   },
   createPolicy,
 } as const
