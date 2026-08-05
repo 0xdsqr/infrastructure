@@ -112,6 +112,8 @@ export function createResolvedProxmoxVmEffect(args: ResolvedProxmoxVmArgs) {
             ],
           },
           {
+            // Fixed Proxmox VM IDs cannot coexist during replacement.
+            deleteBeforeReplace: true,
             ignoreChanges: [
               "clone.datastoreId",
               ...Array.from(
