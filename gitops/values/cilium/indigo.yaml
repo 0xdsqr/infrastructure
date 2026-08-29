@@ -1,0 +1,19 @@
+# Indigo Helm value overrides for Cilium.
+# Keep the shared datapath defaults in common.yaml and cluster identity,
+# API endpoint, and availability settings here.
+
+cluster:
+  name: indigo
+  id: 2
+
+k8sServiceHost: 10.10.80.10
+k8sServicePort: 6443
+
+bpf:
+  masquerade: true
+
+operator:
+  replicas: 2
+
+routingMode: tunnel
+tunnelProtocol: vxlan
