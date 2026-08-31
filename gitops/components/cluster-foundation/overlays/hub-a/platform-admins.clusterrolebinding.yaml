@@ -13,10 +13,6 @@ subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
     name: dsqr-labs:platform-admins
-  # Remove after every hub-a administrator kubeconfig has been reissued.
-  - apiGroup: rbac.authorization.k8s.io
-    kind: Group
-    name: homelab:platform-admins
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
