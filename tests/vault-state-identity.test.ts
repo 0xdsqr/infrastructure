@@ -12,6 +12,8 @@ import { byName, runPulumiMockProgram } from "./pulumi-state-helpers.ts"
 const providerToken = "pulumi:providers:vault"
 const mountToken = "vault:index/mount:Mount"
 const kvConfigToken = "vault:kv/secretBackendV2:SecretBackendV2"
+const authBackendToken = "vault:index/authBackend:AuthBackend"
+const kubernetesAuthBackendConfigToken = "vault:kubernetes/authBackendConfig:AuthBackendConfig"
 const policyToken = "vault:index/policy:Policy"
 const kubernetesRoleToken = "vault:kubernetes/authBackendRole:AuthBackendRole"
 const pkiRoleToken = "vault:pkiSecret/secretBackendRole:SecretBackendRole"
@@ -57,6 +59,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
           humanAdminPolicy: vault.policies.humanAdmin,
           externalSecretsPolicies: vault.policies.externalSecrets,
           externalSecretsKubernetesRole: vault.externalSecretsKubernetesRole,
+          externalSecretsKubernetesAuthBoundaries: vault.externalSecretsKubernetesAuthBoundaries,
           pkiIssuers: vault.pkiIssuers,
           audit: vault.audit,
         }),
@@ -65,6 +68,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
       kv: result.mounts.kv,
       policies: result.policies,
       externalSecretsKubernetesRole: result.externalSecretsKubernetesRole,
+      externalSecretsKubernetesAuthBoundaries: result.externalSecretsKubernetesAuthBoundaries,
       pkiIssuers: result.pkiIssuers,
       audit: result.audit,
     }),
@@ -77,7 +81,12 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   const expectedResources = [
     [auditToken, "audit"],
     [kubernetesRoleToken, "external-secrets-kubernetes-role-hub-a"],
+    [kubernetesRoleToken, "external-secrets-kubernetes-role-indigo"],
+    [authBackendToken, "kubernetes-auth-backend-indigo"],
+    [kubernetesAuthBackendConfigToken, "kubernetes-auth-backend-config-indigo"],
     [policyToken, "external-secrets-token-self-policy"],
+    [policyToken, "external-secrets-token-self-policy-indigo"],
+    [policyToken, "external-secrets-policy-indigo-bootstrap-smoke-test"],
     ...Object.keys(externalPolicyNames).map(
       (key) => [policyToken, `external-secrets-policy-${key}`] as const,
     ),
@@ -151,6 +160,23 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   lifecycle("human-admin-policy", { dependsOn: ["kv"] })
   lifecycle("external-secrets-token-self-policy", { protect: true })
   lifecycle("external-secrets-kubernetes-role-hub-a", { protect: true })
+  lifecycle("kubernetes-auth-backend-indigo", { protect: true })
+  lifecycle("kubernetes-auth-backend-config-indigo", {
+    protect: true,
+    dependsOn: ["kubernetes-auth-backend-indigo"],
+  })
+  lifecycle("external-secrets-policy-indigo-bootstrap-smoke-test", {
+    dependsOn: ["kv"],
+  })
+  lifecycle("external-secrets-token-self-policy-indigo", { protect: true })
+  lifecycle("external-secrets-kubernetes-role-indigo", {
+    protect: true,
+    dependsOn: [
+      "kubernetes-auth-backend-config-indigo",
+      "external-secrets-policy-indigo-bootstrap-smoke-test",
+      "external-secrets-token-self-policy-indigo",
+    ],
+  })
   lifecycle("audit")
 
   for (const key of Object.keys(externalPolicyNames)) {
@@ -231,6 +257,30 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
       tokenType: "service",
     },
   )
+
+  assert.deepEqual(byName(resources, "kubernetes-auth-backend-indigo").inputs, {
+    description: "Kubernetes authentication for the isolated Indigo cluster.",
+    path: "kubernetes-indigo",
+    type: "kubernetes",
+  })
+
+  const indigoAuthConfig = byName(resources, "kubernetes-auth-backend-config-indigo")
+  assert.equal(indigoAuthConfig.inputs.backend, "kubernetes-indigo")
+  assert.equal(indigoAuthConfig.inputs.disableLocalCaJwt, true)
+  assert.equal(indigoAuthConfig.inputs.kubernetesHost, "https://10.10.80.10:6443")
+  assert.match(indigoAuthConfig.inputs.kubernetesCaCert, /BEGIN CERTIFICATE/)
+  assert.equal(indigoAuthConfig.inputs.tokenReviewerJwt, undefined)
+
+  const indigoRole = byName(resources, "external-secrets-kubernetes-role-indigo")
+  assert.deepEqual(indigoRole.inputs.boundServiceAccountNames, ["external-secrets"])
+  assert.deepEqual(indigoRole.inputs.boundServiceAccountNamespaces, ["external-secrets"])
+  assert.equal(indigoRole.inputs.backend, "kubernetes-indigo")
+  assert.equal(indigoRole.inputs.roleName, "indigo-external-secrets")
+  assert.equal(indigoRole.inputs.tokenNoDefaultPolicy, true)
+  assert.deepEqual(indigoRole.inputs.tokenPolicies, [
+    "indigo-external-secrets-bootstrap-smoke-test",
+    "indigo-external-secrets-token-self",
+  ])
 
   for (const key of issuerKeys) {
     const config = vault.pkiIssuers[key]

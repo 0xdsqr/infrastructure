@@ -1,6 +1,7 @@
 import type {
   VaultAuditConfig,
   VaultExternalSecretsPolicyConfig,
+  VaultExternalSecretsKubernetesAuthBoundaryInventory,
   VaultHumanAdminPolicyConfig,
   VaultKubernetesAuthRoleConfig,
   VaultKvMountConfig,
@@ -9,6 +10,7 @@ import type {
   VaultFoundationResourceNames,
   VaultSecretPathInventory,
 } from "@dsqr/pulumi-vault"
+import { indigoKubernetesCaCert } from "./certificates.ts"
 
 const resourceNames = {
   provider: "vault",
@@ -170,6 +172,11 @@ const secretPaths = {
     description: "Dedicated Vault endpoint metadata. Do not store root token or unseal keys here.",
     fields: ["VAULT_ADDR"],
   },
+  indigoBootstrapSmokeTest: {
+    path: "dsqr-labs/clusters/indigo/bootstrap/eso-smoke-test",
+    description: "Harmless validation data for the Indigo External Secrets bootstrap path.",
+    fields: ["message"],
+  },
 } satisfies VaultSecretPathInventory
 
 const humanAdminPolicy = {
@@ -243,6 +250,41 @@ const externalSecretsKubernetesRole = {
   tokenMaxTtlSeconds: 3_600,
   tokenExplicitMaxTtlSeconds: 3_600,
 } satisfies VaultKubernetesAuthRoleConfig
+
+const externalSecretsKubernetesAuthBoundaries = {
+  indigo: {
+    backend: {
+      path: "kubernetes-indigo",
+      description: "Kubernetes authentication for the isolated Indigo cluster.",
+      kubernetesHost: "https://10.10.80.10:6443",
+      kubernetesCaCert: indigoKubernetesCaCert,
+      disableLocalCaJwt: true,
+    },
+    policies: {
+      bootstrapSmokeTest: {
+        name: "indigo-external-secrets-bootstrap-smoke-test",
+        readPaths: [secretPaths.indigoBootstrapSmokeTest.path],
+        resourceName: "external-secrets-policy-indigo-bootstrap-smoke-test",
+      },
+    },
+    role: {
+      backend: "kubernetes-indigo",
+      roleName: "indigo-external-secrets",
+      tokenSelfPolicyName: "indigo-external-secrets-token-self",
+      boundServiceAccountNames: ["external-secrets"],
+      boundServiceAccountNamespaces: ["external-secrets"],
+      tokenTtlSeconds: 1_200,
+      tokenMaxTtlSeconds: 3_600,
+      tokenExplicitMaxTtlSeconds: 3_600,
+    },
+    resourceNames: {
+      authBackend: "kubernetes-auth-backend-indigo",
+      authBackendConfig: "kubernetes-auth-backend-config-indigo",
+      tokenSelfPolicy: "external-secrets-token-self-policy-indigo",
+      kubernetesRole: "external-secrets-kubernetes-role-indigo",
+    },
+  },
+} satisfies VaultExternalSecretsKubernetesAuthBoundaryInventory
 
 const renewableAppRoleDefaults = {
   backend: "approle",
@@ -397,6 +439,7 @@ export const vault = {
     externalSecrets: externalSecretsPolicies,
   },
   externalSecretsKubernetesRole,
+  externalSecretsKubernetesAuthBoundaries,
   raftSnapshotAppRole,
   pkiIssuers,
   audit,

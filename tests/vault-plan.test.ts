@@ -39,6 +39,7 @@ const foundationArgs = (): VaultFoundationArgs => ({
   humanAdminPolicy: vault.policies.humanAdmin,
   externalSecretsPolicies: vault.policies.externalSecrets,
   externalSecretsKubernetesRole: vault.externalSecretsKubernetesRole,
+  externalSecretsKubernetesAuthBoundaries: vault.externalSecretsKubernetesAuthBoundaries,
   pkiIssuers: vault.pkiIssuers,
   audit: vault.audit,
 })
@@ -155,5 +156,31 @@ test("Vault rejects duplicate physical Kubernetes auth roles across consumers", 
   )
 
   assert.match(error.message, /unique backend and role-name identities/)
+  assert.equal(resources.length, count)
+})
+
+test("Vault rejects Kubernetes auth boundaries without isolated reviewer configuration", () => {
+  const args = foundationArgs()
+  const indigo = args.externalSecretsKubernetesAuthBoundaries!.indigo!
+  const count = resources.length
+  const error = Effect.runSync(
+    Effect.flip(
+      createVaultFoundationEffect({
+        ...args,
+        externalSecretsKubernetesAuthBoundaries: {
+          ...args.externalSecretsKubernetesAuthBoundaries,
+          indigo: {
+            ...indigo,
+            backend: {
+              ...indigo.backend,
+              disableLocalCaJwt: false,
+            },
+          },
+        },
+      }),
+    ),
+  )
+
+  assert.match(error.message, /disabled local CA\/JWT discovery/)
   assert.equal(resources.length, count)
 })
