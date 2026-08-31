@@ -157,6 +157,20 @@ const bootstrapArgo = Effect.fn("Cluster.bootstrapArgo")(function* () {
 const bootstrapRoot = Effect.fn("Cluster.bootstrapRoot")(function* () {
   yield* guardIndigo()
   const bootstrapPath = yield* gitOpsPath("clusters", "indigo", "bootstrap")
+  const defaultProjectPath = yield* gitOpsPath(
+    "clusters",
+    "indigo",
+    "bootstrap",
+    "default.appproject.yaml",
+  )
+  yield* kubectl([
+    "apply",
+    "--server-side",
+    "--force-conflicts",
+    "--field-manager=cluster-bootstrap",
+    "--filename",
+    defaultProjectPath,
+  ])
   const result = yield* kubectl([
     "apply",
     "--server-side",
