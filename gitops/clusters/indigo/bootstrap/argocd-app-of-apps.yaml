@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: indigo
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: indigo
+    app.kubernetes.io/part-of: dsqr-gitops
+    homelab.dev/cluster: indigo
+    homelab.dev/environment: production
+    homelab.dev/physical-host: dell-r730xd
+    homelab.dev/tier: gitops
+spec:
+  project: bootstrap
+  source:
+    repoURL: https://github.com/0xdsqr/infrastructure.git
+    targetRevision: refs/heads/master
+    path: gitops/clusters/indigo/applications
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      enabled: true
+      prune: true
+      selfHeal: true
+    retry:
+      limit: 5
+      refresh: true
+      backoff:
+        duration: 20s
+        factor: 2
+        maxDuration: 3m
+    syncOptions:
+      - ApplyOutOfSyncOnly=true
+      - PruneLast=true

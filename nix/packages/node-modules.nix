@@ -9,8 +9,8 @@ let
   src = import ../lib/manifest-source.nix { inherit lib runCommand; };
   npmDepsHash =
     {
-      aarch64-darwin = "sha256-pn8NWu7ZCQp7Jvmcw6lfTm0wYjBKk9XuO91ClAhhdHk=";
-      x86_64-linux = "sha256-pn8NWu7ZCQp7Jvmcw6lfTm0wYjBKk9XuO91ClAhhdHk=";
+      aarch64-darwin = "sha256-HFTDXhrbEz4UyzigJu8lDdt9N+IXN7YyNGk9mCQGcJo=";
+      x86_64-linux = "sha256-HFTDXhrbEz4UyzigJu8lDdt9N+IXN7YyNGk9mCQGcJo=";
     }
     .${stdenvNoCC.hostPlatform.system};
 in

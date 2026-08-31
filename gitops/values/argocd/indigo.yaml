@@ -1,0 +1,12 @@
+# Indigo Helm value overrides for the bootstrap Argo CD release.
+global:
+  domain: argocd.indigo.home.arpa
+
+configs:
+  cm:
+    webhook.maxPayloadSizeMB: "5"
+
+server:
+  # Public and internal ingress are introduced deliberately in a later phase.
+  ingress:
+    enabled: false

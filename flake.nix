@@ -44,6 +44,11 @@
             program = "${packages.infra}/bin/infra";
             meta.description = "Run infrastructure stack commands";
           };
+          cluster = {
+            type = "app";
+            program = "${packages.cluster}/bin/cluster";
+            meta.description = "Bootstrap and validate Kubernetes clusters";
+          };
           proxmox-state-migrate = {
             type = "app";
             program = "${packages.proxmoxStateMigrate}/bin/proxmox-state-migrate";

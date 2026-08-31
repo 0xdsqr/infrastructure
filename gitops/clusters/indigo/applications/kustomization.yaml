@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - argocd-config.yaml
+  - cilium.yaml
+
+labels:
+  - pairs:
+      homelab.dev/cluster: indigo
+      homelab.dev/environment: production
+
+patches:
+  - target:
+      group: argoproj.io
+      version: v1alpha1
+      kind: Application
+      name: cilium
+    patch: |-
+      - op: replace
+        path: /metadata/labels/app.kubernetes.io~1version
+        value: 1.20.1
+      - op: replace
+        path: /spec/sources/0/targetRevision
+        value: 1.20.1
+      - op: remove
+        path: /spec/ignoreDifferences/0

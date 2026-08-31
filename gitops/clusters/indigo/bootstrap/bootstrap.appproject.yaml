@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: bootstrap
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/name: bootstrap
+    app.kubernetes.io/part-of: dsqr-gitops
+    homelab.dev/cluster: indigo
+    homelab.dev/environment: production
+    homelab.dev/owner: platform
+    homelab.dev/tier: gitops
+spec:
+  description: Admin-only Indigo bootstrap resources
+  sourceRepos:
+    - https://github.com/0xdsqr/infrastructure.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: argocd
+  clusterResourceWhitelist:
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: indigo-platform-admins
+  namespaceResourceWhitelist:
+    - group: argoproj.io
+      kind: Application
+    - group: argoproj.io
+      kind: AppProject

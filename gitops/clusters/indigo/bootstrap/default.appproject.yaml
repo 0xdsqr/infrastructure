@@ -1,0 +1,17 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: default
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: default
+    app.kubernetes.io/part-of: dsqr-gitops
+    homelab.dev/owner: platform
+    homelab.dev/tier: gitops
+spec:
+  sourceRepos: []
+  sourceNamespaces: []
+  destinations: []
+  namespaceResourceBlacklist:
+    - group: "*"
+      kind: "*"

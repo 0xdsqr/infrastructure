@@ -1,6 +1,7 @@
 { pkgs }:
 let
   nodeModules = pkgs.callPackage ./node-modules.nix { };
+  cluster = pkgs.callPackage ./cluster.nix { inherit nodeModules; };
   gitops = pkgs.callPackage ./gitops.nix { inherit nodeModules; };
   pulumi = pkgs.callPackage ./pulumi.nix { };
   infra = pkgs.callPackage ./infra.nix { inherit nodeModules pulumi; };
@@ -9,6 +10,7 @@ let
 in
 {
   inherit
+    cluster
     gitops
     infra
     nodeModules
