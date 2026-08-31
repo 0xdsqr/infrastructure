@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import test from "node:test"
 
 const values = readFileSync(
-  new URL("../gitops/values/k8s-monitoring/common.yaml", import.meta.url),
+  new URL("../gitops/components/k8s-monitoring/base/values-common.yaml", import.meta.url),
   "utf8",
 )
 

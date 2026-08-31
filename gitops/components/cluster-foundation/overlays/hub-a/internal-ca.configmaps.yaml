@@ -8,8 +8,8 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: cluster-foundation
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform-config
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-config
 data:
   ca.crt: |
     -----BEGIN CERTIFICATE-----
@@ -34,8 +34,8 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: cluster-foundation
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform-config
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-config
 data:
   ca.crt: |
     -----BEGIN CERTIFICATE-----
@@ -60,8 +60,8 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: cluster-foundation
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform-config
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-config
 data:
   ca.crt: |
     -----BEGIN CERTIFICATE-----

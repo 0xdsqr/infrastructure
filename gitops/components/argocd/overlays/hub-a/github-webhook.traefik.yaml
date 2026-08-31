@@ -9,9 +9,9 @@ metadata:
     app.kubernetes.io/name: argocd-github-webhook
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: argocd
-    homelab.dev/cluster: hub-a
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform-ingress
+    platform.dsqr.dev/cluster: hub-a
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-ingress
 spec:
   rateLimit:
     average: 60
@@ -29,9 +29,9 @@ metadata:
     app.kubernetes.io/name: argocd-github-webhook
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: argocd
-    homelab.dev/cluster: hub-a
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform-ingress
+    platform.dsqr.dev/cluster: hub-a
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-ingress
 spec:
   buffering:
     maxRequestBodyBytes: 5242880
@@ -48,9 +48,9 @@ metadata:
     app.kubernetes.io/name: argocd-github-webhook
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: argocd
-    homelab.dev/cluster: hub-a
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform-ingress
+    platform.dsqr.dev/cluster: hub-a
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-ingress
 spec:
   entryPoints:
     - websecure

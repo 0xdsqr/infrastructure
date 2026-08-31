@@ -6,8 +6,8 @@ metadata:
   labels:
     app.kubernetes.io/name: default
     app.kubernetes.io/part-of: dsqr-gitops
-    homelab.dev/owner: platform
-    homelab.dev/tier: gitops
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: gitops
 spec:
   sourceRepos: []
   sourceNamespaces: []

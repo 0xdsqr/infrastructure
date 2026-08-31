@@ -8,10 +8,10 @@ metadata:
   labels:
     app.kubernetes.io/name: bootstrap
     app.kubernetes.io/part-of: dsqr-gitops
-    homelab.dev/cluster: indigo
-    homelab.dev/environment: production
-    homelab.dev/owner: platform
-    homelab.dev/tier: gitops
+    platform.dsqr.dev/cluster: indigo
+    platform.dsqr.dev/environment: production
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: gitops
 spec:
   description: Admin-only Indigo bootstrap resources
   sourceRepos:

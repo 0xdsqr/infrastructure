@@ -14,11 +14,11 @@ const namespaces = {
     labels: {
       "app.kubernetes.io/managed-by": "pulumi",
       "app.kubernetes.io/part-of": "dsqr-gitops",
-      "homelab.dev/cluster": "hub-a",
-      "homelab.dev/environment": "homelab",
-      "homelab.dev/physical-host": "dell-r730xd",
-      "homelab.dev/owner": "platform",
-      "homelab.dev/tier": "gitops",
+      "platform.dsqr.dev/cluster": "hub-a",
+      "platform.dsqr.dev/environment": "lab",
+      "platform.dsqr.dev/physical-host": "dell-r730xd",
+      "platform.dsqr.dev/owner": "platform",
+      "platform.dsqr.dev/tier": "gitops",
       "pod-security.kubernetes.io/enforce": "baseline",
     },
   },
@@ -33,8 +33,8 @@ const helmReleases = {
     repository: "https://helm.cilium.io/",
     version: "1.19.6",
     valueYamlFiles: [
-      "../../gitops/values/cilium/common.yaml",
-      "../../gitops/values/cilium/hub-a.yaml",
+      "../../gitops/components/cilium/base/values-common.yaml",
+      "../../gitops/components/cilium/overlays/hub-a/values-overrides.yaml",
     ],
   },
   metallb: {
@@ -45,8 +45,8 @@ const helmReleases = {
     repository: "https://metallb.github.io/metallb",
     version: "0.16.1",
     valueYamlFiles: [
-      "../../gitops/values/metallb/common.yaml",
-      "../../gitops/values/metallb/hub-a.yaml",
+      "../../gitops/components/metallb/base/values-common.yaml",
+      "../../gitops/components/metallb/overlays/hub-a/values-overrides.yaml",
     ],
     dependsOn: ["cilium"],
   },
@@ -58,8 +58,8 @@ const helmReleases = {
     repository: "https://traefik.github.io/charts",
     version: "41.0.2",
     valueYamlFiles: [
-      "../../gitops/values/traefik/common.yaml",
-      "../../gitops/values/traefik/hub-a.yaml",
+      "../../gitops/components/traefik/base/values-common.yaml",
+      "../../gitops/components/traefik/overlays/hub-a/values-overrides.yaml",
     ],
     dependsOn: ["cilium"],
   },
@@ -71,8 +71,8 @@ const helmReleases = {
     repository: "https://prometheus-community.github.io/helm-charts",
     version: "8.0.0",
     valueYamlFiles: [
-      "../../gitops/values/kube-state-metrics/common.yaml",
-      "../../gitops/values/kube-state-metrics/hub-a.yaml",
+      "../../gitops/components/kube-state-metrics/base/values-common.yaml",
+      "../../gitops/components/kube-state-metrics/overlays/hub-a/values-overrides.yaml",
     ],
     dependsOn: ["cilium"],
   },
@@ -84,8 +84,8 @@ const helmReleases = {
     repository: "https://grafana.github.io/helm-charts",
     version: "4.3.1",
     valueYamlFiles: [
-      "../../gitops/values/k8s-monitoring/common.yaml",
-      "../../gitops/values/k8s-monitoring/hub-a.yaml",
+      "../../gitops/components/k8s-monitoring/base/values-common.yaml",
+      "../../gitops/components/k8s-monitoring/overlays/hub-a/values-overrides.yaml",
     ],
     dependsOn: ["cilium", "kubeStateMetrics"],
   },
@@ -96,8 +96,8 @@ const helmReleases = {
     repository: "https://argoproj.github.io/argo-helm",
     version: "10.2.1",
     valueYamlFiles: [
-      "../../gitops/values/argocd/common.yaml",
-      "../../gitops/values/argocd/hub-a.yaml",
+      "../../gitops/components/argocd/base/values-common.yaml",
+      "../../gitops/components/argocd/overlays/hub-a/values-overrides.yaml",
     ],
   },
 } satisfies HelmReleaseInventory

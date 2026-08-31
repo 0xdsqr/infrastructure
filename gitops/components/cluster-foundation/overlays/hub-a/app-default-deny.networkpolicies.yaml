@@ -8,8 +8,8 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: cluster-foundation
-    homelab.dev/owner: platform
-    homelab.dev/tier: security-boundary
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: security-boundary
 spec:
   podSelector: {}
   policyTypes:
@@ -26,8 +26,8 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: cluster-foundation
-    homelab.dev/owner: platform
-    homelab.dev/tier: security-boundary
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: security-boundary
 spec:
   podSelector: {}
   policyTypes:

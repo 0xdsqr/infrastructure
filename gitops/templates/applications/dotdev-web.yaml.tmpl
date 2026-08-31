@@ -7,14 +7,14 @@ metadata:
   namespace: ${ARGOCD_NAMESPACE}
   annotations:
     argocd.argoproj.io/sync-wave: "4"
-    homelab.dev/hostname: dsqr.dev
+    platform.dsqr.dev/hostname: dsqr.dev
   labels:
     app.kubernetes.io/instance: dotdev-web
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/name: dotdev-web
     app.kubernetes.io/part-of: dsqr-dotdev
-    homelab.dev/owner: dsqr
-    homelab.dev/tier: application
+    platform.dsqr.dev/owner: dsqr
+    platform.dsqr.dev/tier: application
 spec:
   project: dsqr
   sources:

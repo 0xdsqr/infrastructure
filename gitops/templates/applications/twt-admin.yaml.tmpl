@@ -7,14 +7,14 @@ metadata:
   namespace: ${ARGOCD_NAMESPACE}
   annotations:
     argocd.argoproj.io/sync-wave: "4"
-    homelab.dev/hostname: admin.tastingswithtay.com
+    platform.dsqr.dev/hostname: admin.tastingswithtay.com
   labels:
     app.kubernetes.io/instance: twt-admin
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/name: twt-admin
     app.kubernetes.io/part-of: tastingswithtay
-    homelab.dev/owner: twt
-    homelab.dev/tier: application
+    platform.dsqr.dev/owner: twt
+    platform.dsqr.dev/tier: application
 spec:
   project: twt
   sources:

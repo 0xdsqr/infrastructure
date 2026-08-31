@@ -8,10 +8,10 @@ metadata:
   labels:
     app.kubernetes.io/name: bootstrap
     app.kubernetes.io/part-of: dsqr-gitops
-    homelab.dev/cluster: hub-a
-    homelab.dev/environment: homelab
-    homelab.dev/owner: platform
-    homelab.dev/tier: gitops
+    platform.dsqr.dev/cluster: hub-a
+    platform.dsqr.dev/environment: lab
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: gitops
 spec:
   description: Admin-only hub-a bootstrap resources
   sourceRepos:

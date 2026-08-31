@@ -8,9 +8,9 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: dsqr-dotdev
-    homelab.dev/owner: dsqr
-    homelab.dev/tier: apps
-    homelab.dev/ghcr-pull: "true"
+    platform.dsqr.dev/owner: dsqr
+    platform.dsqr.dev/tier: apps
+    platform.dsqr.dev/ghcr-pull: "true"
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/enforce-version: latest
     pod-security.kubernetes.io/audit: restricted
@@ -28,9 +28,9 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: fidara
-    homelab.dev/owner: fidara
-    homelab.dev/tier: apps
-    homelab.dev/ghcr-pull: "true"
+    platform.dsqr.dev/owner: fidara
+    platform.dsqr.dev/tier: apps
+    platform.dsqr.dev/ghcr-pull: "true"
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/enforce-version: latest
     pod-security.kubernetes.io/audit: restricted
@@ -48,9 +48,9 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: tastingswithtay
-    homelab.dev/owner: twt
-    homelab.dev/tier: apps
-    homelab.dev/ghcr-pull: "true"
+    platform.dsqr.dev/owner: twt
+    platform.dsqr.dev/tier: apps
+    platform.dsqr.dev/ghcr-pull: "true"
     pod-security.kubernetes.io/enforce: restricted
     pod-security.kubernetes.io/enforce-version: latest
     pod-security.kubernetes.io/audit: restricted
@@ -68,8 +68,8 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: cluster-networking
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform
 ---
 apiVersion: v1
 kind: Namespace
@@ -81,8 +81,8 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: cluster-ingress
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform
 ---
 apiVersion: v1
 kind: Namespace
@@ -94,8 +94,8 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: observability
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform
 ---
 apiVersion: v1
 kind: Namespace
@@ -107,6 +107,6 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: cluster-secrets
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform-addon
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-addon
     pod-security.kubernetes.io/enforce: baseline

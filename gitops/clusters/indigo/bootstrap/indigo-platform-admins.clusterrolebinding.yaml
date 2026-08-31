@@ -5,13 +5,13 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: cluster-bootstrap
     app.kubernetes.io/part-of: dsqr-gitops
-    homelab.dev/cluster: indigo
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform-rbac
+    platform.dsqr.dev/cluster: indigo
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-rbac
 subjects:
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
-    name: homelab:platform-admins
+    name: dsqr-labs:platform-admins
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole

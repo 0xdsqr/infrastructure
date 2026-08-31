@@ -13,8 +13,8 @@ metadata:
     app.kubernetes.io/name: metallb
     app.kubernetes.io/part-of: cluster-networking
     app.kubernetes.io/version: 0.16.1
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform-addon
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-addon
 spec:
   project: platform-metallb
   sources:
@@ -24,8 +24,8 @@ spec:
       helm:
         releaseName: metallb
         valueFiles:
-          - $values/gitops/values/metallb/common.yaml
-          - $values/gitops/values/metallb/hub-a.yaml
+          - $values/gitops/components/metallb/base/values-common.yaml
+          - $values/gitops/components/metallb/overlays/hub-a/values-overrides.yaml
     - repoURL: https://github.com/0xdsqr/infrastructure.git
       targetRevision: refs/heads/master
       ref: values

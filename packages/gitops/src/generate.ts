@@ -265,8 +265,8 @@ const renderCluster = Effect.fn("GitOps.generate.renderCluster")(function* (
   for (const applicationName of applicationNames) {
     const templatePath = path.join(templatesDirectory, `${applicationName}.yaml.tmpl`)
     const outputPath = path.join(applicationsDirectory, `${applicationName}.yaml`)
-    const valuesCommonFile = `gitops/values/${applicationName}/common.yaml`
-    const valuesOverlayFile = `gitops/values/${applicationName}/${cluster}.yaml`
+    const valuesCommonFile = `gitops/components/${applicationName}/base/values-common.yaml`
+    const valuesOverlayFile = `gitops/components/${applicationName}/overlays/${cluster}/values-overrides.yaml`
     const valuesOverlayDirectory = `gitops/components/${applicationName}/overlays/${cluster}`
     const template = yield* readText(templatePath)
     const dependencies = [

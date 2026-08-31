@@ -10,7 +10,7 @@ metadata:
   labels:
     app.kubernetes.io/name: platform-k8s-monitoring
     app.kubernetes.io/part-of: dsqr-gitops
-    homelab.dev/tier: platform
+    platform.dsqr.dev/tier: platform
 spec:
   description: Kubernetes telemetry collection
   sourceRepos:

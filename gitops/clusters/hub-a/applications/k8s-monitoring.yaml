@@ -13,8 +13,8 @@ metadata:
     app.kubernetes.io/name: k8s-monitoring
     app.kubernetes.io/part-of: observability
     app.kubernetes.io/version: 4.3.1
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform-addon
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-addon
 spec:
   project: platform-k8s-monitoring
   sources:
@@ -24,8 +24,8 @@ spec:
       helm:
         releaseName: k8s-monitoring
         valueFiles:
-          - $values/gitops/values/k8s-monitoring/common.yaml
-          - $values/gitops/values/k8s-monitoring/hub-a.yaml
+          - $values/gitops/components/k8s-monitoring/base/values-common.yaml
+          - $values/gitops/components/k8s-monitoring/overlays/hub-a/values-overrides.yaml
     - repoURL: https://github.com/0xdsqr/infrastructure.git
       targetRevision: refs/heads/master
       ref: values

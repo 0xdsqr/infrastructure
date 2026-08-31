@@ -52,7 +52,7 @@ test("hub-a distributes the expected home root CA to application namespaces", ()
 test("all hub-a Node workloads load the additional trust anchor", () => {
   for (const app of ["dotdev-web", "dotdev-studio", "dotdev-labs", "twt-web", "twt-admin"]) {
     const values = readFileSync(
-      new URL(`../gitops/values/${app}/hub-a.yaml`, import.meta.url),
+      new URL(`../gitops/components/${app}/overlays/hub-a/values-overrides.yaml`, import.meta.url),
       "utf8",
     )
 
@@ -64,7 +64,7 @@ test("all hub-a Node workloads load the additional trust anchor", () => {
 
   for (const app of ["twt-web", "twt-admin"]) {
     const values = readFileSync(
-      new URL(`../gitops/values/${app}/hub-a.yaml`, import.meta.url),
+      new URL(`../gitops/components/${app}/overlays/hub-a/values-overrides.yaml`, import.meta.url),
       "utf8",
     )
 
@@ -75,7 +75,7 @@ test("all hub-a Node workloads load the additional trust anchor", () => {
 
 test("Fidara verifies PostgreSQL through Knox and the exact home CA", () => {
   const values = readFileSync(
-    new URL("../gitops/values/fidara/hub-a.yaml", import.meta.url),
+    new URL("../gitops/components/fidara/overlays/hub-a/values-overrides.yaml", import.meta.url),
     "utf8",
   )
 

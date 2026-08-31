@@ -10,7 +10,7 @@ metadata:
   labels:
     app.kubernetes.io/name: platform-kube-state-metrics
     app.kubernetes.io/part-of: dsqr-gitops
-    homelab.dev/tier: platform
+    platform.dsqr.dev/tier: platform
 spec:
   description: Kubernetes object-state metrics
   sourceRepos:

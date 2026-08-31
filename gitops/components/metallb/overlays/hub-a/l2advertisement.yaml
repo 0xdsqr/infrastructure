@@ -6,8 +6,8 @@ metadata:
   labels:
     app.kubernetes.io/name: metallb
     app.kubernetes.io/part-of: cluster-networking
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform-addon
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-addon
 spec:
   ipAddressPools:
     - ingress

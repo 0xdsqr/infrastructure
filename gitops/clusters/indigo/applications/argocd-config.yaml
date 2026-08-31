@@ -12,8 +12,8 @@ metadata:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/name: argocd-config
     app.kubernetes.io/part-of: argocd
-    homelab.dev/owner: platform
-    homelab.dev/tier: gitops
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: gitops
 spec:
   project: bootstrap
   source:

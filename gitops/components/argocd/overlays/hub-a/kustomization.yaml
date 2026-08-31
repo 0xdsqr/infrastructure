@@ -9,5 +9,5 @@ resources:
 
 labels:
   - pairs:
-      homelab.dev/cluster: hub-a
-      homelab.dev/environment: homelab
+      platform.dsqr.dev/cluster: hub-a
+      platform.dsqr.dev/environment: lab

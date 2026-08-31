@@ -13,8 +13,8 @@ metadata:
     app.kubernetes.io/name: traefik
     app.kubernetes.io/part-of: cluster-ingress
     app.kubernetes.io/version: 41.0.2
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform-addon
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-addon
 spec:
   project: platform-traefik
   sources:
@@ -24,8 +24,8 @@ spec:
       helm:
         releaseName: traefik
         valueFiles:
-          - $values/gitops/values/traefik/common.yaml
-          - $values/gitops/values/traefik/hub-a.yaml
+          - $values/gitops/components/traefik/base/values-common.yaml
+          - $values/gitops/components/traefik/overlays/hub-a/values-overrides.yaml
     - repoURL: https://github.com/0xdsqr/infrastructure.git
       targetRevision: refs/heads/master
       ref: values

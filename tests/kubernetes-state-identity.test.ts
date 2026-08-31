@@ -52,11 +52,11 @@ test("Kubernetes preserves the Pulumi-owned Argo namespace and release contract"
     labels: {
       "app.kubernetes.io/managed-by": "pulumi",
       "app.kubernetes.io/part-of": "dsqr-gitops",
-      "homelab.dev/cluster": "hub-a",
-      "homelab.dev/environment": "homelab",
-      "homelab.dev/owner": "platform",
-      "homelab.dev/physical-host": "dell-r730xd",
-      "homelab.dev/tier": "gitops",
+      "platform.dsqr.dev/cluster": "hub-a",
+      "platform.dsqr.dev/environment": "lab",
+      "platform.dsqr.dev/owner": "platform",
+      "platform.dsqr.dev/physical-host": "dell-r730xd",
+      "platform.dsqr.dev/tier": "gitops",
       "pod-security.kubernetes.io/enforce": "baseline",
     },
     name: "argocd",
@@ -90,8 +90,8 @@ test("Kubernetes preserves the Pulumi-owned Argo namespace and release contract"
     },
   )
   assert.deepEqual(kubernetes.helmReleases.argoCd.valueYamlFiles, [
-    "../../gitops/values/argocd/common.yaml",
-    "../../gitops/values/argocd/hub-a.yaml",
+    "../../gitops/components/argocd/base/values-common.yaml",
+    "../../gitops/components/argocd/overlays/hub-a/values-overrides.yaml",
   ])
 
   const namespaceOptions = byName(deployment.captured, "argocd")

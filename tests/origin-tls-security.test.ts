@@ -82,7 +82,7 @@ test("Traefik certificate issuance uses a dedicated exact Kubernetes identity", 
 
 test("hub-a Traefik declarations pin the VIP and materialize the exact Vault certificate", () => {
   const values = readFileSync(
-    new URL("../gitops/values/traefik/hub-a.yaml", import.meta.url),
+    new URL("../gitops/components/traefik/overlays/hub-a/values-overrides.yaml", import.meta.url),
     "utf8",
   )
   const generator = readFileSync(
@@ -115,11 +115,11 @@ test("hub-a Traefik declarations pin the VIP and materialize the exact Vault cer
 
 test("hub-a owns its cluster-specific private Argo hostname", () => {
   const commonValues = readFileSync(
-    new URL("../gitops/values/argocd/common.yaml", import.meta.url),
+    new URL("../gitops/components/argocd/base/values-common.yaml", import.meta.url),
     "utf8",
   )
   const hubValues = readFileSync(
-    new URL("../gitops/values/argocd/hub-a.yaml", import.meta.url),
+    new URL("../gitops/components/argocd/overlays/hub-a/values-overrides.yaml", import.meta.url),
     "utf8",
   )
 
@@ -132,7 +132,7 @@ test("hub-a owns its cluster-specific private Argo hostname", () => {
 
 test("app-of-apps health waits for child sync before advancing waves", () => {
   const commonValues = readFileSync(
-    new URL("../gitops/values/argocd/common.yaml", import.meta.url),
+    new URL("../gitops/components/argocd/base/values-common.yaml", import.meta.url),
     "utf8",
   )
 
@@ -162,7 +162,7 @@ test("Argo GitHub webhook secret has one exact Vault path", () => {
 
 test("public Argo webhook exposure is authenticated and route-scoped", () => {
   const values = readFileSync(
-    new URL("../gitops/values/argocd/hub-a.yaml", import.meta.url),
+    new URL("../gitops/components/argocd/overlays/hub-a/values-overrides.yaml", import.meta.url),
     "utf8",
   )
   const externalSecret = readFileSync(

@@ -13,8 +13,8 @@ metadata:
     app.kubernetes.io/name: cilium
     app.kubernetes.io/part-of: cluster-networking
     app.kubernetes.io/version: 1.19.6
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform-addon
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-addon
 spec:
   project: platform-cilium
   sources:
@@ -24,8 +24,8 @@ spec:
       helm:
         releaseName: cilium
         valueFiles:
-          - $values/gitops/values/cilium/common.yaml
-          - $values/gitops/values/cilium/hub-a.yaml
+          - $values/gitops/components/cilium/base/values-common.yaml
+          - $values/gitops/components/cilium/overlays/hub-a/values-overrides.yaml
     - repoURL: https://github.com/0xdsqr/infrastructure.git
       targetRevision: refs/heads/master
       ref: values

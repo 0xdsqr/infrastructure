@@ -7,14 +7,14 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "4"
-    homelab.dev/hostname: fidara.io
+    platform.dsqr.dev/hostname: fidara.io
   labels:
     app.kubernetes.io/instance: fidara
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/name: fidara
     app.kubernetes.io/part-of: fidara
-    homelab.dev/owner: fidara
-    homelab.dev/tier: application
+    platform.dsqr.dev/owner: fidara
+    platform.dsqr.dev/tier: application
 spec:
   project: fidara
   sources:
@@ -25,8 +25,8 @@ spec:
         releaseName: fidara
         valueFiles:
           - values-prod.yaml
-          - $values/gitops/values/fidara/common.yaml
-          - $values/gitops/values/fidara/hub-a.yaml
+          - $values/gitops/components/fidara/base/values-common.yaml
+          - $values/gitops/components/fidara/overlays/hub-a/values-overrides.yaml
     - repoURL: https://github.com/0xdsqr/infrastructure.git
       targetRevision: refs/heads/master
       ref: values

@@ -122,8 +122,14 @@ const gitOpsPath = (...segments: readonly string[]) =>
 const bootstrapArgo = Effect.fn("Cluster.bootstrapArgo")(function* () {
   yield* guardIndigo()
   const config = yield* kubeconfig()
-  const commonValues = yield* gitOpsPath("values", "argocd", "common.yaml")
-  const indigoValues = yield* gitOpsPath("values", "argocd", "indigo.yaml")
+  const commonValues = yield* gitOpsPath("components", "argocd", "base", "values-common.yaml")
+  const indigoValues = yield* gitOpsPath(
+    "components",
+    "argocd",
+    "overlays",
+    "indigo",
+    "values-overrides.yaml",
+  )
   yield* run("helm", [
     "--kubeconfig",
     config,

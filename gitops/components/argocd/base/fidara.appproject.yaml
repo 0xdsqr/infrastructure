@@ -10,7 +10,7 @@ metadata:
   labels:
     app.kubernetes.io/name: fidara
     app.kubernetes.io/part-of: dsqr-gitops
-    homelab.dev/tier: apps
+    platform.dsqr.dev/tier: apps
 spec:
   description: Fidara application workloads
   sourceRepos:

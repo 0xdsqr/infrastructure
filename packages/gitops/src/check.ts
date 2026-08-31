@@ -32,9 +32,8 @@ import {
 const resourceFilePattern = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.yaml$/
 const resourceFinalizer = "resources-finalizer.argocd.argoproj.io"
 const obsoleteGitOpsPattern =
-  /gitops\/manifests|CreateNamespace=true|managedNamespaceMetadata|targetRevision: master|values-overrides\.yaml/
-const obsoleteApplicationPattern =
-  /CreateNamespace=true|managedNamespaceMetadata|homelab\.dev\/(?:image|source-revision|sync-stage)/
+  /gitops\/manifests|CreateNamespace=true|managedNamespaceMetadata|targetRevision: master/
+const obsoleteApplicationPattern = /CreateNamespace=true|managedNamespaceMetadata|homelab\.dev\//
 
 const stringAt = (record: YamlRecord | undefined, ...path: readonly string[]) =>
   asString(nestedValue(record, ...path))

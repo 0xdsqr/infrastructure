@@ -7,14 +7,14 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "4"
-    homelab.dev/hostname: labs.dsqr.dev
+    platform.dsqr.dev/hostname: labs.dsqr.dev
   labels:
     app.kubernetes.io/instance: dotdev-labs
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/name: dotdev-labs
     app.kubernetes.io/part-of: dsqr-dotdev
-    homelab.dev/owner: dsqr
-    homelab.dev/tier: application
+    platform.dsqr.dev/owner: dsqr
+    platform.dsqr.dev/tier: application
 spec:
   project: dsqr
   sources:
@@ -25,7 +25,7 @@ spec:
         releaseName: dotdev-labs
         valueFiles:
           - values-prod.yaml
-          - $values/gitops/values/dotdev-labs/hub-a.yaml
+          - $values/gitops/components/dotdev-labs/overlays/hub-a/values-overrides.yaml
     - repoURL: https://github.com/0xdsqr/infrastructure.git
       targetRevision: refs/heads/master
       ref: values

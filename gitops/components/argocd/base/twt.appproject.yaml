@@ -10,7 +10,7 @@ metadata:
   labels:
     app.kubernetes.io/name: twt
     app.kubernetes.io/part-of: dsqr-gitops
-    homelab.dev/tier: apps
+    platform.dsqr.dev/tier: apps
 spec:
   description: Tastings with Tay application workloads
   sourceRepos:

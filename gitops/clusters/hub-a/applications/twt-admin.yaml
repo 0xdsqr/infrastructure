@@ -7,14 +7,14 @@ metadata:
   namespace: argocd
   annotations:
     argocd.argoproj.io/sync-wave: "4"
-    homelab.dev/hostname: admin.tastingswithtay.com
+    platform.dsqr.dev/hostname: admin.tastingswithtay.com
   labels:
     app.kubernetes.io/instance: twt-admin
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/name: twt-admin
     app.kubernetes.io/part-of: tastingswithtay
-    homelab.dev/owner: twt
-    homelab.dev/tier: application
+    platform.dsqr.dev/owner: twt
+    platform.dsqr.dev/tier: application
 spec:
   project: twt
   sources:
@@ -25,8 +25,8 @@ spec:
         releaseName: twt-admin
         valueFiles:
           - values-prod.yaml
-          - $values/gitops/values/twt-admin/common.yaml
-          - $values/gitops/values/twt-admin/hub-a.yaml
+          - $values/gitops/components/twt-admin/base/values-common.yaml
+          - $values/gitops/components/twt-admin/overlays/hub-a/values-overrides.yaml
     - repoURL: https://github.com/0xdsqr/infrastructure.git
       targetRevision: refs/heads/master
       ref: values

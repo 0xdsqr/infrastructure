@@ -7,9 +7,13 @@ metadata:
   labels:
     app.kubernetes.io/managed-by: argocd
     app.kubernetes.io/part-of: cluster-foundation
-    homelab.dev/owner: platform
-    homelab.dev/tier: platform-rbac
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-rbac
 subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: Group
+    name: dsqr-labs:platform-admins
+  # Remove after every hub-a administrator kubeconfig has been reissued.
   - apiGroup: rbac.authorization.k8s.io
     kind: Group
     name: homelab:platform-admins

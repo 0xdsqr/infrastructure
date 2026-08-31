@@ -10,7 +10,7 @@ metadata:
   labels:
     app.kubernetes.io/name: platform-cilium
     app.kubernetes.io/part-of: dsqr-gitops
-    homelab.dev/tier: platform
+    platform.dsqr.dev/tier: platform
 spec:
   description: Cilium cluster networking
   sourceRepos:
