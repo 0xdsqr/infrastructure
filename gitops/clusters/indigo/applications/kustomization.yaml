@@ -6,6 +6,7 @@ resources:
   - cilium.yaml
   - cluster-foundation.yaml
   - external-secrets.yaml
+  - external-secrets-config.yaml
 
 labels:
   - pairs:

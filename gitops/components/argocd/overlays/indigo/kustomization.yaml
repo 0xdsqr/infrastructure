@@ -8,3 +8,25 @@ labels:
   - pairs:
       platform.dsqr.dev/cluster: indigo
       platform.dsqr.dev/environment: production
+
+patches:
+  - target:
+      group: argoproj.io
+      version: v1alpha1
+      kind: AppProject
+      name: secrets
+    patch: |-
+      - op: replace
+        path: /spec/description
+        value: Trusted Indigo Vault-backed secret declarations
+      - op: replace
+        path: /spec/destinations
+        value:
+          - server: https://kubernetes.default.svc
+            namespace: external-secrets
+      - op: replace
+        path: /spec/clusterResourceWhitelist
+        value:
+          - group: external-secrets.io
+            kind: ClusterSecretStore
+            name: vault-indigo
