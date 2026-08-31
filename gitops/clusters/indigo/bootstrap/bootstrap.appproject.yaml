@@ -19,7 +19,12 @@ spec:
   destinations:
     - server: https://kubernetes.default.svc
       namespace: argocd
+    - server: https://kubernetes.default.svc
+      namespace: external-secrets
   clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+      name: external-secrets
     - group: rbac.authorization.k8s.io
       kind: ClusterRoleBinding
       name: indigo-platform-admins

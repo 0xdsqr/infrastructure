@@ -1,0 +1,10 @@
+# Indigo Helm value overrides for External Secrets Operator.
+# Keep Vault connectivity and secret resources in external-secrets-config.
+replicaCount: 2
+leaderElect: true
+
+webhook:
+  replicaCount: 2
+
+certController:
+  replicaCount: 2

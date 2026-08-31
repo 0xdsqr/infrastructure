@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespaces.yaml
+
+labels:
+  - pairs:
+      platform.dsqr.dev/cluster: indigo
+      platform.dsqr.dev/environment: production

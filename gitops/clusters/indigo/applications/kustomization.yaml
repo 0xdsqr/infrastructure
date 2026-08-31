@@ -4,6 +4,8 @@ kind: Kustomization
 resources:
   - argocd-config.yaml
   - cilium.yaml
+  - cluster-foundation.yaml
+  - external-secrets.yaml
 
 labels:
   - pairs:
