@@ -1,0 +1,4 @@
+# Indigo deliberately verifies kubelet serving certificates. Before the first Metrics Server
+# sync, every kubelet must use a serving certificate issued by the kubeadm cluster CA.
+args:
+  - --kubelet-certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt

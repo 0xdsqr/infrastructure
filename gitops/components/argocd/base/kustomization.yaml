@@ -6,6 +6,7 @@ resources:
   - platform-external-secrets.appproject.yaml
   - platform-k8s-monitoring.appproject.yaml
   - platform-kube-state-metrics.appproject.yaml
+  - platform-kubelet-csr-approver.appproject.yaml
   - platform-metallb.appproject.yaml
   - platform-metallb-config.appproject.yaml
   - platform-metrics-server.appproject.yaml

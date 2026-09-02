@@ -1,0 +1,15 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: ingress
+  namespace: metallb-system
+  labels:
+    app.kubernetes.io/name: metallb
+    app.kubernetes.io/part-of: cluster-networking
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-addon
+spec:
+  addresses:
+    - 10.10.80.200-10.10.80.249
+  autoAssign: true
+  avoidBuggyIPs: true

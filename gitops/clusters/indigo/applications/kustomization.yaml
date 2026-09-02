@@ -7,6 +7,10 @@ resources:
   - cluster-foundation.yaml
   - external-secrets.yaml
   - external-secrets-config.yaml
+  - kubelet-csr-approver.yaml
+  - metallb.yaml
+  - metallb-config.yaml
+  - metrics-server.yaml
 
 labels:
   - pairs:

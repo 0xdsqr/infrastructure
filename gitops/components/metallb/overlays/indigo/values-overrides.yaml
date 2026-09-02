@@ -1,0 +1,15 @@
+# Indigo runs MetalLB as the sole controller for explicitly classed LoadBalancer Services.
+# L2 speakers stay on the three workers so north/south traffic does not land on control-plane nodes.
+loadBalancerClass: metallb.io/metallb
+
+controller:
+  priorityClassName: system-cluster-critical
+
+speaker:
+  tolerateMaster: false
+  priorityClassName: system-node-critical
+
+networkpolicies:
+  enabled: true
+  defaultDeny: true
+  apiPort: 6443

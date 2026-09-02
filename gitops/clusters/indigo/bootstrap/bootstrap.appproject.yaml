@@ -25,6 +25,9 @@ spec:
     - group: ""
       kind: Namespace
       name: external-secrets
+    - group: ""
+      kind: Namespace
+      name: metallb-system
     - group: rbac.authorization.k8s.io
       kind: ClusterRoleBinding
       name: indigo-platform-admins

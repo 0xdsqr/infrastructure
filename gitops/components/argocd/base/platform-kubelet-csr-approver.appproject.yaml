@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-kubelet-csr-approver
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: platform-kubelet-csr-approver
+    app.kubernetes.io/part-of: dsqr-gitops
+    platform.dsqr.dev/tier: platform
+spec:
+  description: Strict approval of kubelet serving-certificate CSRs
+  sourceRepos:
+    - https://postfinance.github.io/kubelet-csr-approver
+    - https://github.com/0xdsqr/infrastructure.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: kube-system
+  clusterResourceWhitelist:
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: kubelet-csr-approver
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: kubelet-csr-approver
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ServiceAccount
+    - group: apps
+      kind: Deployment
+    - group: batch
+      kind: Job
