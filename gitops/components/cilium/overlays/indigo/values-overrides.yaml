@@ -18,6 +18,13 @@ l7Proxy: true
 
 envoy:
   enabled: true
+  # Cilium's default source-address preservation collides with host-level
+  # Tailscale policy routing for Gateway upstream connections. Use the
+  # Gateway-safe translated source address while retaining X-Forwarded-For.
+  useOriginalSourceAddress: false
+  # The Envoy DaemonSet must restart when its shared Cilium configuration
+  # changes so this compatibility setting takes effect everywhere.
+  rollOutPods: true
 
 gatewayAPI:
   enabled: true
