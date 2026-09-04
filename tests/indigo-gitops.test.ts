@@ -272,6 +272,7 @@ test("Indigo installs Envoy Gateway extension CRDs and an HA control plane", asy
   assert.match(application, /name: crds\.gatewayAPI\.enabled\n\s+value: "false"/)
   assert.match(application, /name: crds\.envoyGateway\.enabled\n\s+value: "true"/)
   assert.match(application, /skipCrds: true/)
+  assert.match(application, /DisableClientSideApplyMigration=true/)
   assert.match(application, /ServerSideApply=true/)
   assert.match(values, /deployment:\n\s+replicas: 2/)
   assert.match(values, /control-plane: envoy-gateway/)
