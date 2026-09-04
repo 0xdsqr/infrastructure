@@ -390,6 +390,7 @@ const pkiIssuers = {
     policyName: "homelab-pki-gateway-caddy-home-arpa",
     allowedDomains: [
       "argocd.hub-a.home.arpa",
+      "argocd.indigo.home.arpa",
       "exo.home.arpa",
       "exo.service.home.arpa",
       "grafana.home.arpa",
