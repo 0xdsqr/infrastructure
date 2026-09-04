@@ -18,6 +18,12 @@ spec:
   destinations:
     - server: https://kubernetes.default.svc
       namespace: gateway-system
+  clusterResourceWhitelist:
+    - group: gateway.networking.k8s.io
+      kind: GatewayClass
+      name: cilium-metallb
   namespaceResourceWhitelist:
+    - group: cilium.io
+      kind: CiliumGatewayClassConfig
     - group: gateway.networking.k8s.io
       kind: Gateway

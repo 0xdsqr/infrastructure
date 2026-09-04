@@ -11,7 +11,7 @@ metadata:
     platform.dsqr.dev/owner: platform
     platform.dsqr.dev/tier: platform-addon
 spec:
-  gatewayClassName: cilium
+  gatewayClassName: cilium-metallb
   infrastructure:
     annotations:
       metallb.io/address-pool: gateway

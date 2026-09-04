@@ -100,6 +100,8 @@ test("Indigo shared Gateway is generated, HTTPS-only, and restricted by namespac
     application,
     gateway,
     gatewayOverlay,
+    gatewayClass,
+    gatewayClassConfig,
     project,
     secretsProjectOverlay,
     issuerServiceAccount,
@@ -111,6 +113,8 @@ test("Indigo shared Gateway is generated, HTTPS-only, and restricted by namespac
       read("gitops/clusters/indigo/applications/gateway.yaml"),
       read("gitops/components/gateway/base/shared.gateway.yaml"),
       read("gitops/components/gateway/overlays/indigo/kustomization.yaml"),
+      read("gitops/components/gateway/base/cilium-metallb.gatewayclass.yaml"),
+      read("gitops/components/gateway/base/cilium-metallb.gatewayclassconfig.yaml"),
       read("gitops/components/argocd/overlays/indigo/platform-gateway.appproject.yaml"),
       read("gitops/components/argocd/overlays/indigo/kustomization.yaml"),
       read(
@@ -131,8 +135,19 @@ test("Indigo shared Gateway is generated, HTTPS-only, and restricted by namespac
   assert.match(application, /path: gitops\/components\/gateway\/overlays\/indigo/)
   assert.match(application, /enabled: false/)
   assert.match(project, /namespace: gateway-system/)
+  assert.match(project, /kind: GatewayClass\n\s+name: cilium-metallb/)
+  assert.match(project, /kind: CiliumGatewayClassConfig/)
   assert.match(project, /kind: Gateway/)
-  assert.match(gateway, /gatewayClassName: cilium/)
+  assert.match(gatewayClass, /name: cilium-metallb/)
+  assert.match(gatewayClass, /controllerName: io\.cilium\/gateway-controller/)
+  assert.match(gatewayClass, /kind: CiliumGatewayClassConfig/)
+  assert.match(gatewayClass, /namespace: gateway-system/)
+  assert.match(gatewayClass, /argocd\.argoproj\.io\/sync-wave: "1"/)
+  assert.match(gatewayClassConfig, /kind: CiliumGatewayClassConfig/)
+  assert.match(gatewayClassConfig, /namespace: gateway-system/)
+  assert.match(gatewayClassConfig, /loadBalancerClass: metallb\.io\/metallb/)
+  assert.match(gatewayClassConfig, /argocd\.argoproj\.io\/sync-wave: "0"/)
+  assert.match(gateway, /gatewayClassName: cilium-metallb/)
   assert.match(gateway, /protocol: HTTPS/)
   assert.doesNotMatch(gateway, /protocol: HTTP$/m)
   assert.match(gateway, /metallb\.io\/address-pool: gateway/)
