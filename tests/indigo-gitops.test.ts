@@ -84,11 +84,13 @@ test("Indigo MetalLB is isolated to its reserved pool and worker nodes", async (
 })
 
 test("Indigo explicitly enables Cilium's Gateway API and standalone Envoy data plane", async () => {
-  const [values, project] = await Promise.all([
+  const [commonValues, values, project] = await Promise.all([
+    read("gitops/components/cilium/base/values-common.yaml"),
     read("gitops/components/cilium/overlays/indigo/values-overrides.yaml"),
     read("gitops/components/argocd/base/platform-cilium.appproject.yaml"),
   ])
 
+  assert.match(commonValues, /^operator:\n(?:.*\n)*?  rollOutPods: true$/m)
   assert.match(values, /^l7Proxy: true$/m)
   assert.match(values, /^envoy:\n  enabled: true$/m)
   assert.match(values, /^gatewayAPI:\n  enabled: true$/m)

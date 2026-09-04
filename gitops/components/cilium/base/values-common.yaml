@@ -11,3 +11,7 @@ rollOutCiliumPods: true
 
 operator:
   replicas: 1
+  # Restart the operator when its shared Cilium ConfigMap changes. The
+  # operator owns CRD registration for features such as Gateway API, so it
+  # must observe those settings before agents depending on the CRDs roll.
+  rollOutPods: true
