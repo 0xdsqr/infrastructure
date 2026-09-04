@@ -203,3 +203,38 @@ test("public Argo webhook exposure is authenticated and route-scoped", () => {
     originServerName: "argocd-hooks-hub-a.dsqr.dev",
   })
 })
+
+test("Indigo Argo webhook uses the private Gateway identity and an exact public route", () => {
+  const cloudflareRule = cloudflare.ingressRules.find(
+    (rule) => rule.hostname === "argocd-hooks-indigo.dsqr.dev",
+  )
+  const route = readFileSync(
+    new URL(
+      "../gitops/components/argocd/access/overlays/indigo/github-webhook.httproute.yaml",
+      import.meta.url,
+    ),
+    "utf8",
+  )
+  const externalSecret = readFileSync(
+    new URL(
+      "../gitops/components/argocd/access/overlays/indigo/github-webhook.externalsecret.yaml",
+      import.meta.url,
+    ),
+    "utf8",
+  )
+
+  assert.equal(cloudflareRule?.service, "https://10.10.80.200")
+  assert.deepEqual(cloudflareRule?.originRequest, {
+    http2Origin: false,
+    httpHostHeader: "argocd-hooks-indigo.dsqr.dev",
+    originServerName: "argocd.indigo.home.arpa",
+  })
+  assert.ok(vault.pkiIssuers.indigoGatewayOrigin.allowedDomains.includes("argocd.indigo.home.arpa"))
+  assert.match(route, /method: POST/)
+  assert.match(route, /type: Exact\n\s+value: \/api\/webhook/)
+  assert.match(
+    externalSecret,
+    /key: dsqr-labs\/clusters\/indigo\/platform\/argocd\/webhooks\/github/,
+  )
+  assert.doesNotMatch(externalSecret, /homelab/)
+})

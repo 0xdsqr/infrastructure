@@ -87,6 +87,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     [kubernetesAuthBackendConfigToken, "kubernetes-auth-backend-config-indigo"],
     [policyToken, "external-secrets-token-self-policy"],
     [policyToken, "external-secrets-token-self-policy-indigo"],
+    [policyToken, "external-secrets-policy-indigo-argocd-github-webhook"],
     [policyToken, "external-secrets-policy-indigo-bootstrap-smoke-test"],
     ...Object.keys(externalPolicyNames).map(
       (key) => [policyToken, `external-secrets-policy-${key}`] as const,
@@ -167,6 +168,9 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     protect: true,
     dependsOn: ["kubernetes-auth-backend-indigo"],
   })
+  lifecycle("external-secrets-policy-indigo-argocd-github-webhook", {
+    dependsOn: ["kv"],
+  })
   lifecycle("external-secrets-policy-indigo-bootstrap-smoke-test", {
     dependsOn: ["kv"],
   })
@@ -175,6 +179,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     protect: true,
     dependsOn: [
       "kubernetes-auth-backend-config-indigo",
+      "external-secrets-policy-indigo-argocd-github-webhook",
       "external-secrets-policy-indigo-bootstrap-smoke-test",
       "external-secrets-token-self-policy-indigo",
     ],
@@ -288,6 +293,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   assert.equal(indigoRole.inputs.roleName, "indigo-external-secrets")
   assert.equal(indigoRole.inputs.tokenNoDefaultPolicy, true)
   assert.deepEqual(indigoRole.inputs.tokenPolicies, [
+    "indigo-external-secrets-argocd-github-webhook",
     "indigo-external-secrets-bootstrap-smoke-test",
     "indigo-external-secrets-token-self",
   ])

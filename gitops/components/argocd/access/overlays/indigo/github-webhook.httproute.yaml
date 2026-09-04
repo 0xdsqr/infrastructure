@@ -1,0 +1,33 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: argocd-github-webhook
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: argocd-github-webhook
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: argocd
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-route
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: shared
+      namespace: gateway-system
+      sectionName: https
+  hostnames:
+    - argocd-hooks-indigo.dsqr.dev
+  rules:
+    - matches:
+        - method: POST
+          path:
+            type: Exact
+            value: /api/webhook
+      backendRefs:
+        - group: ""
+          kind: Service
+          name: argocd-server
+          port: 80

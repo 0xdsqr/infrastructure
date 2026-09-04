@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - ../../base
+  - platform-argocd-access.appproject.yaml
   - platform-gateway.appproject.yaml
 
 labels:

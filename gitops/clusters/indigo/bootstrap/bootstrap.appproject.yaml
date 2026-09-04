@@ -24,6 +24,9 @@ spec:
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
+      name: argocd
+    - group: ""
+      kind: Namespace
       name: external-secrets
     - group: ""
       kind: Namespace

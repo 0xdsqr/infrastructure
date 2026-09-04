@@ -1,0 +1,27 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-argocd-access
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: platform-argocd-access
+    app.kubernetes.io/part-of: dsqr-gitops
+    platform.dsqr.dev/tier: platform
+spec:
+  description: Private Argo CD UI and authenticated public webhook access
+  sourceRepos:
+    - https://github.com/0xdsqr/infrastructure.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: argocd
+  namespaceResourceWhitelist:
+    - group: cilium.io
+      kind: CiliumNetworkPolicy
+    - group: external-secrets.io
+      kind: ExternalSecret
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute

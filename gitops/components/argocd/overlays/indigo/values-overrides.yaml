@@ -5,8 +5,11 @@ global:
 configs:
   cm:
     webhook.maxPayloadSizeMB: "5"
+  secret:
+    githubSecret: "$argocd-github-webhook:secret"
 
 server:
-  # Public and internal ingress are introduced deliberately in a later phase.
+  # Indigo uses the separately managed Cilium Gateway API routes; never render
+  # the chart's legacy Ingress resource.
   ingress:
     enabled: false

@@ -8,6 +8,7 @@ test("Indigo platform add-ons are generated from shared Application templates", 
   const kustomization = await read("gitops/clusters/indigo/applications/kustomization.yaml")
 
   for (const application of [
+    "argocd-access",
     "gateway",
     "gateway-api",
     "kubelet-csr-approver",
@@ -60,7 +61,11 @@ test("Indigo foundation declares only current platform namespaces", async () => 
   )
   const names = [...namespaces.matchAll(/^  name: (.+)$/gm)].map((match) => match[1])
 
-  assert.deepEqual(names, ["external-secrets", "gateway-system", "metallb-system"])
+  assert.deepEqual(names, ["argocd", "external-secrets", "gateway-system", "metallb-system"])
+  assert.match(
+    namespaces,
+    /name: argocd[\s\S]+platform\.dsqr\.dev\/gateway-access: shared/,
+  )
   assert.match(
     namespaces,
     /name: gateway-system[\s\S]+pod-security\.kubernetes\.io\/enforce: baseline/,
@@ -168,6 +173,66 @@ test("Indigo shared Gateway is generated, HTTPS-only, and restricted by namespac
   assert.match(externalSecret, /name: gateway-origin-tls/)
   assert.match(externalSecret, /type: kubernetes\.io\/tls/)
   assert.match(externalSecret, /argocd\.argoproj\.io\/sync-wave: "3"/)
+})
+
+test("Indigo Argo access separates the private UI from the authenticated public webhook", async () => {
+  const [
+    application,
+    project,
+    overlay,
+    uiRoute,
+    webhookRoute,
+    webhookSecret,
+    policy,
+    values,
+    bootstrapProject,
+  ] = await Promise.all([
+    read("gitops/clusters/indigo/applications/argocd-access.yaml"),
+    read("gitops/components/argocd/overlays/indigo/platform-argocd-access.appproject.yaml"),
+    read("gitops/components/argocd/access/overlays/indigo/kustomization.yaml"),
+    read("gitops/components/argocd/access/overlays/indigo/ui.httproute.yaml"),
+    read("gitops/components/argocd/access/overlays/indigo/github-webhook.httproute.yaml"),
+    read("gitops/components/argocd/access/overlays/indigo/github-webhook.externalsecret.yaml"),
+    read("gitops/components/argocd/access/base/gateway-ingress.ciliumnetworkpolicy.yaml"),
+    read("gitops/components/argocd/overlays/indigo/values-overrides.yaml"),
+    read("gitops/clusters/indigo/bootstrap/bootstrap.appproject.yaml"),
+  ])
+
+  assert.match(application, /project: platform-argocd-access/)
+  assert.match(application, /path: gitops\/components\/argocd\/access\/overlays\/indigo/)
+  assert.match(application, /argocd\.argoproj\.io\/sync-wave: "5"/)
+  assert.match(application, /enabled: false/)
+  assert.match(project, /namespace: argocd/)
+  assert.match(project, /kind: CiliumNetworkPolicy/)
+  assert.match(project, /kind: ExternalSecret/)
+  assert.match(project, /kind: HTTPRoute/)
+  assert.doesNotMatch(project, /kind: "\*"|name: "\*"/)
+
+  for (const resource of [
+    "github-webhook.externalsecret.yaml",
+    "github-webhook.httproute.yaml",
+    "ui.httproute.yaml",
+  ]) {
+    assert.match(overlay, new RegExp(`  - ${resource.replaceAll(".", "\\.")}`))
+  }
+
+  assert.match(uiRoute, /hostnames:\n\s+- argocd\.indigo\.home\.arpa/)
+  assert.match(uiRoute, /name: shared\n\s+namespace: gateway-system\n\s+sectionName: https/)
+  assert.match(uiRoute, /name: argocd-server\n\s+port: 80/)
+  assert.match(webhookRoute, /hostnames:\n\s+- argocd-hooks-indigo\.dsqr\.dev/)
+  assert.match(webhookRoute, /method: POST/)
+  assert.match(webhookRoute, /type: Exact\n\s+value: \/api\/webhook/)
+  assert.doesNotMatch(webhookRoute, /PathPrefix/)
+  assert.match(
+    webhookSecret,
+    /key: dsqr-labs\/clusters\/indigo\/platform\/argocd\/webhooks\/github/,
+  )
+  assert.match(webhookSecret, /deletionPolicy: Retain/)
+  assert.match(policy, /fromEntities:\n\s+- ingress/)
+  assert.match(policy, /port: "8080"/)
+  assert.doesNotMatch(policy, /fromEntities:\n\s+- world/)
+  assert.match(values, /githubSecret: "\$argocd-github-webhook:secret"/)
+  assert.match(bootstrapProject, /kind: Namespace\n\s+name: argocd/)
 })
 
 test("Indigo explicitly enables Cilium's Gateway API and standalone Envoy data plane", async () => {

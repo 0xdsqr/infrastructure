@@ -1,0 +1,25 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: argocd-allow-gateway-ingress
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/name: argocd-allow-gateway-ingress
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: argocd
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-policy
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+      app.kubernetes.io/name: argocd-server
+  ingress:
+    - fromEntities:
+        - ingress
+      toPorts:
+        - ports:
+            - port: "8080"
+              protocol: TCP

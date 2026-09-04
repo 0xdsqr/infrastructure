@@ -89,6 +89,16 @@ export const cloudflare = {
   ],
   ingressRules: [
     {
+      hostname: "argocd-hooks-indigo.dsqr.dev",
+      zone: "dsqrDev",
+      service: "https://10.10.80.200",
+      originRequest: {
+        http2Origin: false,
+        httpHostHeader: "argocd-hooks-indigo.dsqr.dev",
+        originServerName: "argocd.indigo.home.arpa",
+      },
+    },
+    {
       hostname: "argocd-hooks-hub-a.dsqr.dev",
       zone: "dsqrDev",
       service: "https://10.10.30.200",

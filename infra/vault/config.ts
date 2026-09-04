@@ -177,6 +177,11 @@ const secretPaths = {
     description: "Harmless validation data for the Indigo External Secrets bootstrap path.",
     fields: ["message"],
   },
+  indigoArgocdGithubWebhook: {
+    path: "dsqr-labs/clusters/indigo/platform/argocd/webhooks/github",
+    description: "Dedicated HMAC secret for authenticated GitHub webhooks to Indigo Argo CD.",
+    fields: ["secret"],
+  },
 } satisfies VaultSecretPathInventory
 
 const humanAdminPolicy = {
@@ -261,6 +266,11 @@ const externalSecretsKubernetesAuthBoundaries = {
       disableLocalCaJwt: true,
     },
     policies: {
+      argocdGithubWebhook: {
+        name: "indigo-external-secrets-argocd-github-webhook",
+        readPaths: [secretPaths.indigoArgocdGithubWebhook.path],
+        resourceName: "external-secrets-policy-indigo-argocd-github-webhook",
+      },
       bootstrapSmokeTest: {
         name: "indigo-external-secrets-bootstrap-smoke-test",
         readPaths: [secretPaths.indigoBootstrapSmokeTest.path],
