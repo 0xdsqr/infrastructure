@@ -34,6 +34,7 @@ const resourceFinalizer = "resources-finalizer.argocd.argoproj.io"
 const obsoleteGitOpsPattern =
   /gitops\/manifests|CreateNamespace=true|managedNamespaceMetadata|targetRevision: master/
 const obsoleteApplicationPattern = /CreateNamespace=true|managedNamespaceMetadata|homelab\.dev\//
+const immutableGitCommitPattern = /^[0-9a-f]{40}$/i
 
 const stringAt = (record: YamlRecord | undefined, ...path: readonly string[]) =>
   asString(nestedValue(record, ...path))
@@ -329,9 +330,17 @@ const validateApplication = Effect.fn("GitOps.validateApplication")(function* (o
     options.applicationFile,
   )
   const ambiguousGitSource = sources.find(
-    (source) =>
-      stringAt(source, "repoURL")?.startsWith("https://github.com/") === true &&
-      stringAt(source, "targetRevision") !== "refs/heads/master",
+    (source) => {
+      if (stringAt(source, "repoURL")?.startsWith("https://github.com/") !== true) {
+        return false
+      }
+
+      const targetRevision = stringAt(source, "targetRevision")
+      return (
+        targetRevision !== "refs/heads/master" &&
+        !immutableGitCommitPattern.test(targetRevision ?? "")
+      )
+    },
   )
   yield* validate(
     ambiguousGitSource === undefined,
