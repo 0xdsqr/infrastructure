@@ -50,3 +50,35 @@ test("native inventory cannot silently enable destructive deletion policies", ()
   owner.spec.syncPolicy.preserveResourcesOnDeletion = false
   assert.throws(() => previewApplicationSet(owner), /preserve/)
 })
+
+test("native sync approval follows lifecycle, not hardcoded Application names", () => {
+  const owner = applicationSet()
+  const inventory = owner.spec.generators[0].matrix.generators[1].list.elements
+  for (const component of inventory) component.name = `future-${component.name}`
+  for (const app of previewApplicationSet(owner)) {
+    const metadata = app.metadata as { labels: Record<string, string> }
+    const spec = app.spec as { syncPolicy: { automated: unknown } }
+    const automatic = metadata.labels["platform.dsqr.dev/lifecycle"] !== "controller"
+    assert.deepEqual(spec.syncPolicy.automated, {
+      enabled: automatic,
+      selfHeal: automatic,
+      prune: automatic,
+      allowEmpty: false,
+    })
+  }
+})
+
+test("every managed Indigo namespace requires prune and deletion confirmation", () => {
+  const resources = parseAllDocuments(
+    execFileSync("kubectl", ["kustomize", "gitops/components/cluster-foundation/overlays/indigo"], {
+      encoding: "utf8",
+    }),
+  ).map((document) => document.toJSON())
+  const namespaces = resources.filter((resource) => resource.kind === "Namespace")
+  assert.equal(namespaces.length, 5)
+  for (const namespace of namespaces) {
+    const options = namespace.metadata.annotations["argocd.argoproj.io/sync-options"].split(",")
+    assert.ok(options.includes("Prune=confirm"), namespace.metadata.name)
+    assert.ok(options.includes("Delete=confirm"), namespace.metadata.name)
+  }
+})

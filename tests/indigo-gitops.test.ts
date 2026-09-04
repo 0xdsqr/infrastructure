@@ -28,7 +28,7 @@ const read = (path: string) => {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8")
 }
 
-test("Indigo steady-state policy heals drift without automatically deleting controller APIs", () => {
+test("Indigo requires controller sync approval while configuration heals automatically", () => {
   const render = renderApplications
   const applications = render("indigo")
   const reviewedPrune = new Set([
@@ -52,8 +52,17 @@ test("Indigo steady-state policy heals drift without automatically deleting cont
       reviewedPrune.has(application.metadata.name),
       application.metadata.name,
     )
-    assert.equal(application.spec.syncPolicy.automated.enabled, true, application.metadata.name)
-    assert.equal(application.spec.syncPolicy.automated.selfHeal, true, application.metadata.name)
+    assert.equal(
+      application.spec.syncPolicy.automated.enabled,
+      lifecycle !== "controller",
+      application.metadata.name,
+    )
+    assert.equal(
+      application.spec.syncPolicy.automated.selfHeal,
+      lifecycle !== "controller",
+      application.metadata.name,
+    )
+    assert.equal(application.spec.syncPolicy.automated.allowEmpty, false, application.metadata.name)
     assert.equal(
       application.spec.syncPolicy.automated.prune,
       !reviewedPrune.has(application.metadata.name),
@@ -200,7 +209,7 @@ test("Indigo pins the Gateway API Standard Channel and its exact cluster permiss
   assert.match(application, /targetRevision: 8bb74df00e56ec8f944d48c25e6c1c9c2f6848e3/)
   assert.match(application, /path: config\/crd\/standard/)
   assert.match(application, /- ServerSideApply=true/)
-  assert.match(application, /enabled: true/)
+  assert.match(application, /enabled: false/)
 
   for (const resource of [
     "backendtlspolicies",

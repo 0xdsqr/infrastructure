@@ -88,9 +88,12 @@ spec:
       {{- end }}
       syncPolicy:
         automated:
-          enabled: true
-          selfHeal: true
+          # Controller changes require a deliberate sync, including chart values.
+          # Kubernetes still reconciles workloads; Argo drift repair is manual.
+          enabled: {{ ne .lifecycle "controller" }}
+          selfHeal: {{ ne .lifecycle "controller" }}
           prune: {{ ne .lifecycle "controller" }}
+          allowEmpty: false
         retry:
           limit: {{ if eq .retryProfile "extended" }}5{{ else }}3{{ end }}
           refresh: true
