@@ -9,6 +9,7 @@ import {
   listFiles,
   mapFileSystemError,
   nestedValue,
+  parseYamlDocuments,
   readText,
   readYamlRecord,
   renderKustomization,
@@ -23,10 +24,10 @@ import {
 export const gitOpsGenerateUsage = `Usage:
   gitops-generate [--check] [--repo-root PATH]
 
-Render each cluster's declared Argo CD Applications from
-gitops/templates/applications. Connection and repository settings come from
-the cluster bootstrap Application. Every cluster is validated in a staging
-tree before generated files are changed.
+Render legacy clusters' Argo CD Applications from gitops/templates/applications.
+Native ApplicationSet clusters are validated and left untouched; their controller
+owns generation. Connection and repository settings come from the cluster
+bootstrap Application. All changes are validated in a staging tree first.
 
 Options:
   --check      fail when committed output differs from a clean render
@@ -222,6 +223,22 @@ const renderCluster = Effect.fn("GitOps.generate.renderCluster")(function* (
   const root = yield* validateRootApplication(cluster, rootApplicationPath)
   const applicationsKustomization = yield* readYamlRecord(applicationsKustomizationPath)
   const resources = asArray(applicationsKustomization.resources) ?? []
+  if (resources.some((resource) => typeof resource === "string" && resource.includes("/"))) {
+    const declared = yield* parseYamlDocuments(
+      applicationsDirectory,
+      yield* renderKustomization(applicationsDirectory),
+    )
+    yield* validate(
+      declared.length > 0 && declared.every((resource) => resource.kind === "ApplicationSet"),
+      `Cluster ${cluster} cannot mix legacy generated Applications with native ApplicationSets`,
+    )
+    yield* validate(
+      (yield* generatedApplicationFiles(applicationsDirectory)).length === 0,
+      `Cluster ${cluster} still contains retired generated Application files`,
+    )
+    yield* renderKustomization(bootstrapDirectory)
+    return
+  }
   yield* validate(
     resources.length > 0,
     `Cluster ${cluster} must declare at least one Application`,

@@ -1,0 +1,337 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  generators:
+    - matrix:
+        generators:
+          - list:
+              elements:
+                - cluster: indigo
+                  environment: production
+                  argoNamespace: argocd
+                  server: https://kubernetes.default.svc
+                  repoURL: https://github.com/0xdsqr/infrastructure.git
+                  revision: refs/heads/master
+          - list:
+              elements:
+                - name: argocd
+                  namespace: argocd
+                  project: platform-argocd
+                  partOf: argocd
+                  tier: gitops
+                  lifecycle: controller
+                  version: ""
+                  wave: "2"
+                  component: argocd
+                  remoteSource: {}
+                  charts:
+                    - repoURL: ghcr.io/argoproj/argo-helm
+                      chart: argo-cd
+                      revision: 10.2.1
+                      releaseName: argocd
+                      skipCrds: false
+                      parameters: []
+                      useValues: true
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                    - DisableClientSideApplyMigration=true
+                    - ServerSideApply=true
+                  retryProfile: standard
+                - name: argocd-access
+                  namespace: argocd
+                  project: platform-argocd-access
+                  partOf: argocd
+                  tier: platform-addon
+                  lifecycle: configuration
+                  version: ""
+                  wave: "5"
+                  component: argocd/access
+                  remoteSource: {}
+                  charts: []
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                    - ServerSideApply=true
+                    - PruneLast=true
+                  retryProfile: standard
+                - name: argocd-config
+                  namespace: argocd
+                  project: bootstrap
+                  partOf: argocd
+                  tier: gitops
+                  lifecycle: foundation
+                  version: ""
+                  wave: "1"
+                  component: argocd
+                  remoteSource: {}
+                  charts: []
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                    - PruneLast=true
+                  retryProfile: extended
+                - name: cilium
+                  namespace: kube-system
+                  project: platform-cilium
+                  partOf: cluster-networking
+                  tier: platform-addon
+                  lifecycle: controller
+                  version: 1.20.1
+                  wave: "2"
+                  component: cilium
+                  remoteSource: {}
+                  charts:
+                    - repoURL: https://helm.cilium.io/
+                      chart: cilium
+                      revision: 1.20.1
+                      releaseName: cilium
+                      skipCrds: false
+                      parameters: []
+                      useValues: true
+                  ignoreDifferences:
+                    - jsonPointers:
+                        - /data
+                      kind: Secret
+                      name: cilium-ca
+                      namespace: kube-system
+                    - jsonPointers:
+                        - /data
+                      kind: Secret
+                      name: hubble-server-certs
+                      namespace: kube-system
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                    - RespectIgnoreDifferences=true
+                  retryProfile: standard
+                - name: cluster-foundation
+                  namespace: argocd
+                  project: bootstrap
+                  partOf: dsqr-gitops
+                  tier: gitops
+                  lifecycle: foundation
+                  version: ""
+                  wave: "0"
+                  component: cluster-foundation
+                  remoteSource: {}
+                  charts: []
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                    - PruneLast=true
+                  retryProfile: extended
+                - name: envoy-gateway
+                  namespace: envoy-gateway-system
+                  project: platform-envoy-gateway
+                  partOf: cluster-ingress
+                  tier: platform-addon
+                  lifecycle: controller
+                  version: 1.9.1
+                  wave: "3"
+                  component: envoy-gateway
+                  remoteSource: {}
+                  charts:
+                    - repoURL: docker.io/envoyproxy
+                      chart: gateway-crds-helm
+                      revision: v1.9.1
+                      releaseName: envoy-gateway-crds
+                      skipCrds: false
+                      parameters:
+                        - name: crds.gatewayAPI.enabled
+                          value: "false"
+                        - name: crds.envoyGateway.enabled
+                          value: "true"
+                      useValues: false
+                    - repoURL: docker.io/envoyproxy
+                      chart: gateway-helm
+                      revision: v1.9.1
+                      releaseName: envoy-gateway
+                      skipCrds: true
+                      parameters: []
+                      useValues: true
+                  ignoreDifferences:
+                    - group: admissionregistration.k8s.io
+                      jqPathExpressions:
+                        - .webhooks[]?.clientConfig.caBundle
+                      kind: MutatingWebhookConfiguration
+                      name: envoy-gateway-topology-injector.envoy-gateway-system
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                    - RespectIgnoreDifferences=true
+                    - DisableClientSideApplyMigration=true
+                    - ServerSideApply=true
+                  retryProfile: standard
+                - name: external-secrets
+                  namespace: external-secrets
+                  project: platform-external-secrets
+                  partOf: cluster-secrets
+                  tier: platform-addon
+                  lifecycle: controller
+                  version: 2.8.0
+                  wave: "2"
+                  component: external-secrets
+                  remoteSource: {}
+                  charts:
+                    - repoURL: https://charts.external-secrets.io
+                      chart: external-secrets
+                      revision: 2.8.0
+                      releaseName: external-secrets
+                      skipCrds: false
+                      parameters: []
+                      useValues: true
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                    - ServerSideApply=true
+                  retryProfile: standard
+                - name: external-secrets-config
+                  namespace: external-secrets
+                  project: secrets
+                  partOf: cluster-secrets
+                  tier: platform-addon
+                  lifecycle: configuration
+                  version: ""
+                  wave: "3"
+                  component: external-secrets-config
+                  remoteSource: {}
+                  charts: []
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                    - PruneLast=true
+                  retryProfile: standard
+                - name: gateway
+                  namespace: gateway-system
+                  project: platform-gateway
+                  partOf: cluster-ingress
+                  tier: platform-addon
+                  lifecycle: configuration
+                  version: ""
+                  wave: "4"
+                  component: gateway
+                  remoteSource: {}
+                  charts: []
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                    - ServerSideApply=true
+                    - PruneLast=true
+                  retryProfile: standard
+                - name: gateway-api
+                  namespace: kube-system
+                  project: platform-gateway-api
+                  partOf: cluster-networking
+                  tier: platform-addon
+                  lifecycle: controller
+                  version: 1.6.1
+                  wave: "1"
+                  component: gateway-api
+                  remoteSource:
+                    path: config/crd/standard
+                    repoURL: https://github.com/kubernetes-sigs/gateway-api.git
+                    targetRevision: 8bb74df00e56ec8f944d48c25e6c1c9c2f6848e3
+                  charts: []
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                    - ServerSideApply=true
+                  retryProfile: standard
+                - name: kubelet-csr-approver
+                  namespace: kube-system
+                  project: platform-kubelet-csr-approver
+                  partOf: cluster-security
+                  tier: platform-addon
+                  lifecycle: controller
+                  version: 1.2.14
+                  wave: "1"
+                  component: kubelet-csr-approver
+                  remoteSource: {}
+                  charts:
+                    - repoURL: https://postfinance.github.io/kubelet-csr-approver
+                      chart: kubelet-csr-approver
+                      revision: 1.2.14
+                      releaseName: kubelet-csr-approver
+                      skipCrds: false
+                      parameters: []
+                      useValues: true
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                  retryProfile: standard
+                - name: metallb
+                  namespace: metallb-system
+                  project: platform-metallb
+                  partOf: cluster-networking
+                  tier: platform-addon
+                  lifecycle: controller
+                  version: 0.16.1
+                  wave: "2"
+                  component: metallb
+                  remoteSource: {}
+                  charts:
+                    - repoURL: https://metallb.github.io/metallb
+                      chart: metallb
+                      revision: 0.16.1
+                      releaseName: metallb
+                      skipCrds: false
+                      parameters: []
+                      useValues: true
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                  retryProfile: standard
+                - name: metallb-config
+                  namespace: metallb-system
+                  project: platform-metallb-config
+                  partOf: cluster-networking
+                  tier: platform-addon
+                  lifecycle: configuration
+                  version: ""
+                  wave: "3"
+                  component: metallb
+                  remoteSource: {}
+                  charts: []
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                    - PruneLast=true
+                  retryProfile: extended
+                - name: metrics-server
+                  namespace: kube-system
+                  project: platform-metrics-server
+                  partOf: cluster-observability
+                  tier: platform-addon
+                  lifecycle: controller
+                  version: 0.8.1
+                  wave: "2"
+                  component: metrics-server
+                  remoteSource: {}
+                  charts:
+                    - repoURL: https://kubernetes-sigs.github.io/metrics-server/
+                      chart: metrics-server
+                      revision: 3.13.1
+                      releaseName: metrics-server
+                      skipCrds: false
+                      parameters: []
+                      useValues: true
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                  retryProfile: standard

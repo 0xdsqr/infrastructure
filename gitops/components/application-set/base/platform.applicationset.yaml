@@ -1,0 +1,101 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: platform
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=confirm,Delete=confirm
+spec:
+  goTemplate: true
+  goTemplateOptions: [missingkey=error]
+  # Overlays provide explicit cluster and component inventories. No discovery
+  # of arbitrary repositories or clusters, and no custom runtime generator.
+  generators:
+    - matrix:
+        generators:
+          - list:
+              elements: []
+          - list:
+              elements: []
+  syncPolicy:
+    applicationsSync: create-update
+    preserveResourcesOnDeletion: true
+  template:
+    metadata:
+      name: '{{ .name }}'
+      namespace: '{{ .argoNamespace }}'
+      annotations:
+        argocd.argoproj.io/sync-wave: '{{ .wave }}'
+      labels:
+        app.kubernetes.io/instance: '{{ .name }}'
+        app.kubernetes.io/managed-by: argocd
+        app.kubernetes.io/name: '{{ .name }}'
+        app.kubernetes.io/part-of: '{{ .partOf }}'
+        platform.dsqr.dev/owner: platform
+        platform.dsqr.dev/lifecycle: '{{ .lifecycle }}'
+        platform.dsqr.dev/tier: '{{ .tier }}'
+        platform.dsqr.dev/cluster: '{{ .cluster }}'
+        platform.dsqr.dev/environment: '{{ .environment }}'
+    spec:
+      project: '{{ .project }}'
+      destination:
+        server: '{{ .server }}'
+        namespace: '{{ .namespace }}'
+  templatePatch: |
+    {{- if .version }}
+    metadata:
+      labels:
+        app.kubernetes.io/version: {{ .version | toJson }}
+    {{- end }}
+    spec:
+      {{- if .charts }}
+      sources:
+        {{- range .charts }}
+        - repoURL: {{ .repoURL | toJson }}
+          chart: {{ .chart | toJson }}
+          targetRevision: {{ .revision | toJson }}
+          helm:
+            releaseName: {{ .releaseName | toJson }}
+            {{- if .skipCrds }}
+            skipCrds: true
+            {{- end }}
+            {{- if .parameters }}
+            parameters: {{ .parameters | toJson }}
+            {{- end }}
+            {{- if .useValues }}
+            valueFiles:
+              - '$values/gitops/components/{{ $.component }}/base/values-common.yaml'
+              - '$values/gitops/components/{{ $.component }}/overlays/{{ $.cluster }}/values-overrides.yaml'
+            {{- end }}
+        {{- end }}
+        - repoURL: {{ .repoURL | toJson }}
+          targetRevision: {{ .revision | toJson }}
+          ref: values
+      {{- else }}
+      source:
+        {{- if .remoteSource }}
+        repoURL: {{ .remoteSource.repoURL | toJson }}
+        targetRevision: {{ .remoteSource.targetRevision | toJson }}
+        path: {{ .remoteSource.path | toJson }}
+        {{- else }}
+        repoURL: {{ .repoURL | toJson }}
+        targetRevision: {{ .revision | toJson }}
+        path: 'gitops/components/{{ .component }}/overlays/{{ .cluster }}'
+        {{- end }}
+      {{- end }}
+      {{- if .ignoreDifferences }}
+      ignoreDifferences: {{ .ignoreDifferences | toJson }}
+      {{- end }}
+      syncPolicy:
+        automated:
+          enabled: true
+          selfHeal: true
+          prune: {{ ne .lifecycle "controller" }}
+        retry:
+          limit: {{ if eq .retryProfile "extended" }}5{{ else }}3{{ end }}
+          refresh: true
+          backoff:
+            duration: 20s
+            factor: 2
+            maxDuration: {{ if eq .retryProfile "extended" }}3m{{ else }}2m{{ end }}
+        syncOptions: {{ .syncOptions | toJson }}

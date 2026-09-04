@@ -3,7 +3,8 @@ import { Console, Effect, Either } from "effect"
 import { stringify } from "yaml"
 
 import { generateGitOps } from "./generate.ts"
-import { GitOpsUsageError, type GitOpsValidationError } from "./errors.ts"
+import { GitOpsUsageError, GitOpsValidationError } from "./errors.ts"
+import { previewApplicationSet } from "./applicationset.ts"
 import { renderGitOps } from "./render.ts"
 import {
   asArray,
@@ -45,7 +46,10 @@ const arrayAt = (record: YamlRecord | undefined, ...path: readonly string[]) =>
 export const isSupportedSourceTransport = (source: YamlRecord): boolean => {
   if (stringAt(source, "repoURL")?.startsWith("https://") === true) return true
   if (stringAt(source, "repoURL") === "ghcr.io/argoproj/argo-helm") {
-    return stringAt(source, "chart") === "argo-cd" && /^\d+\.\d+\.\d+$/.test(stringAt(source, "targetRevision") ?? "")
+    return (
+      stringAt(source, "chart") === "argo-cd" &&
+      /^\d+\.\d+\.\d+$/.test(stringAt(source, "targetRevision") ?? "")
+    )
   }
   // Argo's Helm OCI sources omit the URL scheme. Keep this exception scoped
   // to the pinned official Envoy charts; it does not allow arbitrary HTTP.
@@ -285,6 +289,7 @@ export const requireLocalGitOpsSourceDirectory = Effect.fn("GitOps.requireLocalS
 })
 
 const validateApplication = Effect.fn("GitOps.validateApplication")(function* (options: {
+  readonly application?: YamlRecord
   readonly applicationFile: string
   readonly applicationResource: string
   readonly cluster: string
@@ -293,7 +298,7 @@ const validateApplication = Effect.fn("GitOps.validateApplication")(function* (o
   readonly root: RootApplication
 }) {
   const path = yield* Path.Path
-  const application = yield* readYamlRecord(options.applicationFile)
+  const application = options.application ?? (yield* readYamlRecord(options.applicationFile))
   const applicationName = stringAt(application, "metadata", "name")
   const project = stringAt(application, "spec", "project")
   const sources = sourcesOf(application)
@@ -335,27 +340,23 @@ const validateApplication = Effect.fn("GitOps.validateApplication")(function* (o
     options.applicationFile,
   )
 
-  const insecureSource = sources.find(
-    (source) => !isSupportedSourceTransport(source),
-  )
+  const insecureSource = sources.find((source) => !isSupportedSourceTransport(source))
   yield* validate(
     insecureSource === undefined,
     `${applicationName} contains an unsupported source transport: ${stringAt(insecureSource, "repoURL") ?? "<missing>"}`,
     options.applicationFile,
   )
-  const ambiguousGitSource = sources.find(
-    (source) => {
-      if (stringAt(source, "repoURL")?.startsWith("https://github.com/") !== true) {
-        return false
-      }
+  const ambiguousGitSource = sources.find((source) => {
+    if (stringAt(source, "repoURL")?.startsWith("https://github.com/") !== true) {
+      return false
+    }
 
-      const targetRevision = stringAt(source, "targetRevision")
-      return (
-        targetRevision !== "refs/heads/master" &&
-        !immutableGitCommitPattern.test(targetRevision ?? "")
-      )
-    },
-  )
+    const targetRevision = stringAt(source, "targetRevision")
+    return (
+      targetRevision !== "refs/heads/master" &&
+      !immutableGitCommitPattern.test(targetRevision ?? "")
+    )
+  })
   yield* validate(
     ambiguousGitSource === undefined,
     `${applicationName} contains an ambiguous Git revision: ${stringAt(ambiguousGitSource, "targetRevision") ?? "<missing>"}`,
@@ -397,7 +398,9 @@ const validateApplication = Effect.fn("GitOps.validateApplication")(function* (o
     }
   }
 
-  const applicationSource = yield* readText(options.applicationFile)
+  const applicationSource = options.application
+    ? stringify(application)
+    : yield* readText(options.applicationFile)
   yield* validate(
     !obsoleteApplicationPattern.test(applicationSource),
     `${applicationName} contains obsolete sync or release metadata`,
@@ -508,6 +511,54 @@ export const checkGitOps = Effect.fn("GitOps.check")(function* (options: GitOpsC
       root,
     )
     const kustomization = yield* readYamlRecord(applicationsKustomization)
+    const declared = yield* parseYamlDocuments(
+      applicationsDirectory,
+      yield* renderKustomization(applicationsDirectory),
+    )
+    if (declared.some((resource) => resource.kind === "ApplicationSet")) {
+      const bootstrapProject = yield* readYamlRecord(
+        path.join(bootstrapDirectory, "bootstrap.appproject.yaml"),
+      )
+      yield* validate(
+        arrayAt(bootstrapProject, "spec", "namespaceResourceWhitelist").some(
+          (value) => stringAt(asRecord(value), "kind") === "ApplicationSet",
+        ),
+        `${cluster} bootstrap project must permit ApplicationSets`,
+      )
+      for (const applicationSet of declared) {
+        yield* validate(
+          stringAt(applicationSet, "metadata", "namespace") === root.namespace,
+          `${cluster} ApplicationSet has an invalid namespace`,
+        )
+        const protection =
+          stringAt(applicationSet, "metadata", "annotations", "argocd.argoproj.io/sync-options") ??
+          ""
+        yield* validate(
+          protection.includes("Prune=confirm") && protection.includes("Delete=confirm"),
+          `${cluster} ApplicationSet must require deletion confirmation`,
+        )
+        const applications = yield* Effect.try({
+          try: () => previewApplicationSet(applicationSet),
+          catch: (cause) =>
+            new GitOpsValidationError({
+              message: `Invalid native ApplicationSet: ${String(cause)}`,
+              path: applicationsDirectory,
+            }),
+        })
+        for (const application of applications) {
+          namespaceCount += yield* validateApplication({
+            application,
+            applicationFile: applicationsKustomization,
+            applicationResource: `${stringAt(application, "metadata", "name")}.yaml`,
+            cluster,
+            declaredProjects,
+            repoRoot,
+            root,
+          })
+        }
+      }
+      continue
+    }
     const resources = arrayAt(kustomization, "resources")
     yield* validate(resources.length > 0, `${cluster} declares no child Applications`)
 

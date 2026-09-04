@@ -5,45 +5,121 @@ import { join } from "node:path"
 import test from "node:test"
 import { execFileSync } from "node:child_process"
 import { parseAllDocuments, stringify } from "yaml"
+import { previewApplicationSet } from "../packages/gitops/src/applicationset.ts"
 
-const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8")
+const renderApplications = (cluster: string) =>
+  parseAllDocuments(
+    execFileSync("kubectl", ["kustomize", `gitops/clusters/${cluster}/applications`], {
+      encoding: "utf8",
+    }),
+  )
+    .map((document) => document.toJSON())
+    .flatMap((resource) =>
+      resource.kind === "ApplicationSet" ? previewApplicationSet(resource) : [resource],
+    )
+const read = (path: string) => {
+  const application = path.match(/^gitops\/clusters\/indigo\/applications\/([^/]+)\.yaml$/)?.[1]
+  if (application && application !== "kustomization")
+    return Promise.resolve(
+      stringify(
+        renderApplications("indigo").find((resource) => resource.metadata.name === application),
+      ),
+    )
+  return readFile(new URL(`../${path}`, import.meta.url), "utf8")
+}
 
 test("Indigo steady-state policy heals drift without automatically deleting controller APIs", () => {
-  const render = (cluster: string) => parseAllDocuments(execFileSync("kubectl", [
-    "kustomize", new URL(`../gitops/clusters/${cluster}/applications`, import.meta.url).pathname,
-  ], { encoding: "utf8" })).map(document => document.toJSON())
+  const render = renderApplications
   const applications = render("indigo")
-  const reviewedPrune = new Set(["argocd", "cilium", "envoy-gateway", "external-secrets", "gateway-api", "kubelet-csr-approver", "metallb", "metrics-server"])
+  const reviewedPrune = new Set([
+    "argocd",
+    "cilium",
+    "envoy-gateway",
+    "external-secrets",
+    "gateway-api",
+    "kubelet-csr-approver",
+    "metallb",
+    "metrics-server",
+  ])
   for (const application of applications) {
     const lifecycle = application.metadata.labels["platform.dsqr.dev/lifecycle"]
-    assert.ok(["controller", "configuration", "foundation"].includes(lifecycle), application.metadata.name)
-    assert.equal(lifecycle === "controller", reviewedPrune.has(application.metadata.name), application.metadata.name)
+    assert.ok(
+      ["controller", "configuration", "foundation"].includes(lifecycle),
+      application.metadata.name,
+    )
+    assert.equal(
+      lifecycle === "controller",
+      reviewedPrune.has(application.metadata.name),
+      application.metadata.name,
+    )
     assert.equal(application.spec.syncPolicy.automated.enabled, true, application.metadata.name)
     assert.equal(application.spec.syncPolicy.automated.selfHeal, true, application.metadata.name)
-    assert.equal(application.spec.syncPolicy.automated.prune, !reviewedPrune.has(application.metadata.name), application.metadata.name)
+    assert.equal(
+      application.spec.syncPolicy.automated.prune,
+      !reviewedPrune.has(application.metadata.name),
+      application.metadata.name,
+    )
   }
-  assert.equal(render("hub-a").find(application => application.metadata.name === "cilium").spec.syncPolicy.automated.enabled, false)
+  assert.equal(
+    render("hub-a").find((application) => application.metadata.name === "cilium").spec.syncPolicy
+      .automated.enabled,
+    false,
+  )
 })
 
 test("steady-state lifecycle selection works for new Application names", async () => {
   const directory = await mkdtemp(join(tmpdir(), "gitops-lifecycle-"))
   try {
     await mkdir(join(directory, "policy"))
-    await writeFile(join(directory, "policy/kustomization.yaml"), await read("gitops/components/gitops-policy/steady-state/kustomization.yaml"))
-    await writeFile(join(directory, "kustomization.yaml"), stringify({
-      apiVersion: "kustomize.config.k8s.io/v1beta1", kind: "Kustomization",
-      resources: ["applications.yaml"], components: ["policy"],
-    }))
-    await writeFile(join(directory, "applications.yaml"), ["controller", "configuration"].map(lifecycle => stringify({
-      apiVersion: "argoproj.io/v1alpha1", kind: "Application",
-      metadata: { name: `new-${lifecycle}`, labels: { "platform.dsqr.dev/lifecycle": lifecycle } },
-      spec: { syncPolicy: { automated: { enabled: false, prune: false, selfHeal: false }, syncOptions: ["FailOnSharedResource=true"] } },
-    })).join("---\n"))
-    const applications = parseAllDocuments(execFileSync("kubectl", ["kustomize", directory], { encoding: "utf8" })).map(document => document.toJSON())
+    await writeFile(
+      join(directory, "policy/kustomization.yaml"),
+      await read("gitops/components/gitops-policy/steady-state/kustomization.yaml"),
+    )
+    await writeFile(
+      join(directory, "kustomization.yaml"),
+      stringify({
+        apiVersion: "kustomize.config.k8s.io/v1beta1",
+        kind: "Kustomization",
+        resources: ["applications.yaml"],
+        components: ["policy"],
+      }),
+    )
+    await writeFile(
+      join(directory, "applications.yaml"),
+      ["controller", "configuration"]
+        .map((lifecycle) =>
+          stringify({
+            apiVersion: "argoproj.io/v1alpha1",
+            kind: "Application",
+            metadata: {
+              name: `new-${lifecycle}`,
+              labels: { "platform.dsqr.dev/lifecycle": lifecycle },
+            },
+            spec: {
+              syncPolicy: {
+                automated: { enabled: false, prune: false, selfHeal: false },
+                syncOptions: ["FailOnSharedResource=true"],
+              },
+            },
+          }),
+        )
+        .join("---\n"),
+    )
+    const applications = parseAllDocuments(
+      execFileSync("kubectl", ["kustomize", directory], { encoding: "utf8" }),
+    ).map((document) => document.toJSON())
     for (const application of applications) {
-      const configuration = application.metadata.labels["platform.dsqr.dev/lifecycle"] === "configuration"
-      assert.deepEqual(application.spec.syncPolicy.automated, { enabled: true, selfHeal: true, prune: configuration })
-      assert.equal(application.spec.syncPolicy.syncOptions.includes("PruneLast=true"), configuration)
+      const configuration =
+        application.metadata.labels["platform.dsqr.dev/lifecycle"] === "configuration"
+      assert.deepEqual(application.spec.syncPolicy.automated, {
+        enabled: true,
+        selfHeal: true,
+        prune: configuration,
+      })
+      assert.equal(
+        application.spec.syncPolicy.syncOptions.includes("PruneLast=true"),
+        configuration,
+      )
       assert.ok(application.spec.syncPolicy.syncOptions.includes("FailOnSharedResource=true"))
     }
   } finally {
@@ -53,23 +129,48 @@ test("steady-state lifecycle selection works for new Application names", async (
 
 test("only hub-a renders the legacy Cilium tracking exception", () => {
   for (const cluster of ["hub-a", "indigo"]) {
-    const applications = parseAllDocuments(execFileSync("kubectl", ["kustomize", `gitops/clusters/${cluster}/applications`], { encoding: "utf8" })).map(document => document.toJSON())
-    const rules = applications.find(application => application.metadata.name === "cilium").spec.ignoreDifferences
-    assert.equal(rules.some(rule => rule.jsonPointers.includes("/metadata/annotations/argocd.argoproj.io~1tracking-id")), cluster === "hub-a")
-    assert.deepEqual(rules.filter(rule => rule.kind === "Secret").map(rule => rule.name).sort(), ["cilium-ca", "hubble-server-certs"])
+    const applications = renderApplications(cluster)
+    const rules = applications.find((application) => application.metadata.name === "cilium").spec
+      .ignoreDifferences
+    assert.equal(
+      rules.some((rule) =>
+        rule.jsonPointers.includes("/metadata/annotations/argocd.argoproj.io~1tracking-id"),
+      ),
+      cluster === "hub-a",
+    )
+    assert.deepEqual(
+      rules
+        .filter((rule) => rule.kind === "Secret")
+        .map((rule) => rule.name)
+        .sort(),
+      ["cilium-ca", "hubble-server-certs"],
+    )
   }
 })
 
 test("Indigo excludes legacy Traefik but retains roadmap AppProjects", () => {
   for (const cluster of ["hub-a", "indigo"]) {
-    const projects = parseAllDocuments(execFileSync("kubectl", ["kustomize", `gitops/components/argocd/overlays/${cluster}`], { encoding: "utf8" }))
-      .map(document => document.toJSON()).filter(resource => resource.kind === "AppProject").map(resource => resource.metadata.name)
+    const projects = parseAllDocuments(
+      execFileSync("kubectl", ["kustomize", `gitops/components/argocd/overlays/${cluster}`], {
+        encoding: "utf8",
+      }),
+    )
+      .map((document) => document.toJSON())
+      .filter((resource) => resource.kind === "AppProject")
+      .map((resource) => resource.metadata.name)
     assert.equal(projects.includes("platform-traefik"), cluster === "hub-a")
-    for (const project of ["dsqr", "twt", "fidara", "platform-k8s-monitoring", "platform-kube-state-metrics"]) assert.ok(projects.includes(project), project)
+    for (const project of [
+      "dsqr",
+      "twt",
+      "fidara",
+      "platform-k8s-monitoring",
+      "platform-kube-state-metrics",
+    ])
+      assert.ok(projects.includes(project), project)
   }
 })
 
-test("Indigo platform add-ons are generated from shared Application templates", async () => {
+test("Indigo platform add-ons are generated by the shared native ApplicationSet", async () => {
   const kustomization = await read("gitops/clusters/indigo/applications/kustomization.yaml")
 
   for (const application of [
@@ -82,10 +183,10 @@ test("Indigo platform add-ons are generated from shared Application templates", 
     "metallb-config",
     "metrics-server",
   ]) {
-    assert.match(kustomization, new RegExp(`  - ${application}\\.yaml`))
-
-    const generated = await read(`gitops/clusters/indigo/applications/${application}.yaml`)
-    assert.match(generated, /^# Generated by `nix run \.#gitops-generate`\./)
+    assert.match(kustomization, /components\/application-set\/overlays\/indigo/)
+    assert.ok(
+      renderApplications("indigo").some((resource) => resource.metadata.name === application),
+    )
   }
 })
 
@@ -99,7 +200,7 @@ test("Indigo pins the Gateway API Standard Channel and its exact cluster permiss
   assert.match(application, /targetRevision: 8bb74df00e56ec8f944d48c25e6c1c9c2f6848e3/)
   assert.match(application, /path: config\/crd\/standard/)
   assert.match(application, /- ServerSideApply=true/)
-  assert.match(application, /enabled: false/)
+  assert.match(application, /enabled: true/)
 
   for (const resource of [
     "backendtlspolicies",
@@ -134,10 +235,7 @@ test("Indigo foundation declares only current platform namespaces", async () => 
     "gateway-system",
     "metallb-system",
   ])
-  assert.match(
-    namespaces,
-    /name: argocd[\s\S]+platform\.dsqr\.dev\/gateway-access: shared/,
-  )
+  assert.match(namespaces, /name: argocd[\s\S]+platform\.dsqr\.dev\/gateway-access: shared/)
   assert.match(
     namespaces,
     /name: envoy-gateway-system[\s\S]+pod-security\.kubernetes\.io\/enforce: restricted/,
@@ -189,41 +287,37 @@ test("Indigo shared Envoy Gateway is HA, HTTPS-only, and restricted by namespace
     issuerAuthDelegator,
     vaultGenerator,
     externalSecret,
-  ] =
-    await Promise.all([
-      read("gitops/clusters/indigo/applications/gateway.yaml"),
-      read("gitops/components/gateway/base/shared.gateway.yaml"),
-      read("gitops/components/gateway/overlays/indigo/kustomization.yaml"),
-      read("gitops/components/gateway/base/envoy.gatewayclass.yaml"),
-      read("gitops/components/gateway/base/shared.envoyproxy.yaml"),
-      read("gitops/components/argocd/overlays/indigo/platform-gateway.appproject.yaml"),
-      read("gitops/components/argocd/overlays/indigo/kustomization.yaml"),
-      read(
-        "gitops/components/external-secrets-config/overlays/indigo/gateway-origin-issuer.serviceaccount.yaml",
-      ),
-      read(
-        "gitops/components/external-secrets-config/overlays/indigo/gateway-origin-issuer.clusterrolebinding.yaml",
-      ),
-      read(
-        "gitops/components/external-secrets-config/overlays/indigo/indigo-gateway-origin.vaultdynamicsecret.yaml",
-      ),
-      read(
-        "gitops/components/external-secrets-config/overlays/indigo/indigo-gateway-origin.externalsecret.yaml",
-      ),
-    ])
+  ] = await Promise.all([
+    read("gitops/clusters/indigo/applications/gateway.yaml"),
+    read("gitops/components/gateway/base/shared.gateway.yaml"),
+    read("gitops/components/gateway/overlays/indigo/kustomization.yaml"),
+    read("gitops/components/gateway/base/envoy.gatewayclass.yaml"),
+    read("gitops/components/gateway/base/shared.envoyproxy.yaml"),
+    read("gitops/components/argocd/overlays/indigo/platform-gateway.appproject.yaml"),
+    read("gitops/components/argocd/overlays/indigo/kustomization.yaml"),
+    read(
+      "gitops/components/external-secrets-config/overlays/indigo/gateway-origin-issuer.serviceaccount.yaml",
+    ),
+    read(
+      "gitops/components/external-secrets-config/overlays/indigo/gateway-origin-issuer.clusterrolebinding.yaml",
+    ),
+    read(
+      "gitops/components/external-secrets-config/overlays/indigo/indigo-gateway-origin.vaultdynamicsecret.yaml",
+    ),
+    read(
+      "gitops/components/external-secrets-config/overlays/indigo/indigo-gateway-origin.externalsecret.yaml",
+    ),
+  ])
 
   assert.match(application, /project: platform-gateway/)
   assert.match(application, /path: gitops\/components\/gateway\/overlays\/indigo/)
-  assert.match(application, /enabled: false/)
+  assert.match(application, /enabled: true/)
   assert.match(project, /namespace: gateway-system/)
   assert.match(project, /kind: GatewayClass\n\s+name: envoy/)
   assert.match(project, /kind: EnvoyProxy/)
   assert.match(project, /kind: Gateway/)
   assert.match(gatewayClass, /name: envoy/)
-  assert.match(
-    gatewayClass,
-    /controllerName: gateway\.envoyproxy\.io\/gatewayclass-controller/,
-  )
+  assert.match(gatewayClass, /controllerName: gateway\.envoyproxy\.io\/gatewayclass-controller/)
   assert.doesNotMatch(gatewayClass, /namespace:/)
   assert.match(gatewayClass, /argocd\.argoproj\.io\/sync-wave: "1"/)
   assert.match(envoyProxy, /kind: EnvoyProxy/)
@@ -288,7 +382,7 @@ test("Indigo Argo access separates the private UI from the authenticated public 
   assert.match(application, /project: platform-argocd-access/)
   assert.match(application, /path: gitops\/components\/argocd\/access\/overlays\/indigo/)
   assert.match(application, /argocd\.argoproj\.io\/sync-wave: "5"/)
-  assert.match(application, /enabled: false/)
+  assert.match(application, /enabled: true/)
   assert.match(project, /namespace: argocd/)
   assert.match(project, /kind: CiliumNetworkPolicy/)
   assert.match(project, /kind: ExternalSecret/)
@@ -361,14 +455,8 @@ test("Indigo retires Cilium Gateway API while preserving its L7 policy data plan
   assert.match(values, /^devices: ens18$/m)
   assert.match(values, /^  rollOutPods: true$/m)
   assert.match(values, /^gatewayAPI:\n  enabled: false$/m)
-  assert.match(
-    project,
-    /kind: ValidatingAdmissionPolicy\n\s+name: gateway\.cilium\.io/,
-  )
-  assert.match(
-    project,
-    /kind: ValidatingAdmissionPolicyBinding\n\s+name: gateway\.cilium\.io/,
-  )
+  assert.match(project, /kind: ValidatingAdmissionPolicy\n\s+name: gateway\.cilium\.io/)
+  assert.match(project, /kind: ValidatingAdmissionPolicyBinding\n\s+name: gateway\.cilium\.io/)
   assert.match(project, /kind: GatewayClass\n\s+name: cilium/)
 })
 

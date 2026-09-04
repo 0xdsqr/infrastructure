@@ -121,11 +121,31 @@ const gitOpsPath = (...segments: readonly string[]) =>
 
 const bootstrapArgo = Effect.fn("Cluster.bootstrapArgo")(function* () {
   yield* guardIndigo()
-  const crd = yield* kubectl(["get", "crd", "applications.argoproj.io", "--ignore-not-found", "-o", "name"])
-  const owner = crd.stdout.trim() === "" ? "" : (yield* kubectl(["-n", "argocd", "get", "application", "argocd", "--ignore-not-found", "-o", "name"])).stdout.trim()
+  const crd = yield* kubectl([
+    "get",
+    "crd",
+    "applications.argoproj.io",
+    "--ignore-not-found",
+    "-o",
+    "name",
+  ])
+  const owner =
+    crd.stdout.trim() === ""
+      ? ""
+      : (yield* kubectl([
+          "-n",
+          "argocd",
+          "get",
+          "application",
+          "argocd",
+          "--ignore-not-found",
+          "-o",
+          "name",
+        ])).stdout.trim()
   if (owner !== "") {
     return yield* new ClusterError({
-      message: "Argo CD is GitOps-managed by Application/argocd. Change its chart/values in Git; bootstrap will not overwrite it. Disaster recovery requires deliberately pausing its GitOps owners first.",
+      message:
+        "Argo CD is GitOps-managed by Application/argocd. Change its chart/values in Git; bootstrap will not overwrite it. Disaster recovery requires deliberately pausing its GitOps owners first.",
     })
   }
   const config = yield* kubeconfig()
