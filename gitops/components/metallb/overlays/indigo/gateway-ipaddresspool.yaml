@@ -1,7 +1,7 @@
 apiVersion: metallb.io/v1beta1
-kind: L2Advertisement
+kind: IPAddressPool
 metadata:
-  name: ingress
+  name: gateway
   namespace: metallb-system
   labels:
     app.kubernetes.io/name: metallb
@@ -9,10 +9,7 @@ metadata:
     platform.dsqr.dev/owner: platform
     platform.dsqr.dev/tier: platform-addon
 spec:
-  ipAddressPools:
-    - gateway
-    - ingress
-  nodeSelectors:
-    - matchExpressions:
-        - key: node-role.kubernetes.io/control-plane
-          operator: DoesNotExist
+  addresses:
+    - 10.10.80.200/32
+  autoAssign: false
+  avoidBuggyIPs: true

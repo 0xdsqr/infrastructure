@@ -5,6 +5,10 @@ resources:
   - ../../common
   - vault-indigo.clustersecretstore.yaml
   - indigo-bootstrap-smoke-test.externalsecret.yaml
+  - gateway-origin-issuer.serviceaccount.yaml
+  - gateway-root-ca.configmap.yaml
+  - indigo-gateway-origin.vaultdynamicsecret.yaml
+  - indigo-gateway-origin.externalsecret.yaml
 
 labels:
   - pairs:

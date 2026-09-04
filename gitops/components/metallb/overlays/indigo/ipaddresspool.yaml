@@ -10,6 +10,6 @@ metadata:
     platform.dsqr.dev/tier: platform-addon
 spec:
   addresses:
-    - 10.10.80.200-10.10.80.249
+    - 10.10.80.201-10.10.80.249
   autoAssign: true
   avoidBuggyIPs: true

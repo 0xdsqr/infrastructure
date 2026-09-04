@@ -8,6 +8,7 @@ resources:
   - external-secrets.yaml
   - external-secrets-config.yaml
   - gateway-api.yaml
+  - gateway.yaml
   - kubelet-csr-approver.yaml
   - metallb.yaml
   - metallb-config.yaml

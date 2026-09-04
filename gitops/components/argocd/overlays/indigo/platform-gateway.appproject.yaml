@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-gateway
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: platform-gateway
+    app.kubernetes.io/part-of: dsqr-gitops
+    platform.dsqr.dev/tier: platform
+spec:
+  description: Shared Cilium Gateway infrastructure
+  sourceRepos:
+    - https://github.com/0xdsqr/infrastructure.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: gateway-system
+  namespaceResourceWhitelist:
+    - group: gateway.networking.k8s.io
+      kind: Gateway

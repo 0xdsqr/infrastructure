@@ -1,0 +1,36 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: shared
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  labels:
+    app.kubernetes.io/name: shared-gateway
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: cluster-ingress
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-addon
+spec:
+  gatewayClassName: cilium
+  infrastructure:
+    annotations:
+      metallb.io/address-pool: gateway
+  listeners:
+    - name: https
+      protocol: HTTPS
+      port: 443
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - group: ""
+            kind: Secret
+            name: gateway-origin-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              platform.dsqr.dev/gateway-access: shared
+        kinds:
+          - group: gateway.networking.k8s.io
+            kind: HTTPRoute

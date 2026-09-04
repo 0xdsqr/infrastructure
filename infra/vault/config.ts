@@ -428,6 +428,25 @@ const pkiIssuers = {
       tokenExplicitMaxTtlSeconds: 3_600,
     },
   },
+  indigoGatewayOrigin: {
+    backend: "pki_int",
+    roleName: "indigo-gateway-origin",
+    policyName: "homelab-pki-indigo-gateway-origin",
+    allowedDomains: ["argocd.indigo.home.arpa", "gateway.indigo.home.arpa"],
+    allowWildcardCertificates: false,
+    generateLease: true,
+    ttlHours: 720,
+    maxTtlHours: 720,
+    kubernetesAuthRole: {
+      backend: "kubernetes-indigo",
+      roleName: "indigo-gateway-origin-issuer",
+      boundServiceAccountNames: ["gateway-origin-issuer"],
+      boundServiceAccountNamespaces: ["gateway-system"],
+      tokenTtlSeconds: 1_200,
+      tokenMaxTtlSeconds: 3_600,
+      tokenExplicitMaxTtlSeconds: 3_600,
+    },
+  },
 } satisfies VaultPkiIssuerInventory
 
 export const vault = {

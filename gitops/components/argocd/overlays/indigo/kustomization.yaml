@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - ../../base
+  - platform-gateway.appproject.yaml
 
 labels:
   - pairs:
@@ -24,9 +25,16 @@ patches:
         value:
           - server: https://kubernetes.default.svc
             namespace: external-secrets
+          - server: https://kubernetes.default.svc
+            namespace: gateway-system
       - op: replace
         path: /spec/clusterResourceWhitelist
         value:
           - group: external-secrets.io
             kind: ClusterSecretStore
             name: vault-indigo
+      - op: add
+        path: /spec/namespaceResourceWhitelist/-
+        value:
+          group: ""
+          kind: ServiceAccount

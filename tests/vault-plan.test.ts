@@ -159,6 +159,32 @@ test("Vault rejects duplicate physical Kubernetes auth roles across consumers", 
   assert.equal(resources.length, count)
 })
 
+test("Vault rejects PKI roles targeting undeclared Kubernetes auth backends", () => {
+  const args = foundationArgs()
+  const issuer = args.pkiIssuers.indigoGatewayOrigin!
+  const count = resources.length
+  const error = Effect.runSync(
+    Effect.flip(
+      createVaultFoundationEffect({
+        ...args,
+        pkiIssuers: {
+          ...args.pkiIssuers,
+          indigoGatewayOrigin: {
+            ...issuer,
+            kubernetesAuthRole: {
+              ...issuer.kubernetesAuthRole!,
+              backend: "kubernetes-missing",
+            },
+          },
+        },
+      }),
+    ),
+  )
+
+  assert.match(error.message, /must reference a declared external or managed Kubernetes auth backend/)
+  assert.equal(resources.length, count)
+})
+
 test("Vault rejects Kubernetes auth boundaries without isolated reviewer configuration", () => {
   const args = foundationArgs()
   const indigo = args.externalSecretsKubernetesAuthBoundaries!.indigo!

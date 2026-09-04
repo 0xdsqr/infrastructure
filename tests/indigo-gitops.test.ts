@@ -8,6 +8,7 @@ test("Indigo platform add-ons are generated from shared Application templates", 
   const kustomization = await read("gitops/clusters/indigo/applications/kustomization.yaml")
 
   for (const application of [
+    "gateway",
     "gateway-api",
     "kubelet-csr-approver",
     "metallb",
@@ -59,21 +60,29 @@ test("Indigo foundation declares only current platform namespaces", async () => 
   )
   const names = [...namespaces.matchAll(/^  name: (.+)$/gm)].map((match) => match[1])
 
-  assert.deepEqual(names, ["external-secrets", "metallb-system"])
+  assert.deepEqual(names, ["external-secrets", "gateway-system", "metallb-system"])
+  assert.match(
+    namespaces,
+    /name: gateway-system[\s\S]+pod-security\.kubernetes\.io\/enforce: baseline/,
+  )
   assert.match(
     namespaces,
     /name: metallb-system[\s\S]+pod-security\.kubernetes\.io\/enforce: privileged/,
   )
 })
 
-test("Indigo MetalLB is isolated to its reserved pool and worker nodes", async () => {
-  const [pool, advertisement, values] = await Promise.all([
+test("Indigo MetalLB reserves the Gateway VIP and advertises only from workers", async () => {
+  const [gatewayPool, pool, advertisement, values] = await Promise.all([
+    read("gitops/components/metallb/overlays/indigo/gateway-ipaddresspool.yaml"),
     read("gitops/components/metallb/overlays/indigo/ipaddresspool.yaml"),
     read("gitops/components/metallb/overlays/indigo/l2advertisement.yaml"),
     read("gitops/components/metallb/overlays/indigo/values-overrides.yaml"),
   ])
 
-  assert.match(pool, /10\.10\.80\.200-10\.10\.80\.249/)
+  assert.match(gatewayPool, /10\.10\.80\.200\/32/)
+  assert.match(gatewayPool, /autoAssign: false/)
+  assert.match(pool, /10\.10\.80\.201-10\.10\.80\.249/)
+  assert.match(advertisement, /ipAddressPools:\n\s+- gateway\n\s+- ingress/)
   assert.match(
     advertisement,
     /key: node-role\.kubernetes\.io\/control-plane\n\s+operator: DoesNotExist/,
@@ -81,6 +90,40 @@ test("Indigo MetalLB is isolated to its reserved pool and worker nodes", async (
   assert.match(values, /loadBalancerClass: metallb\.io\/metallb/)
   assert.match(values, /tolerateMaster: false/)
   assert.match(values, /defaultDeny: true/)
+})
+
+test("Indigo shared Gateway is generated, HTTPS-only, and restricted by namespace label", async () => {
+  const [application, gateway, gatewayOverlay, project, vaultGenerator, externalSecret] =
+    await Promise.all([
+      read("gitops/clusters/indigo/applications/gateway.yaml"),
+      read("gitops/components/gateway/base/shared.gateway.yaml"),
+      read("gitops/components/gateway/overlays/indigo/kustomization.yaml"),
+      read("gitops/components/argocd/overlays/indigo/platform-gateway.appproject.yaml"),
+      read(
+        "gitops/components/external-secrets-config/overlays/indigo/indigo-gateway-origin.vaultdynamicsecret.yaml",
+      ),
+      read(
+        "gitops/components/external-secrets-config/overlays/indigo/indigo-gateway-origin.externalsecret.yaml",
+      ),
+    ])
+
+  assert.match(application, /project: platform-gateway/)
+  assert.match(application, /path: gitops\/components\/gateway\/overlays\/indigo/)
+  assert.match(application, /enabled: false/)
+  assert.match(project, /namespace: gateway-system/)
+  assert.match(project, /kind: Gateway/)
+  assert.match(gateway, /gatewayClassName: cilium/)
+  assert.match(gateway, /protocol: HTTPS/)
+  assert.doesNotMatch(gateway, /protocol: HTTP$/m)
+  assert.match(gateway, /metallb\.io\/address-pool: gateway/)
+  assert.match(gatewayOverlay, /metallb\.io~1loadBalancerIPs\n\s+value: 10\.10\.80\.200/)
+  assert.match(gateway, /platform\.dsqr\.dev\/gateway-access: shared/)
+  assert.match(vaultGenerator, /common_name: gateway\.indigo\.home\.arpa/)
+  assert.match(vaultGenerator, /alt_names: argocd\.indigo\.home\.arpa/)
+  assert.match(vaultGenerator, /mountPath: kubernetes-indigo/)
+  assert.match(vaultGenerator, /role: indigo-gateway-origin-issuer/)
+  assert.match(externalSecret, /name: gateway-origin-tls/)
+  assert.match(externalSecret, /type: kubernetes\.io\/tls/)
 })
 
 test("Indigo explicitly enables Cilium's Gateway API and standalone Envoy data plane", async () => {

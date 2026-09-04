@@ -37,6 +37,7 @@ const externalPolicyNames = {
 const issuerKeys = [
   "gatewayCaddy",
   "hubATraefikOrigin",
+  "indigoGatewayOrigin",
   "postgresKnoxListener",
   "proxmoxListener",
   "rustfsKhaosListener",
@@ -107,6 +108,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
       ] as const
     ).map((key) => [appRoleToken, `pki-issuer-approle-${key}`] as const),
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-hubATraefikOrigin"],
+    [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoGatewayOrigin"],
     [providerToken, "vault"],
   ].sort((left, right) => left[1].localeCompare(right[1]))
 
@@ -206,6 +208,14 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     dependsOn: [
       "pki-issuer-role-hubATraefikOrigin",
       "pki-issuer-policy-hubATraefikOrigin",
+      "external-secrets-token-self-policy",
+    ],
+  })
+  lifecycle("pki-issuer-kubernetes-role-indigoGatewayOrigin", {
+    protect: true,
+    dependsOn: [
+      "pki-issuer-role-indigoGatewayOrigin",
+      "pki-issuer-policy-indigoGatewayOrigin",
       "external-secrets-token-self-policy",
     ],
   })
@@ -349,6 +359,17 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   assert.equal(traefikRole.inputs.roleName, "hub-a-traefik-origin-issuer")
   assert.deepEqual(traefikRole.inputs.boundServiceAccountNames, ["traefik-origin-issuer"])
   assert.deepEqual(traefikRole.inputs.boundServiceAccountNamespaces, ["traefik"])
+
+  const indigoGatewayRole = byName(
+    resources,
+    "pki-issuer-kubernetes-role-indigoGatewayOrigin",
+  )
+  assert.equal(indigoGatewayRole.inputs.backend, "kubernetes-indigo")
+  assert.equal(indigoGatewayRole.inputs.roleName, "indigo-gateway-origin-issuer")
+  assert.deepEqual(indigoGatewayRole.inputs.boundServiceAccountNames, [
+    "gateway-origin-issuer",
+  ])
+  assert.deepEqual(indigoGatewayRole.inputs.boundServiceAccountNamespaces, ["gateway-system"])
 
   assert.deepEqual(byName(resources, "audit").inputs, {
     description: "Homelab Vault audit log.",

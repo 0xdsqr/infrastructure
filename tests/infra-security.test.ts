@@ -372,6 +372,11 @@ test("Vault PKI issuers are exact, least-privilege, and do not persist SecretIDs
   ])
   assert.ok(vault.pkiIssuers.gatewayCaddy.allowedDomains.includes("exo.service.home.arpa"))
   assert.ok(!("appRole" in vault.pkiIssuers.hubATraefikOrigin))
+  assert.deepEqual(vault.pkiIssuers.indigoGatewayOrigin.allowedDomains, [
+    "argocd.indigo.home.arpa",
+    "gateway.indigo.home.arpa",
+  ])
+  assert.equal(vault.pkiIssuers.indigoGatewayOrigin.kubernetesAuthRole.backend, "kubernetes-indigo")
 
   const wildcardDomain = Effect.runSync(
     Effect.flip(

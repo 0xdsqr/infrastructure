@@ -1024,12 +1024,7 @@ export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(funct
     "Physical Vault Kubernetes auth roles must have unique backend and role-name identities.",
   )
 
-  const existingKubernetesAuthBackends = new Set([
-    args.externalSecretsKubernetesRole.backend,
-    ...pkiIssuerEntries.flatMap(({ issuer }) =>
-      issuer.kubernetesAuthRole ? [issuer.kubernetesAuthRole.backend] : [],
-    ),
-  ])
+  const existingKubernetesAuthBackends = new Set([args.externalSecretsKubernetesRole.backend])
   const managedKubernetesAuthBackends = externalSecretsKubernetesAuthBoundaryEntries.map(
     ({ boundary }) => boundary.backend.path,
   )
@@ -1040,6 +1035,19 @@ export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(funct
       ),
     "vault:kubernetesAuthBackends",
     "Managed Kubernetes auth backend paths must be unique and must not replace externally managed backends.",
+  )
+  const availableKubernetesAuthBackends = new Set([
+    ...existingKubernetesAuthBackends,
+    ...managedKubernetesAuthBackends,
+  ])
+  yield* requireResourceConfigEffect(
+    pkiIssuerEntries.every(
+      ({ issuer }) =>
+        !issuer.kubernetesAuthRole ||
+        availableKubernetesAuthBackends.has(issuer.kubernetesAuthRole.backend),
+    ),
+    "vault:kubernetesAuthBackends",
+    "PKI Kubernetes auth roles must reference a declared external or managed Kubernetes auth backend.",
   )
 
   const secretPaths = Object.values(args.secretPaths).map(({ path }) => path)
@@ -1454,11 +1462,18 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
         const kubernetesAuthRole = issuer.kubernetesAuthRole
           ? yield* registerPulumiResource(
               issuerResourceNames.kubernetesAuthRole,
-              () =>
-                new vault.kubernetes.AuthBackendRole(
+              () => {
+                const managedBoundary = externalSecretsKubernetesAuthBoundaryEntries.find(
+                  ({ boundary }) => boundary.backend.path === issuer.kubernetesAuthRole!.backend,
+                )
+                const backend = managedBoundary
+                  ? externalSecretsKubernetesAuthBoundaries[managedBoundary.key]!.backend
+                  : issuer.kubernetesAuthRole!.backend
+
+                return new vault.kubernetes.AuthBackendRole(
                   issuerResourceNames.kubernetesAuthRole,
                   {
-                    backend: issuer.kubernetesAuthRole!.backend,
+                    backend,
                     roleName: issuer.kubernetesAuthRole!.roleName,
                     boundServiceAccountNames: [
                       ...issuer.kubernetesAuthRole!.boundServiceAccountNames,
@@ -1478,7 +1493,8 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
                     ...protectedPkiResourceOptions,
                     dependsOn: [role, policy, externalSecretsTokenSelfPolicy],
                   },
-                ),
+                )
+              },
             )
           : undefined
 

@@ -27,6 +27,9 @@ spec:
       name: external-secrets
     - group: ""
       kind: Namespace
+      name: gateway-system
+    - group: ""
+      kind: Namespace
       name: metallb-system
     - group: rbac.authorization.k8s.io
       kind: ClusterRoleBinding
