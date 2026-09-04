@@ -81,8 +81,11 @@ test("Indigo MetalLB reserves the Gateway VIP and advertises only from workers",
 
   assert.match(gatewayPool, /10\.10\.80\.200\/32/)
   assert.match(gatewayPool, /autoAssign: false/)
+  assert.match(gatewayPool, /argocd\.argoproj\.io\/sync-wave: "1"/)
   assert.match(pool, /10\.10\.80\.201-10\.10\.80\.249/)
+  assert.match(pool, /argocd\.argoproj\.io\/sync-wave: "0"/)
   assert.match(advertisement, /ipAddressPools:\n\s+- gateway\n\s+- ingress/)
+  assert.match(advertisement, /argocd\.argoproj\.io\/sync-wave: "2"/)
   assert.match(
     advertisement,
     /key: node-role\.kubernetes\.io\/control-plane\n\s+operator: DoesNotExist/,
