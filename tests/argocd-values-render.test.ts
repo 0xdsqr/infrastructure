@@ -12,6 +12,11 @@ test("Argo Helm renders legacy ingress only for hub-a", { skip: !chart }, () => 
       "--values", "gitops/components/argocd/base/values-common.yaml",
       "--values", `gitops/components/argocd/overlays/${cluster}/values-overrides.yaml`,
     ], { encoding: "utf8", maxBuffer: 8 * 1024 * 1024 })).map(document => document.toJSON()).filter(Boolean)
+    if (cluster === "indigo") {
+      const settings = resources.find(resource => resource.kind === "ConfigMap" && resource.metadata.name === "argocd-cm")
+      assert.equal(settings.data["users.anonymous.enabled"], "false")
+      assert.equal(settings.data["admin.enabled"], "true")
+    }
     const policy = resources.find(resource => resource.kind === "NetworkPolicy" && resource.metadata.name === "argocd-allow-server-ingress")
     assert.ok(policy)
     const namespaces = policy.spec.ingress.flatMap(rule => rule.from.map(source => source.namespaceSelector?.matchLabels?.["kubernetes.io/metadata.name"]))

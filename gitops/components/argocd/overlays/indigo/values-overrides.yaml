@@ -16,6 +16,7 @@ applicationSet:
 
 configs:
   cm:
+    users.anonymous.enabled: "false"
     webhook.maxPayloadSizeMB: "5"
   secret:
     githubSecret: "$argocd-github-webhook:secret"
