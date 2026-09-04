@@ -84,11 +84,23 @@ test("Indigo MetalLB is isolated to its reserved pool and worker nodes", async (
 })
 
 test("Indigo explicitly enables Cilium's Gateway API and standalone Envoy data plane", async () => {
-  const values = await read("gitops/components/cilium/overlays/indigo/values-overrides.yaml")
+  const [values, project] = await Promise.all([
+    read("gitops/components/cilium/overlays/indigo/values-overrides.yaml"),
+    read("gitops/components/argocd/base/platform-cilium.appproject.yaml"),
+  ])
 
   assert.match(values, /^l7Proxy: true$/m)
   assert.match(values, /^envoy:\n  enabled: true$/m)
   assert.match(values, /^gatewayAPI:\n  enabled: true$/m)
+  assert.match(
+    project,
+    /kind: ValidatingAdmissionPolicy\n\s+name: gateway\.cilium\.io/,
+  )
+  assert.match(
+    project,
+    /kind: ValidatingAdmissionPolicyBinding\n\s+name: gateway\.cilium\.io/,
+  )
+  assert.match(project, /kind: GatewayClass\n\s+name: cilium/)
 })
 
 test("Indigo Metrics Server keeps kubelet TLS verification enabled", async () => {
