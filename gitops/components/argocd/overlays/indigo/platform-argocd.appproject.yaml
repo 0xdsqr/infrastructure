@@ -1,0 +1,63 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-argocd
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  labels:
+    app.kubernetes.io/part-of: dsqr-gitops
+    platform.dsqr.dev/owner: platform
+spec:
+  description: Admin-only Argo CD installation and self-management
+  sourceRepos:
+    - ghcr.io/argoproj/argo-helm
+    - https://github.com/0xdsqr/infrastructure.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: argocd
+  clusterResourceWhitelist:
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: applications.argoproj.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: applicationsets.argoproj.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: appprojects.argoproj.io
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: argocd-application-controller
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: argocd-server
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: argocd-application-controller
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: argocd-server
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: Secret
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ServiceAccount
+    - group: apps
+      kind: Deployment
+    - group: apps
+      kind: StatefulSet
+    - group: batch
+      kind: Job
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+    - group: policy
+      kind: PodDisruptionBudget
+    - group: rbac.authorization.k8s.io
+      kind: Role
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding

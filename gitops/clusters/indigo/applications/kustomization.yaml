@@ -5,6 +5,7 @@ components:
   - ../../../components/gitops-policy/steady-state
 
 resources:
+  - argocd.yaml
   - argocd-access.yaml
   - argocd-config.yaml
   - cilium.yaml

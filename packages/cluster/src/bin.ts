@@ -15,7 +15,7 @@ require KUBECONFIG and refuse to mutate a cluster whose API server is not the
 declared Indigo endpoint (https://10.10.80.10:6443).
 
 Steps:
-  argocd            install or upgrade the pinned Argo CD Helm release
+  argocd            install the pinned Argo CD Helm release before GitOps adoption
   root              apply the AppProject, RBAC, and app-of-apps root
   cilium-adoption   perform the deliberate, non-pruning Cilium ownership handoff`
 
@@ -121,6 +121,13 @@ const gitOpsPath = (...segments: readonly string[]) =>
 
 const bootstrapArgo = Effect.fn("Cluster.bootstrapArgo")(function* () {
   yield* guardIndigo()
+  const crd = yield* kubectl(["get", "crd", "applications.argoproj.io", "--ignore-not-found", "-o", "name"])
+  const owner = crd.stdout.trim() === "" ? "" : (yield* kubectl(["-n", "argocd", "get", "application", "argocd", "--ignore-not-found", "-o", "name"])).stdout.trim()
+  if (owner !== "") {
+    return yield* new ClusterError({
+      message: "Argo CD is GitOps-managed by Application/argocd. Change its chart/values in Git; bootstrap will not overwrite it. Disaster recovery requires deliberately pausing its GitOps owners first.",
+    })
+  }
   const config = yield* kubeconfig()
   const commonValues = yield* gitOpsPath("components", "argocd", "base", "values-common.yaml")
   const indigoValues = yield* gitOpsPath(

@@ -13,7 +13,7 @@ test("Indigo steady-state policy heals drift without automatically deleting cont
     "kustomize", new URL(`../gitops/clusters/${cluster}/applications`, import.meta.url).pathname,
   ], { encoding: "utf8" })).map(document => document.toJSON())
   const applications = render("indigo")
-  const reviewedPrune = new Set(["cilium", "envoy-gateway", "external-secrets", "gateway-api", "kubelet-csr-approver", "metallb", "metrics-server"])
+  const reviewedPrune = new Set(["argocd", "cilium", "envoy-gateway", "external-secrets", "gateway-api", "kubelet-csr-approver", "metallb", "metrics-server"])
   for (const application of applications) {
     const lifecycle = application.metadata.labels["platform.dsqr.dev/lifecycle"]
     assert.ok(["controller", "configuration", "foundation"].includes(lifecycle), application.metadata.name)

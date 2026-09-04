@@ -44,6 +44,9 @@ const arrayAt = (record: YamlRecord | undefined, ...path: readonly string[]) =>
 
 export const isSupportedSourceTransport = (source: YamlRecord): boolean => {
   if (stringAt(source, "repoURL")?.startsWith("https://") === true) return true
+  if (stringAt(source, "repoURL") === "ghcr.io/argoproj/argo-helm") {
+    return stringAt(source, "chart") === "argo-cd" && /^\d+\.\d+\.\d+$/.test(stringAt(source, "targetRevision") ?? "")
+  }
   // Argo's Helm OCI sources omit the URL scheme. Keep this exception scoped
   // to the pinned official Envoy charts; it does not allow arbitrary HTTP.
   return (

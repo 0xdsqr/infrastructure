@@ -2,6 +2,18 @@
 global:
   domain: argocd.indigo.home.arpa
 
+applicationSet:
+  replicas: 1
+  extraArgs:
+    - --policy=create-update
+    - --enable-scm-providers=false
+  resources:
+    requests:
+      cpu: 25m
+      memory: 96Mi
+    limits:
+      memory: 256Mi
+
 configs:
   cm:
     webhook.maxPayloadSizeMB: "5"

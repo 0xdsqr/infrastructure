@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - ../../base
+  - platform-argocd.appproject.yaml
   - platform-argocd-access.appproject.yaml
   - platform-envoy-gateway.appproject.yaml
   - platform-gateway.appproject.yaml
