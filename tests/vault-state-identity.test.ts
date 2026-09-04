@@ -375,7 +375,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   ])
   assert.deepEqual(indigoGatewayRole.inputs.boundServiceAccountNamespaces, ["gateway-system"])
   assert.deepEqual(indigoGatewayRole.inputs.tokenPolicies, [
-    "homelab-pki-indigo-gateway-origin",
+    "dsqr-labs-pki-indigo-gateway-origin",
     "indigo-external-secrets-token-self",
   ])
 

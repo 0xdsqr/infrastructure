@@ -431,7 +431,7 @@ const pkiIssuers = {
   indigoGatewayOrigin: {
     backend: "pki_int",
     roleName: "indigo-gateway-origin",
-    policyName: "homelab-pki-indigo-gateway-origin",
+    policyName: "dsqr-labs-pki-indigo-gateway-origin",
     allowedDomains: ["argocd.indigo.home.arpa", "gateway.indigo.home.arpa"],
     allowWildcardCertificates: false,
     generateLease: true,
