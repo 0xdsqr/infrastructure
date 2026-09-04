@@ -1,6 +1,10 @@
 # Shared default Helm values for the Argo CD chart.
 # Keep values here when every cluster should use the same Argo CD defaults.
 # Put cluster-specific changes in gitops/components/argocd/overlays/<cluster>/values-overrides.yaml.
+dsqr:
+  # Legacy ingress is opt-in; new clusters declare their own Gateway routes.
+  legacyTraefikIngress: false
+
 global:
   addPrometheusAnnotations: false
   networkPolicy:
@@ -128,7 +132,7 @@ server:
   networkPolicy:
     create: false
   ingress:
-    enabled: true
+    enabled: false
     ingressClassName: traefik
     path: /
     pathType: Prefix
@@ -157,7 +161,9 @@ extraObjects:
       podSelector: {}
       policyTypes:
         - Ingress
-  - apiVersion: networking.k8s.io/v1
+  # The upstream chart evaluates string extraObjects with Helm's tpl function.
+  - |
+    apiVersion: networking.k8s.io/v1
     kind: NetworkPolicy
     metadata:
       name: argocd-allow-server-ingress
@@ -170,6 +176,7 @@ extraObjects:
       policyTypes:
         - Ingress
       ingress:
+        {{- if .Values.dsqr.legacyTraefikIngress }}
         - from:
             - namespaceSelector:
                 matchLabels:
@@ -181,6 +188,7 @@ extraObjects:
           ports:
             - port: 8080
               protocol: TCP
+        {{- end }}
         - from:
             - namespaceSelector:
                 matchLabels:

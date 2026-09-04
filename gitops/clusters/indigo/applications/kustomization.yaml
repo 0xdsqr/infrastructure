@@ -37,5 +37,3 @@ patches:
       - op: replace
         path: /spec/sources/0/targetRevision
         value: 1.20.1
-      - op: remove
-        path: /spec/ignoreDifferences/0

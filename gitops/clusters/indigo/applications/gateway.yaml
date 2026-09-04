@@ -13,6 +13,7 @@ metadata:
     app.kubernetes.io/name: gateway
     app.kubernetes.io/part-of: cluster-ingress
     platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/lifecycle: configuration
     platform.dsqr.dev/tier: platform-addon
 spec:
   project: platform-gateway

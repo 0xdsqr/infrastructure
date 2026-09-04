@@ -9,7 +9,7 @@ configs:
     githubSecret: "$argocd-github-webhook:secret"
 
 server:
-  # Indigo uses the separately managed Cilium Gateway API routes; never render
+  # Indigo uses the separately managed Envoy Gateway API routes; never render
   # the chart's legacy Ingress resource.
   ingress:
     enabled: false

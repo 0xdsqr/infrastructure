@@ -24,3 +24,18 @@ labels:
   - pairs:
       platform.dsqr.dev/cluster: hub-a
       platform.dsqr.dev/environment: lab
+
+# Only hub-a retains the legacy Pulumi ownership exception.
+patches:
+  - target:
+      group: argoproj.io
+      kind: Application
+      name: cilium
+    patch: |-
+      - op: add
+        path: /spec/ignoreDifferences/-
+        value:
+          group: '*'
+          kind: '*'
+          jsonPointers:
+            - /metadata/annotations/argocd.argoproj.io~1tracking-id

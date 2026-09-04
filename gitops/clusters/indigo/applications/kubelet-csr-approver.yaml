@@ -15,6 +15,7 @@ metadata:
     app.kubernetes.io/part-of: cluster-security
     app.kubernetes.io/version: 1.2.14
     platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/lifecycle: controller
     platform.dsqr.dev/tier: platform-addon
 spec:
   project: platform-kubelet-csr-approver

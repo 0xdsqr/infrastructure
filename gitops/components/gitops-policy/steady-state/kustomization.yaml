@@ -7,7 +7,7 @@ patches:
   - target:
       group: argoproj.io
       kind: Application
-      name: (cilium|envoy-gateway|external-secrets|gateway-api|kubelet-csr-approver|metallb|metrics-server)
+      labelSelector: platform.dsqr.dev/lifecycle=controller
     patch: |-
       - op: replace
         path: /spec/syncPolicy/automated
@@ -18,7 +18,7 @@ patches:
   - target:
       group: argoproj.io
       kind: Application
-      name: (argocd-access|external-secrets-config|gateway|metallb-config)
+      labelSelector: platform.dsqr.dev/lifecycle=configuration
     patch: |-
       - op: replace
         path: /spec/syncPolicy/automated

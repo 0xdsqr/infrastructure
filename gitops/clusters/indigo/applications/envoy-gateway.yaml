@@ -14,6 +14,7 @@ metadata:
     app.kubernetes.io/part-of: cluster-ingress
     app.kubernetes.io/version: 1.9.1
     platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/lifecycle: controller
     platform.dsqr.dev/tier: platform-addon
 spec:
   project: platform-envoy-gateway

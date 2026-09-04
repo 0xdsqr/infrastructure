@@ -1,8 +1,10 @@
 import assert from "node:assert/strict"
-import { readFile } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import test from "node:test"
 import { execFileSync } from "node:child_process"
-import { parseAllDocuments } from "yaml"
+import { parseAllDocuments, stringify } from "yaml"
 
 const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8")
 
@@ -13,11 +15,58 @@ test("Indigo steady-state policy heals drift without automatically deleting cont
   const applications = render("indigo")
   const reviewedPrune = new Set(["cilium", "envoy-gateway", "external-secrets", "gateway-api", "kubelet-csr-approver", "metallb", "metrics-server"])
   for (const application of applications) {
+    const lifecycle = application.metadata.labels["platform.dsqr.dev/lifecycle"]
+    assert.ok(["controller", "configuration", "foundation"].includes(lifecycle), application.metadata.name)
+    assert.equal(lifecycle === "controller", reviewedPrune.has(application.metadata.name), application.metadata.name)
     assert.equal(application.spec.syncPolicy.automated.enabled, true, application.metadata.name)
     assert.equal(application.spec.syncPolicy.automated.selfHeal, true, application.metadata.name)
     assert.equal(application.spec.syncPolicy.automated.prune, !reviewedPrune.has(application.metadata.name), application.metadata.name)
   }
   assert.equal(render("hub-a").find(application => application.metadata.name === "cilium").spec.syncPolicy.automated.enabled, false)
+})
+
+test("steady-state lifecycle selection works for new Application names", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "gitops-lifecycle-"))
+  try {
+    await mkdir(join(directory, "policy"))
+    await writeFile(join(directory, "policy/kustomization.yaml"), await read("gitops/components/gitops-policy/steady-state/kustomization.yaml"))
+    await writeFile(join(directory, "kustomization.yaml"), stringify({
+      apiVersion: "kustomize.config.k8s.io/v1beta1", kind: "Kustomization",
+      resources: ["applications.yaml"], components: ["policy"],
+    }))
+    await writeFile(join(directory, "applications.yaml"), ["controller", "configuration"].map(lifecycle => stringify({
+      apiVersion: "argoproj.io/v1alpha1", kind: "Application",
+      metadata: { name: `new-${lifecycle}`, labels: { "platform.dsqr.dev/lifecycle": lifecycle } },
+      spec: { syncPolicy: { automated: { enabled: false, prune: false, selfHeal: false }, syncOptions: ["FailOnSharedResource=true"] } },
+    })).join("---\n"))
+    const applications = parseAllDocuments(execFileSync("kubectl", ["kustomize", directory], { encoding: "utf8" })).map(document => document.toJSON())
+    for (const application of applications) {
+      const configuration = application.metadata.labels["platform.dsqr.dev/lifecycle"] === "configuration"
+      assert.deepEqual(application.spec.syncPolicy.automated, { enabled: true, selfHeal: true, prune: configuration })
+      assert.equal(application.spec.syncPolicy.syncOptions.includes("PruneLast=true"), configuration)
+      assert.ok(application.spec.syncPolicy.syncOptions.includes("FailOnSharedResource=true"))
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true })
+  }
+})
+
+test("only hub-a renders the legacy Cilium tracking exception", () => {
+  for (const cluster of ["hub-a", "indigo"]) {
+    const applications = parseAllDocuments(execFileSync("kubectl", ["kustomize", `gitops/clusters/${cluster}/applications`], { encoding: "utf8" })).map(document => document.toJSON())
+    const rules = applications.find(application => application.metadata.name === "cilium").spec.ignoreDifferences
+    assert.equal(rules.some(rule => rule.jsonPointers.includes("/metadata/annotations/argocd.argoproj.io~1tracking-id")), cluster === "hub-a")
+    assert.deepEqual(rules.filter(rule => rule.kind === "Secret").map(rule => rule.name).sort(), ["cilium-ca", "hubble-server-certs"])
+  }
+})
+
+test("Indigo excludes legacy Traefik but retains roadmap AppProjects", () => {
+  for (const cluster of ["hub-a", "indigo"]) {
+    const projects = parseAllDocuments(execFileSync("kubectl", ["kustomize", `gitops/components/argocd/overlays/${cluster}`], { encoding: "utf8" }))
+      .map(document => document.toJSON()).filter(resource => resource.kind === "AppProject").map(resource => resource.metadata.name)
+    assert.equal(projects.includes("platform-traefik"), cluster === "hub-a")
+    for (const project of ["dsqr", "twt", "fidara", "platform-k8s-monitoring", "platform-kube-state-metrics"]) assert.ok(projects.includes(project), project)
+  }
 })
 
 test("Indigo platform add-ons are generated from shared Application templates", async () => {
