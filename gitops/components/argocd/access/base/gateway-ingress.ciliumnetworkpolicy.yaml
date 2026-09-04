@@ -17,8 +17,11 @@ spec:
       app.kubernetes.io/instance: argocd
       app.kubernetes.io/name: argocd-server
   ingress:
-    - fromEntities:
-        - ingress
+    - fromEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": envoy-gateway-system
+            "k8s:gateway.envoyproxy.io/owning-gateway-name": shared
+            "k8s:gateway.envoyproxy.io/owning-gateway-namespace": gateway-system
       toPorts:
         - ports:
             - port: "8080"

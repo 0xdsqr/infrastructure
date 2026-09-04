@@ -30,6 +30,9 @@ spec:
       name: external-secrets
     - group: ""
       kind: Namespace
+      name: envoy-gateway-system
+    - group: ""
+      kind: Namespace
       name: gateway-system
     - group: ""
       kind: Namespace

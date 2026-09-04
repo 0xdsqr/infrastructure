@@ -9,6 +9,7 @@ test("Indigo platform add-ons are generated from shared Application templates", 
 
   for (const application of [
     "argocd-access",
+    "envoy-gateway",
     "gateway",
     "gateway-api",
     "kubelet-csr-approver",
@@ -61,10 +62,20 @@ test("Indigo foundation declares only current platform namespaces", async () => 
   )
   const names = [...namespaces.matchAll(/^  name: (.+)$/gm)].map((match) => match[1])
 
-  assert.deepEqual(names, ["argocd", "external-secrets", "gateway-system", "metallb-system"])
+  assert.deepEqual(names, [
+    "argocd",
+    "external-secrets",
+    "envoy-gateway-system",
+    "gateway-system",
+    "metallb-system",
+  ])
   assert.match(
     namespaces,
     /name: argocd[\s\S]+platform\.dsqr\.dev\/gateway-access: shared/,
+  )
+  assert.match(
+    namespaces,
+    /name: envoy-gateway-system[\s\S]+pod-security\.kubernetes\.io\/enforce: restricted/,
   )
   assert.match(
     namespaces,
@@ -100,13 +111,13 @@ test("Indigo MetalLB reserves the Gateway VIP and advertises only from workers",
   assert.match(values, /defaultDeny: true/)
 })
 
-test("Indigo shared Gateway is generated, HTTPS-only, and restricted by namespace label", async () => {
+test("Indigo shared Envoy Gateway is HA, HTTPS-only, and restricted by namespace label", async () => {
   const [
     application,
     gateway,
     gatewayOverlay,
     gatewayClass,
-    gatewayClassConfig,
+    envoyProxy,
     project,
     secretsProjectOverlay,
     issuerServiceAccount,
@@ -118,8 +129,8 @@ test("Indigo shared Gateway is generated, HTTPS-only, and restricted by namespac
       read("gitops/clusters/indigo/applications/gateway.yaml"),
       read("gitops/components/gateway/base/shared.gateway.yaml"),
       read("gitops/components/gateway/overlays/indigo/kustomization.yaml"),
-      read("gitops/components/gateway/base/cilium-metallb.gatewayclass.yaml"),
-      read("gitops/components/gateway/base/cilium-metallb.gatewayclassconfig.yaml"),
+      read("gitops/components/gateway/base/envoy.gatewayclass.yaml"),
+      read("gitops/components/gateway/base/shared.envoyproxy.yaml"),
       read("gitops/components/argocd/overlays/indigo/platform-gateway.appproject.yaml"),
       read("gitops/components/argocd/overlays/indigo/kustomization.yaml"),
       read(
@@ -140,23 +151,34 @@ test("Indigo shared Gateway is generated, HTTPS-only, and restricted by namespac
   assert.match(application, /path: gitops\/components\/gateway\/overlays\/indigo/)
   assert.match(application, /enabled: false/)
   assert.match(project, /namespace: gateway-system/)
-  assert.match(project, /kind: GatewayClass\n\s+name: cilium-metallb/)
-  assert.match(project, /kind: CiliumGatewayClassConfig/)
+  assert.match(project, /kind: GatewayClass\n\s+name: envoy/)
+  assert.match(project, /kind: EnvoyProxy/)
   assert.match(project, /kind: Gateway/)
-  assert.match(gatewayClass, /name: cilium-metallb/)
-  assert.match(gatewayClass, /controllerName: io\.cilium\/gateway-controller/)
-  assert.match(gatewayClass, /kind: CiliumGatewayClassConfig/)
-  assert.match(gatewayClass, /namespace: gateway-system/)
+  assert.match(gatewayClass, /name: envoy/)
+  assert.match(
+    gatewayClass,
+    /controllerName: gateway\.envoyproxy\.io\/gatewayclass-controller/,
+  )
+  assert.doesNotMatch(gatewayClass, /namespace:/)
   assert.match(gatewayClass, /argocd\.argoproj\.io\/sync-wave: "1"/)
-  assert.match(gatewayClassConfig, /kind: CiliumGatewayClassConfig/)
-  assert.match(gatewayClassConfig, /namespace: gateway-system/)
-  assert.match(gatewayClassConfig, /loadBalancerClass: metallb\.io\/metallb/)
-  assert.match(gatewayClassConfig, /argocd\.argoproj\.io\/sync-wave: "0"/)
-  assert.match(gateway, /gatewayClassName: cilium-metallb/)
+  assert.match(envoyProxy, /kind: EnvoyProxy/)
+  assert.match(envoyProxy, /namespace: gateway-system/)
+  assert.match(envoyProxy, /replicas: 2/)
+  assert.match(envoyProxy, /minAvailable: 1/)
+  assert.match(envoyProxy, /loadBalancerClass: metallb\.io\/metallb/)
+  assert.match(envoyProxy, /allocateLoadBalancerNodePorts: false/)
+  assert.match(envoyProxy, /argocd\.argoproj\.io\/sync-wave: "0"/)
+  assert.doesNotMatch(gatewayOverlay, /^namespace:/m)
+  assert.match(gateway, /gatewayClassName: envoy/)
+  assert.match(gateway, /namespace: gateway-system/)
+  assert.match(gateway, /group: gateway\.envoyproxy\.io\n\s+kind: EnvoyProxy\n\s+name: shared/)
   assert.match(gateway, /protocol: HTTPS/)
   assert.doesNotMatch(gateway, /protocol: HTTP$/m)
-  assert.match(gateway, /metallb\.io\/address-pool: gateway/)
-  assert.match(gatewayOverlay, /metallb\.io~1loadBalancerIPs\n\s+value: 10\.10\.80\.200/)
+  assert.match(envoyProxy, /metallb\.io\/address-pool: gateway/)
+  assert.match(
+    gatewayOverlay,
+    /envoyService\/annotations\/metallb\.io~1loadBalancerIPs\n\s+value: 10\.10\.80\.200/,
+  )
   assert.match(gateway, /platform\.dsqr\.dev\/gateway-access: shared/)
   assert.match(issuerServiceAccount, /automountServiceAccountToken: false/)
   assert.match(issuerServiceAccount, /argocd\.argoproj\.io\/sync-wave: "0"/)
@@ -228,11 +250,35 @@ test("Indigo Argo access separates the private UI from the authenticated public 
     /key: dsqr-labs\/clusters\/indigo\/platform\/argocd\/webhooks\/github/,
   )
   assert.match(webhookSecret, /deletionPolicy: Retain/)
-  assert.match(policy, /fromEntities:\n\s+- ingress/)
+  assert.match(policy, /fromEndpoints:/)
+  assert.match(policy, /k8s:io\.kubernetes\.pod\.namespace.*envoy-gateway-system/)
+  assert.match(policy, /k8s:gateway\.envoyproxy\.io\/owning-gateway-name.*shared/)
   assert.match(policy, /port: "8080"/)
-  assert.doesNotMatch(policy, /fromEntities:\n\s+- world/)
+  assert.doesNotMatch(policy, /fromEntities:/)
   assert.match(values, /githubSecret: "\$argocd-github-webhook:secret"/)
   assert.match(bootstrapProject, /kind: Namespace\n\s+name: argocd/)
+})
+
+test("Indigo installs Envoy Gateway extension CRDs and an HA control plane", async () => {
+  const [application, values, project] = await Promise.all([
+    read("gitops/clusters/indigo/applications/envoy-gateway.yaml"),
+    read("gitops/components/envoy-gateway/base/values-common.yaml"),
+    read("gitops/components/argocd/overlays/indigo/platform-envoy-gateway.appproject.yaml"),
+  ])
+
+  assert.match(application, /chart: gateway-crds-helm/)
+  assert.match(application, /chart: gateway-helm/)
+  assert.match(application, /targetRevision: v1\.9\.1/)
+  assert.match(application, /name: crds\.gatewayAPI\.enabled\n\s+value: "false"/)
+  assert.match(application, /name: crds\.envoyGateway\.enabled\n\s+value: "true"/)
+  assert.match(application, /skipCrds: true/)
+  assert.match(application, /ServerSideApply=true/)
+  assert.match(values, /deployment:\n\s+replicas: 2/)
+  assert.match(values, /control-plane: envoy-gateway/)
+  assert.match(values, /podDisruptionBudget:\n\s+minAvailable: 1/)
+  assert.match(project, /name: envoyproxies\.gateway\.envoyproxy\.io/)
+  assert.match(project, /kind: MutatingWebhookConfiguration/)
+  assert.doesNotMatch(project, /kind: "\*"|name: "\*"/)
 })
 
 test("Indigo explicitly enables Cilium's Gateway API and standalone Envoy data plane", async () => {

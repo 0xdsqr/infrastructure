@@ -1,0 +1,78 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-envoy-gateway
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  labels:
+    app.kubernetes.io/name: platform-envoy-gateway
+    app.kubernetes.io/part-of: dsqr-gitops
+    platform.dsqr.dev/tier: platform
+spec:
+  description: Envoy Gateway control plane and extension definitions
+  sourceRepos:
+    - docker.io/envoyproxy
+    - https://github.com/0xdsqr/infrastructure.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: envoy-gateway-system
+  clusterResourceWhitelist:
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      name: envoy-gateway-topology-injector.envoy-gateway-system
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: backends.gateway.envoyproxy.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: backendtrafficpolicies.gateway.envoyproxy.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: clienttrafficpolicies.gateway.envoyproxy.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: envoyextensionpolicies.gateway.envoyproxy.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: envoypatchpolicies.gateway.envoyproxy.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: envoyproxies.gateway.envoyproxy.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: httproutefilters.gateway.envoyproxy.io
+    - group: apiextensions.k8s.io
+      kind: CustomResourceDefinition
+      name: securitypolicies.gateway.envoyproxy.io
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: envoy-gateway-gateway-helm-envoy-gateway-role
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: envoy-gateway-gateway-helm-certgen:envoy-gateway-system
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: envoy-gateway-gateway-helm-envoy-gateway-rolebinding
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+      name: envoy-gateway-gateway-helm-certgen:envoy-gateway-system
+  namespaceResourceWhitelist:
+    - group: ""
+      kind: ConfigMap
+    - group: ""
+      kind: Service
+    - group: ""
+      kind: ServiceAccount
+    - group: apps
+      kind: Deployment
+    - group: batch
+      kind: Job
+    - group: policy
+      kind: PodDisruptionBudget
+    - group: rbac.authorization.k8s.io
+      kind: Role
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding

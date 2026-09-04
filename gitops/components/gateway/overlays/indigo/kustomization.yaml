@@ -1,8 +1,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: gateway-system
-
 resources:
   - ../../base
 
@@ -13,11 +11,11 @@ labels:
 
 patches:
   - target:
-      group: gateway.networking.k8s.io
-      version: v1
-      kind: Gateway
+      group: gateway.envoyproxy.io
+      version: v1alpha1
+      kind: EnvoyProxy
       name: shared
     patch: |-
       - op: add
-        path: /spec/infrastructure/annotations/metallb.io~1loadBalancerIPs
+        path: /spec/provider/kubernetes/envoyService/annotations/metallb.io~1loadBalancerIPs
         value: 10.10.80.200

@@ -8,6 +8,7 @@ resources:
   - cluster-foundation.yaml
   - external-secrets.yaml
   - external-secrets-config.yaml
+  - envoy-gateway.yaml
   - gateway-api.yaml
   - gateway.yaml
   - kubelet-csr-approver.yaml

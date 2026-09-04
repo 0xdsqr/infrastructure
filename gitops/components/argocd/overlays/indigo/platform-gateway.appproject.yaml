@@ -12,7 +12,7 @@ metadata:
     app.kubernetes.io/part-of: dsqr-gitops
     platform.dsqr.dev/tier: platform
 spec:
-  description: Shared Cilium Gateway infrastructure
+  description: Shared Envoy Gateway infrastructure
   sourceRepos:
     - https://github.com/0xdsqr/infrastructure.git
   destinations:
@@ -21,9 +21,9 @@ spec:
   clusterResourceWhitelist:
     - group: gateway.networking.k8s.io
       kind: GatewayClass
-      name: cilium-metallb
+      name: envoy
   namespaceResourceWhitelist:
-    - group: cilium.io
-      kind: CiliumGatewayClassConfig
+    - group: gateway.envoyproxy.io
+      kind: EnvoyProxy
     - group: gateway.networking.k8s.io
       kind: Gateway

@@ -1,0 +1,43 @@
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: shared
+  namespace: gateway-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/name: shared-envoy-proxy
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: cluster-ingress
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-addon
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+        container:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+        pod:
+          topologySpreadConstraints:
+            - maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: DoNotSchedule
+              labelSelector:
+                matchLabels:
+                  gateway.envoyproxy.io/owning-gateway-name: shared
+                  gateway.envoyproxy.io/owning-gateway-namespace: gateway-system
+      envoyPDB:
+        minAvailable: 1
+      envoyService:
+        type: LoadBalancer
+        loadBalancerClass: metallb.io/metallb
+        allocateLoadBalancerNodePorts: false
+        annotations:
+          metallb.io/address-pool: gateway

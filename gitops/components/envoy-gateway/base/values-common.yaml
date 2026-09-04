@@ -1,0 +1,18 @@
+# Shared production defaults for the Envoy Gateway control plane.
+# Gateway API CRDs remain owned by the separate gateway-api Application.
+crds:
+  enabled: false
+
+deployment:
+  replicas: 2
+  pod:
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            control-plane: envoy-gateway
+
+podDisruptionBudget:
+  minAvailable: 1

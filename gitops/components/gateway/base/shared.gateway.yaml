@@ -2,6 +2,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: shared
+  namespace: gateway-system
   annotations:
     argocd.argoproj.io/sync-wave: "3"
   labels:
@@ -11,10 +12,12 @@ metadata:
     platform.dsqr.dev/owner: platform
     platform.dsqr.dev/tier: platform-addon
 spec:
-  gatewayClassName: cilium-metallb
+  gatewayClassName: envoy
   infrastructure:
-    annotations:
-      metallb.io/address-pool: gateway
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: shared
   listeners:
     - name: https
       protocol: HTTPS
