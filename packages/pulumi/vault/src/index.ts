@@ -1227,7 +1227,7 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
       ),
   )
 
-  const externalSecretsKubernetesAuthBoundaries = Object.fromEntries(
+  const externalSecretsKubernetesAuthBoundaryResources = Object.fromEntries(
     yield* Effect.forEach(
       externalSecretsKubernetesAuthBoundaryEntries,
       ({ key, boundary, policyEntries }) =>
@@ -1319,14 +1319,24 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
           return [
             key,
             {
-              backend: authBackend.path,
-              config: authBackendConfig.id,
-              roleName: role.roleName,
-              policies: role.tokenPolicies,
+              authBackend,
+              tokenSelfPolicy,
+              output: {
+                backend: authBackend.path,
+                config: authBackendConfig.id,
+                roleName: role.roleName,
+                policies: role.tokenPolicies,
+              },
             },
           ] as const
         }),
     ),
+  )
+  const externalSecretsKubernetesAuthBoundaries = Object.fromEntries(
+    Object.entries(externalSecretsKubernetesAuthBoundaryResources).map(([key, resources]) => [
+      key,
+      resources.output,
+    ]),
   )
 
   const raftSnapshotPolicy = args.raftSnapshotAppRole
@@ -1466,9 +1476,13 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
                 const managedBoundary = externalSecretsKubernetesAuthBoundaryEntries.find(
                   ({ boundary }) => boundary.backend.path === issuer.kubernetesAuthRole!.backend,
                 )
-                const backend = managedBoundary
-                  ? externalSecretsKubernetesAuthBoundaries[managedBoundary.key]!.backend
-                  : issuer.kubernetesAuthRole!.backend
+                const managedBoundaryResources = managedBoundary
+                  ? externalSecretsKubernetesAuthBoundaryResources[managedBoundary.key]
+                  : undefined
+                const backend =
+                  managedBoundaryResources?.authBackend.path ?? issuer.kubernetesAuthRole!.backend
+                const tokenSelfPolicy =
+                  managedBoundaryResources?.tokenSelfPolicy ?? externalSecretsTokenSelfPolicy
 
                 return new vault.kubernetes.AuthBackendRole(
                   issuerResourceNames.kubernetesAuthRole,
@@ -1485,13 +1499,13 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
                     tokenMaxTtl: issuer.kubernetesAuthRole!.tokenMaxTtlSeconds,
                     tokenNoDefaultPolicy: true,
                     tokenNumUses: 0,
-                    tokenPolicies: [policy.name, externalSecretsTokenSelfPolicy.name],
+                    tokenPolicies: [policy.name, tokenSelfPolicy.name],
                     tokenTtl: issuer.kubernetesAuthRole!.tokenTtlSeconds,
                     tokenType: "service",
                   },
                   {
                     ...protectedPkiResourceOptions,
-                    dependsOn: [role, policy, externalSecretsTokenSelfPolicy],
+                    dependsOn: [role, policy, tokenSelfPolicy],
                   },
                 )
               },

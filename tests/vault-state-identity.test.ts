@@ -216,7 +216,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     dependsOn: [
       "pki-issuer-role-indigoGatewayOrigin",
       "pki-issuer-policy-indigoGatewayOrigin",
-      "external-secrets-token-self-policy",
+      "external-secrets-token-self-policy-indigo",
     ],
   })
 
@@ -359,6 +359,10 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   assert.equal(traefikRole.inputs.roleName, "hub-a-traefik-origin-issuer")
   assert.deepEqual(traefikRole.inputs.boundServiceAccountNames, ["traefik-origin-issuer"])
   assert.deepEqual(traefikRole.inputs.boundServiceAccountNamespaces, ["traefik"])
+  assert.deepEqual(traefikRole.inputs.tokenPolicies, [
+    "homelab-pki-hub-a-traefik-origin",
+    "hub-a-external-secrets-token-self",
+  ])
 
   const indigoGatewayRole = byName(
     resources,
@@ -370,6 +374,10 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     "gateway-origin-issuer",
   ])
   assert.deepEqual(indigoGatewayRole.inputs.boundServiceAccountNamespaces, ["gateway-system"])
+  assert.deepEqual(indigoGatewayRole.inputs.tokenPolicies, [
+    "homelab-pki-indigo-gateway-origin",
+    "indigo-external-secrets-token-self",
+  ])
 
   assert.deepEqual(byName(resources, "audit").inputs, {
     description: "Homelab Vault audit log.",
