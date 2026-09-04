@@ -246,6 +246,7 @@ test("Indigo explicitly enables Cilium's Gateway API and standalone Envoy data p
   assert.match(values, /^l7Proxy: true$/m)
   assert.match(values, /^envoy:\n  enabled: true$/m)
   assert.match(values, /^  useOriginalSourceAddress: false$/m)
+  assert.match(values, /^devices: ens18$/m)
   assert.match(values, /^  rollOutPods: true$/m)
   assert.match(values, /^gatewayAPI:\n  enabled: true$/m)
   assert.match(
