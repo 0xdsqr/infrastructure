@@ -33,6 +33,9 @@ patches:
           - group: external-secrets.io
             kind: ClusterSecretStore
             name: vault-indigo
+          - group: rbac.authorization.k8s.io
+            kind: ClusterRoleBinding
+            name: gateway-origin-issuer-auth-delegator
       - op: add
         path: /spec/namespaceResourceWhitelist/-
         value:
