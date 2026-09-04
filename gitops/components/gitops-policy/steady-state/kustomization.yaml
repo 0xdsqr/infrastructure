@@ -1,0 +1,31 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Opt in after first adoption and failover validation. Controller/API deletions
+# require a reviewed pruning operation; ordinary configuration follows Git.
+patches:
+  - target:
+      group: argoproj.io
+      kind: Application
+      name: (cilium|envoy-gateway|external-secrets|gateway-api|kubelet-csr-approver|metallb|metrics-server)
+    patch: |-
+      - op: replace
+        path: /spec/syncPolicy/automated
+        value:
+          enabled: true
+          selfHeal: true
+          prune: false
+  - target:
+      group: argoproj.io
+      kind: Application
+      name: (argocd-access|external-secrets-config|gateway|metallb-config)
+    patch: |-
+      - op: replace
+        path: /spec/syncPolicy/automated
+        value:
+          enabled: true
+          selfHeal: true
+          prune: true
+      - op: add
+        path: /spec/syncPolicy/syncOptions/-
+        value: PruneLast=true

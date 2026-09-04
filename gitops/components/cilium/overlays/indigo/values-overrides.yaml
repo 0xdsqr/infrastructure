@@ -11,27 +11,31 @@ k8sServicePort: 6443
 
 bpf:
   masquerade: true
+  # Preserve the live Service datapath when retiring Gateway API.
+  lbAlgorithmAnnotation: true
+
+socketLB:
+  hostNamespaceOnly: true
 
 # Keep Cilium's service datapath on Indigo's LAN interface. Tailscale remains
 # available for node administration, but its ts0 interface must not be selected
 # for Kubernetes NodePort, masquerading, or datapath MTU detection.
 devices: ens18
 
-# Cilium is Indigo's Gateway API controller and uses the independently
-# life-cycled, node-local Envoy DaemonSet for its L7 data plane.
+# Envoy Gateway owns north-south routing. Retain Cilium's separate Envoy
+# DaemonSet for Cilium L7 network policy and observability.
 l7Proxy: true
 
 envoy:
   enabled: true
-  # Avoid the fragile transparent-source return path for Gateway upstream
-  # connections while retaining the client address in X-Forwarded-For.
+  # Preserve the tested Cilium L7 source-address behavior.
   useOriginalSourceAddress: false
   # The Envoy DaemonSet must restart when its shared Cilium configuration
   # changes so this compatibility setting takes effect everywhere.
   rollOutPods: true
 
 gatewayAPI:
-  enabled: true
+  enabled: false
 
 operator:
   replicas: 2

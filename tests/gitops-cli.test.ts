@@ -8,6 +8,7 @@ import { NodeContext } from "@effect/platform-node"
 import { Effect } from "effect"
 
 import {
+  isSupportedSourceTransport,
   parseGitOpsCheckArguments,
   requireLocalGitOpsSourceDirectory,
   resolveLocalGitOpsSourcePath,
@@ -16,6 +17,19 @@ import { parseGitOpsGenerateArguments } from "../packages/gitops/src/generate.ts
 import { formatGitOpsError } from "../packages/gitops/src/main.ts"
 import { parseGitOpsRenderArguments } from "../packages/gitops/src/render.ts"
 import { listFilesRecursive, runCommand } from "../packages/gitops/src/runtime.ts"
+
+test("Helm OCI transport exceptions require an official Envoy chart and pinned version", () => {
+  assert.equal(isSupportedSourceTransport({ repoURL: "https://helm.cilium.io/" }), true)
+  for (const chart of ["gateway-helm", "gateway-crds-helm"]) {
+    assert.equal(isSupportedSourceTransport({ repoURL: "docker.io/envoyproxy", chart, targetRevision: "v1.9.1" }), true)
+  }
+  for (const source of [
+    { repoURL: "http://helm.cilium.io/" },
+    { repoURL: "docker.io/other", chart: "gateway-helm", targetRevision: "v1.9.1" },
+    { repoURL: "docker.io/envoyproxy", chart: "other", targetRevision: "v1.9.1" },
+    { repoURL: "docker.io/envoyproxy", chart: "gateway-helm", targetRevision: "latest" },
+  ]) assert.equal(isSupportedSourceTransport(source), false)
+})
 
 test("GitOps CLIs preserve their repository-root contracts", async () => {
   assert.deepEqual(await Effect.runPromise(parseGitOpsCheckArguments([], "/work")), {

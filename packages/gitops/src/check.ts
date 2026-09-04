@@ -42,6 +42,17 @@ const stringAt = (record: YamlRecord | undefined, ...path: readonly string[]) =>
 const arrayAt = (record: YamlRecord | undefined, ...path: readonly string[]) =>
   asArray(nestedValue(record, ...path)) ?? []
 
+export const isSupportedSourceTransport = (source: YamlRecord): boolean => {
+  if (stringAt(source, "repoURL")?.startsWith("https://") === true) return true
+  // Argo's Helm OCI sources omit the URL scheme. Keep this exception scoped
+  // to the pinned official Envoy charts; it does not allow arbitrary HTTP.
+  return (
+    stringAt(source, "repoURL") === "docker.io/envoyproxy" &&
+    ["gateway-crds-helm", "gateway-helm"].includes(stringAt(source, "chart") ?? "") &&
+    /^v\d+\.\d+\.\d+$/.test(stringAt(source, "targetRevision") ?? "")
+  )
+}
+
 const sourcesOf = (application: YamlRecord): readonly YamlRecord[] => {
   const sources = asArray(nestedValue(application, "spec", "sources"))
   if (sources) {
@@ -300,8 +311,8 @@ const validateApplication = Effect.fn("GitOps.validateApplication")(function* (o
     options.applicationFile,
   )
   yield* validate(
-    sources.length >= 1 && sources.length <= 2,
-    `${applicationName} has ${sources.length} sources; expected one or two`,
+    sources.length >= 1 && sources.length <= 3,
+    `${applicationName} has ${sources.length} sources; expected one to three`,
     options.applicationFile,
   )
   yield* validate(
@@ -322,11 +333,11 @@ const validateApplication = Effect.fn("GitOps.validateApplication")(function* (o
   )
 
   const insecureSource = sources.find(
-    (source) => stringAt(source, "repoURL")?.startsWith("https://") !== true,
+    (source) => !isSupportedSourceTransport(source),
   )
   yield* validate(
     insecureSource === undefined,
-    `${applicationName} contains a non-HTTPS source: ${stringAt(insecureSource, "repoURL") ?? "<missing>"}`,
+    `${applicationName} contains an unsupported source transport: ${stringAt(insecureSource, "repoURL") ?? "<missing>"}`,
     options.applicationFile,
   )
   const ambiguousGitSource = sources.find(
@@ -348,7 +359,7 @@ const validateApplication = Effect.fn("GitOps.validateApplication")(function* (o
     options.applicationFile,
   )
 
-  if (sources.length === 2) {
+  if (sources.length >= 2) {
     yield* validate(
       sources.filter((source) => field(source, "ref") === "values").length === 1,
       `${applicationName} must have exactly one values source`,

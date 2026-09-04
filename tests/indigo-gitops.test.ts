@@ -1,8 +1,24 @@
 import assert from "node:assert/strict"
 import { readFile } from "node:fs/promises"
 import test from "node:test"
+import { execFileSync } from "node:child_process"
+import { parseAllDocuments } from "yaml"
 
 const read = (path: string) => readFile(new URL(`../${path}`, import.meta.url), "utf8")
+
+test("Indigo steady-state policy heals drift without automatically deleting controller APIs", () => {
+  const render = (cluster: string) => parseAllDocuments(execFileSync("kubectl", [
+    "kustomize", new URL(`../gitops/clusters/${cluster}/applications`, import.meta.url).pathname,
+  ], { encoding: "utf8" })).map(document => document.toJSON())
+  const applications = render("indigo")
+  const reviewedPrune = new Set(["cilium", "envoy-gateway", "external-secrets", "gateway-api", "kubelet-csr-approver", "metallb", "metrics-server"])
+  for (const application of applications) {
+    assert.equal(application.spec.syncPolicy.automated.enabled, true, application.metadata.name)
+    assert.equal(application.spec.syncPolicy.automated.selfHeal, true, application.metadata.name)
+    assert.equal(application.spec.syncPolicy.automated.prune, !reviewedPrune.has(application.metadata.name), application.metadata.name)
+  }
+  assert.equal(render("hub-a").find(application => application.metadata.name === "cilium").spec.syncPolicy.automated.enabled, false)
+})
 
 test("Indigo platform add-ons are generated from shared Application templates", async () => {
   const kustomization = await read("gitops/clusters/indigo/applications/kustomization.yaml")
@@ -282,7 +298,7 @@ test("Indigo installs Envoy Gateway extension CRDs and an HA control plane", asy
   assert.doesNotMatch(project, /kind: "\*"|name: "\*"/)
 })
 
-test("Indigo explicitly enables Cilium's Gateway API and standalone Envoy data plane", async () => {
+test("Indigo retires Cilium Gateway API while preserving its L7 policy data plane", async () => {
   const [commonValues, values, project] = await Promise.all([
     read("gitops/components/cilium/base/values-common.yaml"),
     read("gitops/components/cilium/overlays/indigo/values-overrides.yaml"),
@@ -295,7 +311,7 @@ test("Indigo explicitly enables Cilium's Gateway API and standalone Envoy data p
   assert.match(values, /^  useOriginalSourceAddress: false$/m)
   assert.match(values, /^devices: ens18$/m)
   assert.match(values, /^  rollOutPods: true$/m)
-  assert.match(values, /^gatewayAPI:\n  enabled: true$/m)
+  assert.match(values, /^gatewayAPI:\n  enabled: false$/m)
   assert.match(
     project,
     /kind: ValidatingAdmissionPolicy\n\s+name: gateway\.cilium\.io/,
