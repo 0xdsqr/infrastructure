@@ -34,6 +34,8 @@ patches:
             namespace: external-secrets
           - server: https://kubernetes.default.svc
             namespace: gateway-system
+          - server: https://kubernetes.default.svc
+            namespace: argocd
       - op: replace
         path: /spec/clusterResourceWhitelist
         value:
@@ -43,6 +45,9 @@ patches:
           - group: rbac.authorization.k8s.io
             kind: ClusterRoleBinding
             name: gateway-origin-issuer-auth-delegator
+          - group: rbac.authorization.k8s.io
+            kind: ClusterRoleBinding
+            name: argocd-server-issuer-auth-delegator
       - op: add
         path: /spec/namespaceResourceWhitelist/-
         value:

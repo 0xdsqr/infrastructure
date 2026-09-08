@@ -439,6 +439,27 @@ const pkiIssuers = {
       tokenExplicitMaxTtlSeconds: 3_600,
     },
   },
+  indigoArgocdServer: {
+    backend: "pki_int",
+    roleName: "indigo-argocd-server",
+    policyName: "dsqr-labs-pki-indigo-argocd-server",
+    allowedDomains: ["argocd-server.argocd.svc.cluster.local"],
+    allowWildcardCertificates: false,
+    // Certificate validity must outlive ESO's short-lived login token.
+    // Reissue through ESO; retain explicit PKI serial-number revocation.
+    generateLease: false,
+    ttlHours: 720,
+    maxTtlHours: 720,
+    kubernetesAuthRole: {
+      backend: "kubernetes-indigo",
+      roleName: "indigo-argocd-server-issuer",
+      boundServiceAccountNames: ["argocd-server-issuer"],
+      boundServiceAccountNamespaces: ["argocd"],
+      tokenTtlSeconds: 1_200,
+      tokenMaxTtlSeconds: 3_600,
+      tokenExplicitMaxTtlSeconds: 3_600,
+    },
+  },
   indigoGatewayOrigin: {
     backend: "pki_int",
     roleName: "indigo-gateway-origin",

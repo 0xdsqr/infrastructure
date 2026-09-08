@@ -37,6 +37,7 @@ const externalPolicyNames = {
 const issuerKeys = [
   "gatewayCaddy",
   "hubATraefikOrigin",
+  "indigoArgocdServer",
   "indigoGatewayOrigin",
   "postgresKnoxListener",
   "proxmoxListener",
@@ -110,6 +111,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     ).map((key) => [appRoleToken, `pki-issuer-approle-${key}`] as const),
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-hubATraefikOrigin"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoGatewayOrigin"],
+    [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoArgocdServer"],
     [providerToken, "vault"],
   ].sort((left, right) => left[1].localeCompare(right[1]))
 
@@ -221,6 +223,14 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     dependsOn: [
       "pki-issuer-role-indigoGatewayOrigin",
       "pki-issuer-policy-indigoGatewayOrigin",
+      "external-secrets-token-self-policy-indigo",
+    ],
+  })
+  lifecycle("pki-issuer-kubernetes-role-indigoArgocdServer", {
+    protect: true,
+    dependsOn: [
+      "pki-issuer-role-indigoArgocdServer",
+      "pki-issuer-policy-indigoArgocdServer",
       "external-secrets-token-self-policy-indigo",
     ],
   })
@@ -382,6 +392,17 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   assert.deepEqual(indigoGatewayRole.inputs.boundServiceAccountNamespaces, ["gateway-system"])
   assert.deepEqual(indigoGatewayRole.inputs.tokenPolicies, [
     "dsqr-labs-pki-indigo-gateway-origin",
+    "indigo-external-secrets-token-self",
+  ])
+
+  const indigoArgocdRole = byName(resources, "pki-issuer-kubernetes-role-indigoArgocdServer")
+  assert.equal(indigoArgocdRole.inputs.backend, "kubernetes-indigo")
+  assert.equal(indigoArgocdRole.inputs.roleName, "indigo-argocd-server-issuer")
+  assert.deepEqual(indigoArgocdRole.inputs.boundServiceAccountNames, ["argocd-server-issuer"])
+  assert.deepEqual(indigoArgocdRole.inputs.boundServiceAccountNamespaces, ["argocd"])
+  assert.equal(indigoArgocdRole.inputs.tokenNoDefaultPolicy, true)
+  assert.deepEqual(indigoArgocdRole.inputs.tokenPolicies, [
+    "dsqr-labs-pki-indigo-argocd-server",
     "indigo-external-secrets-token-self",
   ])
 
