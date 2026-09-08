@@ -87,7 +87,7 @@ test("Argo API, repository RPC and Redis access are component-specific", () => {
   }
 })
 
-test("Only repo-server gets registry HTTPS and DNS observation uses trusted CoreDNS", () => {
+test("Only repo-server gets registry HTTPS; DNS interception waits for host readiness", () => {
   const downloads = policy("argocd-repository-downloads")
   assert.deepEqual(roles(downloads), ["argocd-repo-server"])
   assert.deepEqual(downloads.egress[0].toPorts, [{ ports: [{ port: "443", protocol: "TCP" }] }])
@@ -124,6 +124,7 @@ test("Only repo-server gets registry HTTPS and DNS observation uses trusted Core
   }
   const repositoryDNS = policy("argocd-repository-dns")
   assert.deepEqual(roles(repositoryDNS), ["argocd-repo-server"])
-  assert.deepEqual(repositoryDNS.egress[0].toPorts[0].rules, { dns: [{ matchPattern: "*" }] })
+  assert.equal(repositoryDNS.egress[0].toPorts[0].rules, undefined)
+  assert.ok(!indigo().some((resource) => resource.kind === "NetworkPolicy"))
   assert.ok(!roles(policy("argocd-internal-dns")).includes("argocd-repo-server"))
 })

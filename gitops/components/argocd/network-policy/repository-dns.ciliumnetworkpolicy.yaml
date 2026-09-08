@@ -32,8 +32,6 @@ spec:
               protocol: UDP
             - port: "53"
               protocol: TCP
-          # Observe answers from trusted CoreDNS so toFQDNs follows registry IP changes.
-          # DNS resolution is allowed; connections still require an explicit egress rule.
-          rules:
-            dns:
-              - matchPattern: "*"
+          # DNS interception must wait for the NixOS host firewall to admit
+          # Cilium's proxy path. Do not enable egress default-deny until that
+          # prerequisite and fresh registry-download tests have passed.
