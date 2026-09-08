@@ -1,0 +1,27 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: external-secrets-vault-access
+  namespace: external-secrets
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: cluster-secrets
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-policy
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: external-secrets
+      app.kubernetes.io/name: external-secrets
+  enableDefaultDeny:
+    ingress: false
+    egress: false
+  egress:
+    # Dedicated Vault host; update alongside its DNS/address if moved.
+    - toCIDR: [10.10.30.110/32]
+      toPorts:
+        - ports:
+            - port: "8200"
+              protocol: TCP

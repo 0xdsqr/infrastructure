@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - default-deny.networkpolicy.yaml
+  - operator.ciliumnetworkpolicy.yaml
+  - webhook.ciliumnetworkpolicy.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: argocd
+      app.kubernetes.io/part-of: cluster-secrets
+      platform.dsqr.dev/owner: platform
+      platform.dsqr.dev/tier: platform-policy

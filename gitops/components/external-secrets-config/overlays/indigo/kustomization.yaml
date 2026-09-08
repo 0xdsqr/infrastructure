@@ -10,6 +10,10 @@ resources:
   - gateway-root-ca.configmap.yaml
   - indigo-gateway-origin.vaultdynamicsecret.yaml
   - indigo-gateway-origin.externalsecret.yaml
+  - vault-access.ciliumnetworkpolicy.yaml
+
+components:
+  - ../../network-policy
 
 labels:
   - pairs:

@@ -44,3 +44,13 @@ patches:
         value:
           group: ""
           kind: ServiceAccount
+      - op: add
+        path: /spec/namespaceResourceWhitelist/-
+        value:
+          group: networking.k8s.io
+          kind: NetworkPolicy
+      - op: add
+        path: /spec/namespaceResourceWhitelist/-
+        value:
+          group: cilium.io
+          kind: CiliumNetworkPolicy
