@@ -16,11 +16,14 @@ const tailscale = runPulumiProgram(
         adminUser: tailscaleAdminUser,
       }),
       keySpecs: infrastructure.tailscale.keySpecs,
+      deviceTagSpecs: infrastructure.tailscale.deviceTagSpecs,
     })
   }),
 )
 
 export const tailscalePolicy = tailscale.policy
+export const tailscaleDeviceTags = tailscale.deviceTags
+export const indigoNodeAuthKey = tailscale.authKeys.indigoNode
 export const homelabServerAuthKey = tailscale.authKeys.homelabServer
 export const homelabBackupAuthKey = tailscale.authKeys.homelabBackup
 export const mailServerAuthKey = tailscale.authKeys.mailServer

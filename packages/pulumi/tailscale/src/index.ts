@@ -18,6 +18,14 @@ export type TailscaleKeyLifecycle = "one-time" | "server-bootstrap"
 
 export type TailscaleKeySpecs = Readonly<Record<string, TailscaleKeySpec>>
 
+export type TailscaleDeviceTagSpec = {
+  readonly resourceName: string
+  readonly deviceId: string
+  readonly tags: ReadonlyArray<string>
+}
+
+export type TailscaleDeviceTagSpecs = Readonly<Record<string, TailscaleDeviceTagSpec>>
+
 export type JsonPrimitive = boolean | null | number | string
 export type JsonValue =
   | JsonPrimitive
@@ -31,11 +39,13 @@ export type TailscalePlatformArgs<KeySpecs extends TailscaleKeySpecs> = {
   readonly policyResourceName: string
   readonly policyDocument: JsonObject
   readonly keySpecs: KeySpecs
+  readonly deviceTagSpecs?: TailscaleDeviceTagSpecs | undefined
   readonly resourceOptions?: TailscaleResourceOptions | undefined
 }
 
 export type TailscalePlatform<KeySpecs extends TailscaleKeySpecs> = {
   readonly policy: pulumi.Output<string>
+  readonly deviceTags: Readonly<Record<string, pulumi.Output<string[]>>>
   readonly authKeys: {
     readonly [Key in keyof KeySpecs]: pulumi.Output<string>
   }
@@ -200,7 +210,7 @@ export const validateTailscalePlatformArgs = Effect.fn("Tailscale.validatePlatfo
     "Policy resourceName must not be empty.",
   )
 
-  const resourceNames = new Set<string>()
+  const resourceNames = new Set<string>([args.policyResourceName])
 
   for (const [key, spec] of Object.entries(args.keySpecs)) {
     yield* requireResourceConfigEffect(
@@ -221,6 +231,11 @@ export const validateTailscalePlatformArgs = Effect.fn("Tailscale.validatePlatfo
       "Tailnet key description must not be empty.",
     )
     yield* requireResourceConfigEffect(
+      Array.from(spec.description).length <= 50,
+      `tailscale:key:${key}`,
+      "Tailnet key description must contain at most 50 characters.",
+    )
+    yield* requireResourceConfigEffect(
       spec.tags.length > 0,
       `tailscale:key:${key}`,
       "Tailnet key must assign at least one tag.",
@@ -234,6 +249,30 @@ export const validateTailscalePlatformArgs = Effect.fn("Tailscale.validatePlatfo
       new Set(spec.tags).size === spec.tags.length,
       `tailscale:key:${key}`,
       "Tailnet key tags must be unique.",
+    )
+  }
+
+  const deviceIds = new Set<string>()
+  for (const [key, spec] of Object.entries(args.deviceTagSpecs ?? {})) {
+    const resource = `tailscale:deviceTags:${key}`
+    yield* requireResourceConfigEffect(
+      spec.resourceName.trim().length > 0 && !resourceNames.has(spec.resourceName),
+      resource,
+      "Device tag resourceName must be non-empty and unique.",
+    )
+    resourceNames.add(spec.resourceName)
+    yield* requireResourceConfigEffect(
+      spec.deviceId.trim().length > 0 && !deviceIds.has(spec.deviceId),
+      resource,
+      "Device ID must be non-empty and managed only once.",
+    )
+    deviceIds.add(spec.deviceId)
+    yield* requireResourceConfigEffect(
+      spec.tags.length > 0 &&
+        spec.tags.every((tag) => tailnetTagPattern.test(tag)) &&
+        new Set(spec.tags).size === spec.tags.length,
+      resource,
+      "Device tags must be a non-empty, unique list using tag:<name> syntax.",
     )
   }
 
@@ -267,8 +306,29 @@ export const createTailscalePlatformEffect = Effect.fn("Tailscale.createPlatform
     authKeys[key as keyof KeySpecs] = pulumi.secret(tailnetKey.key)
   }
 
+  const deviceTags: Record<string, pulumi.Output<string[]>> = {}
+  for (const [key, spec] of Object.entries(args.deviceTagSpecs ?? {})) {
+    const device = yield* registerPulumiResource(
+      spec.resourceName,
+      () =>
+        new tailscale.DeviceTags(
+          spec.resourceName,
+          { deviceId: spec.deviceId, tags: [...spec.tags] },
+          {
+            ...args.resourceOptions,
+            dependsOn: [policy],
+            // Removing inventory must not silently remove a machine's identity.
+            protect: true,
+            retainOnDelete: true,
+          },
+        ),
+    )
+    deviceTags[key] = device.tags
+  }
+
   return {
     policy: policy.acl,
+    deviceTags,
     authKeys,
   } satisfies TailscalePlatform<KeySpecs>
 })
