@@ -1,0 +1,39 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: argocd-repository-dns
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: argocd
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-policy
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: argocd
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values: [argocd-repo-server]
+  enableDefaultDeny:
+    ingress: false
+    egress: false
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s:k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+          # Observe answers from trusted CoreDNS so toFQDNs follows registry IP changes.
+          # DNS resolution is allowed; connections still require an explicit egress rule.
+          rules:
+            dns:
+              - matchPattern: "*"

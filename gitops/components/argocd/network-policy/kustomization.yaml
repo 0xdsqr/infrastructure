@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - dns.ciliumnetworkpolicy.yaml
+  - repository-dns.ciliumnetworkpolicy.yaml
+  - api.ciliumnetworkpolicy.yaml
+  - repo-rpc.ciliumnetworkpolicy.yaml
+  - redis.ciliumnetworkpolicy.yaml

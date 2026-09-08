@@ -7,6 +7,10 @@ resources:
   - platform-argocd-access.appproject.yaml
   - platform-envoy-gateway.appproject.yaml
   - platform-gateway.appproject.yaml
+  - repository-egress.ciliumnetworkpolicy.yaml
+
+components:
+  - ../../network-policy
 
 labels:
   - pairs:
