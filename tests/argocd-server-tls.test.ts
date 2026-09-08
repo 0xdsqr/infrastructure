@@ -86,14 +86,33 @@ test("existing generated secrets Application owns certificate preparation with s
   ])
 })
 
-test("certificate preparation leaves routing, server mode and hub-a untouched", () => {
+test("Indigo routes use authenticated backend TLS while hub-a retains its existing server mode", () => {
   const values = parse(readFileSync("gitops/components/argocd/base/values-common.yaml", "utf8"))
   assert.equal(values.configs.params["server.insecure"], "true")
-  const routes = render("gitops/components/argocd/access/overlays/indigo").filter((item) => item.kind === "HTTPRoute")
+  const indigoValues = parse(readFileSync("gitops/components/argocd/overlays/indigo/values-overrides.yaml", "utf8"))
+  assert.equal(indigoValues.configs.params["server.insecure"], "false")
+  const access = render("gitops/components/argocd/access/overlays/indigo")
+  const policies = access.filter((item) => item.kind === "BackendTLSPolicy")
+  assert.equal(policies.length, 1)
+  const policy = policies[0]
+  assert.equal(policy.apiVersion, "gateway.networking.k8s.io/v1")
+  assert.equal(policy.metadata.namespace, "argocd")
+  assert.deepEqual(policy.spec, {
+    targetRefs: [{ group: "", kind: "Service", name: "argocd-server", sectionName: "https" }],
+    validation: {
+      hostname: vault.pkiIssuers.indigoArgocdServer.allowedDomains[0],
+      caCertificateRefs: [{ group: "", kind: "ConfigMap", name: "dsqr-home-root-ca" }],
+    },
+  })
+  const project = render("gitops/components/argocd/overlays/indigo")
+    .find((item) => item.kind === "AppProject" && item.metadata.name === "platform-argocd-access")
+  assert.ok(project.spec.namespaceResourceWhitelist.some((item: { group: string; kind: string }) =>
+    item.group === "gateway.networking.k8s.io" && item.kind === "BackendTLSPolicy"))
+  const routes = access.filter((item) => item.kind === "HTTPRoute")
   assert.equal(routes.length, 2)
   for (const route of routes) {
     for (const rule of route.spec.rules) {
-      assert.deepEqual(rule.backendRefs.map((backend: { name: string; port: number }) => [backend.name, backend.port]), [["argocd-server", 80]])
+      assert.deepEqual(rule.backendRefs.map((backend: { name: string; port: number }) => [backend.name, backend.port]), [["argocd-server", 443]])
     }
   }
   assert.equal(render("gitops/components/external-secrets-config/overlays/hub-a")

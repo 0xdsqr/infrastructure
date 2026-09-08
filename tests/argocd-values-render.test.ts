@@ -17,6 +17,10 @@ test("Argo Helm renders legacy ingress only for hub-a", { skip: !chart }, () => 
       assert.equal(settings.data["users.anonymous.enabled"], "false")
       assert.equal(settings.data["admin.enabled"], "true")
     }
+    const params = resources.find(resource => resource.kind === "ConfigMap" && resource.metadata.name === "argocd-cmd-params-cm")
+    assert.equal(params.data["server.insecure"], cluster === "indigo" ? "false" : "true")
+    const service = resources.find(resource => resource.kind === "Service" && resource.metadata.name === "argocd-server")
+    assert.ok(service.spec.ports.some(port => port.name === "https" && port.port === 443 && port.targetPort === 8080))
     const policy = resources.find(resource => resource.kind === "NetworkPolicy" && resource.metadata.name === "argocd-allow-server-ingress")
     assert.ok(policy)
     const namespaces = policy.spec.ingress.flatMap(rule => rule.from.map(source => source.namespaceSelector?.matchLabels?.["kubernetes.io/metadata.name"]))

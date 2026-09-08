@@ -30,5 +30,5 @@ spec:
         - group: ""
           kind: Service
           name: argocd-server
-          port: 80
+          port: 443
           weight: 1

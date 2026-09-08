@@ -408,7 +408,7 @@ test("Indigo Argo access separates the private UI from the authenticated public 
 
   assert.match(uiRoute, /hostnames:\n\s+- argocd\.indigo\.home\.arpa/)
   assert.match(uiRoute, /name: shared\n\s+namespace: gateway-system\n\s+sectionName: https/)
-  assert.match(uiRoute, /name: argocd-server\n\s+port: 80/)
+  assert.match(uiRoute, /name: argocd-server\n\s+port: 443/)
   assert.match(webhookRoute, /hostnames:\n\s+- argocd-hooks-indigo\.dsqr\.dev/)
   assert.match(webhookRoute, /method: POST/)
   assert.match(webhookRoute, /type: Exact\n\s+value: \/api\/webhook/)

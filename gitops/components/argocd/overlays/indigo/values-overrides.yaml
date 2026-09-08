@@ -15,6 +15,9 @@ applicationSet:
       memory: 256Mi
 
 configs:
+  params:
+    # Envoy verifies the Vault-issued argocd-server-tls certificate.
+    server.insecure: "false"
   cm:
     users.anonymous.enabled: "false"
     webhook.maxPayloadSizeMB: "5"
