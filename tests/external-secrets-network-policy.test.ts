@@ -65,7 +65,7 @@ test("ESO traffic is limited to DNS, API, controller-only Vault, probes and moni
   )
   assert.deepEqual(webhook.ingress, [
     {
-      fromEntities: ["kube-apiserver"],
+      fromEntities: ["kube-apiserver", "remote-node"],
       toPorts: [{ ports: [{ port: "10250", protocol: "TCP" }] }],
     },
   ])

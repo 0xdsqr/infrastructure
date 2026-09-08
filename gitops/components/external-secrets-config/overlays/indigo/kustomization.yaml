@@ -15,6 +15,27 @@ resources:
 components:
   - ../../network-policy
 
+patches:
+  - target:
+      group: cilium.io
+      kind: CiliumNetworkPolicy
+      name: external-secrets-webhook-access
+    patch: |-
+      apiVersion: cilium.io/v2
+      kind: CiliumNetworkPolicy
+      metadata:
+        name: external-secrets-webhook-access
+      spec:
+        ingress:
+          # Host-originated API requests use Cilium's node-router address and
+          # arrive as remote-node on Indigo's VXLAN datapath (verified in Hubble).
+          # Permit nodes only on the webhook port, never all cluster workloads.
+          - fromEntities: [kube-apiserver, remote-node]
+            toPorts:
+              - ports:
+                  - port: "10250"
+                    protocol: TCP
+
 labels:
   - pairs:
       platform.dsqr.dev/cluster: indigo
