@@ -32,6 +32,8 @@ spec:
               protocol: UDP
             - port: "53"
               protocol: TCP
-          # DNS interception must wait for the NixOS host firewall to admit
-          # Cilium's proxy path. Do not enable egress default-deny until that
-          # prerequisite and fresh registry-download tests have passed.
+          # Observe answers from CoreDNS for the repository HTTPS allowlist.
+          # Nodes must support Cilium's policy-proxy path before opting in.
+          rules:
+            dns:
+              - matchPattern: "*"

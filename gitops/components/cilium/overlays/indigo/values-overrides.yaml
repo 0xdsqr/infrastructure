@@ -22,6 +22,10 @@ socketLB:
 # for Kubernetes NodePort, masquerading, or datapath MTU detection.
 devices: ens18
 
+# Keep endpoint anti-spoofing explicit while integrating Cilium's policy proxy
+# with the host firewall. Do not rely on the chart default for this safeguard.
+enableSourceIPVerification: true
+
 # Envoy Gateway owns north-south routing. Retain Cilium's separate Envoy
 # DaemonSet for Cilium L7 network policy and observability.
 l7Proxy: true

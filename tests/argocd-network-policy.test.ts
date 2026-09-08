@@ -87,7 +87,7 @@ test("Argo API, repository RPC and Redis access are component-specific", () => {
   }
 })
 
-test("Only repo-server gets registry HTTPS; DNS interception waits for host readiness", () => {
+test("Only repo-server gets registry HTTPS and DNS inspection for FQDN enforcement", () => {
   const downloads = policy("argocd-repository-downloads")
   assert.deepEqual(roles(downloads), ["argocd-repo-server"])
   assert.deepEqual(downloads.egress[0].toPorts, [{ ports: [{ port: "443", protocol: "TCP" }] }])
@@ -100,8 +100,10 @@ test("Only repo-server gets registry HTTPS; DNS interception waits for host read
     "registry-1.docker.io",
     "auth.docker.io",
     "production.cloudflare.docker.com",
+    "production.cloudfront.docker.com",
     "helm.cilium.io",
     "charts.external-secrets.io",
+    "external-secrets.io",
     "kubernetes-sigs.github.io",
     "metallb.github.io",
     "postfinance.github.io",
@@ -124,7 +126,8 @@ test("Only repo-server gets registry HTTPS; DNS interception waits for host read
   }
   const repositoryDNS = policy("argocd-repository-dns")
   assert.deepEqual(roles(repositoryDNS), ["argocd-repo-server"])
-  assert.equal(repositoryDNS.egress[0].toPorts[0].rules, undefined)
+  assert.deepEqual(repositoryDNS.egress[0].toPorts[0].rules, { dns: [{ matchPattern: "*" }] })
+  assert.equal(policy("argocd-internal-dns").egress[0].toPorts[0].rules, undefined)
   assert.ok(!indigo().some((resource) => resource.kind === "NetworkPolicy"))
   assert.ok(!roles(policy("argocd-internal-dns")).includes("argocd-repo-server"))
 })

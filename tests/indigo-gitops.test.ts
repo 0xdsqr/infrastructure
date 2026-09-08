@@ -462,6 +462,7 @@ test("Indigo retires Cilium Gateway API while preserving its L7 policy data plan
   assert.match(values, /^envoy:\n  enabled: true$/m)
   assert.match(values, /^  useOriginalSourceAddress: false$/m)
   assert.match(values, /^devices: ens18$/m)
+  assert.match(values, /^enableSourceIPVerification: true$/m)
   assert.match(values, /^  rollOutPods: true$/m)
   assert.match(values, /^gatewayAPI:\n  enabled: false$/m)
   assert.match(project, /kind: ValidatingAdmissionPolicy\n\s+name: gateway\.cilium\.io/)
