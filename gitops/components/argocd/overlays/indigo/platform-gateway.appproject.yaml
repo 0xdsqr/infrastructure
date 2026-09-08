@@ -18,11 +18,17 @@ spec:
   destinations:
     - server: https://kubernetes.default.svc
       namespace: gateway-system
+    - server: https://kubernetes.default.svc
+      namespace: envoy-gateway-system
   clusterResourceWhitelist:
     - group: gateway.networking.k8s.io
       kind: GatewayClass
       name: envoy
   namespaceResourceWhitelist:
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+    - group: cilium.io
+      kind: CiliumNetworkPolicy
     - group: gateway.envoyproxy.io
       kind: EnvoyProxy
     - group: gateway.networking.k8s.io

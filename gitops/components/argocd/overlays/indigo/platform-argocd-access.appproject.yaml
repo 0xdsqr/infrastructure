@@ -18,6 +18,8 @@ spec:
   destinations:
     - server: https://kubernetes.default.svc
       namespace: argocd
+    - server: https://kubernetes.default.svc
+      namespace: envoy-gateway-system
   namespaceResourceWhitelist:
     - group: cilium.io
       kind: CiliumNetworkPolicy

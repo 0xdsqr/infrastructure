@@ -3,6 +3,10 @@ kind: Kustomization
 
 resources:
   - ../../base
+  - dmz-ingress.ciliumnetworkpolicy.yaml
+
+components:
+  - ../../network-policy
 
 labels:
   - pairs:

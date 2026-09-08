@@ -1,0 +1,66 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: envoy-gateway-controller-access
+  namespace: envoy-gateway-system
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: cluster-ingress
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-policy
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/instance: envoy-gateway
+      control-plane: envoy-gateway
+  enableDefaultDeny:
+    ingress: false
+    egress: false
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: envoy-gateway-system
+            gateway.envoyproxy.io/owning-gateway-name: shared
+            gateway.envoyproxy.io/owning-gateway-namespace: gateway-system
+      toPorts:
+        - ports:
+            - port: "18000"
+              protocol: TCP
+    # Indigo host-originated admission calls can arrive as remote-node.
+    - fromEntities: [kube-apiserver, remote-node]
+      toPorts:
+        - ports:
+            - port: "9443"
+              protocol: TCP
+    - fromEntities: [host]
+      toPorts:
+        - ports:
+            - port: "8081"
+              protocol: TCP
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: observability
+            app.kubernetes.io/instance: k8s-monitoring-alloy-metrics
+            app.kubernetes.io/name: alloy-metrics
+      toPorts:
+        - ports:
+            - port: "19001"
+              protocol: TCP
+  egress:
+    - toEntities: [kube-apiserver]
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s:k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP

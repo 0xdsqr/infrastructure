@@ -3,3 +3,4 @@ kind: Kustomization
 
 resources:
   - gateway-ingress.ciliumnetworkpolicy.yaml
+  - gateway-egress.ciliumnetworkpolicy.yaml
