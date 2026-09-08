@@ -16,7 +16,7 @@ const controlRoles = [
   "argocd-server",
 ]
 
-test("Argo allowances are opt-in, egress-only and staged before enforcement", () => {
+test("Argo allowances are opt-in, egress-only and ordered before namespace enforcement", () => {
   const policies = indigo().filter((resource) => resource.kind === "CiliumNetworkPolicy")
   assert.equal(policies.length, 6)
   for (const resource of policies) {
@@ -128,6 +128,19 @@ test("Only repo-server gets registry HTTPS and DNS inspection for FQDN enforceme
   assert.deepEqual(roles(repositoryDNS), ["argocd-repo-server"])
   assert.deepEqual(repositoryDNS.egress[0].toPorts[0].rules, { dns: [{ matchPattern: "*" }] })
   assert.equal(policy("argocd-internal-dns").egress[0].toPorts[0].rules, undefined)
-  assert.ok(!indigo().some((resource) => resource.kind === "NetworkPolicy"))
   assert.ok(!roles(policy("argocd-internal-dns")).includes("argocd-repo-server"))
+})
+
+test("Argo denies namespace egress by default without changing chart-owned ingress", () => {
+  const policies = indigo().filter((resource) => resource.kind === "NetworkPolicy")
+  assert.equal(policies.length, 1)
+  const deny = policies[0]
+  assert.equal(deny.metadata.name, "argocd-default-deny-egress")
+  assert.equal(deny.metadata.namespace, "argocd")
+  assert.equal(deny.metadata.annotations["argocd.argoproj.io/sync-wave"], "1")
+  assert.deepEqual(deny.spec, { podSelector: {}, policyTypes: ["Egress"] })
+  // Redis has no outbound dependencies: replies to permitted inbound traffic
+  // are stateful, so no outbound initiation allowance is necessary.
+  const allowances = indigo().filter((resource) => resource.kind === "CiliumNetworkPolicy")
+  assert.ok(allowances.every((resource) => !roles(resource.spec).includes("argocd-redis")))
 })
