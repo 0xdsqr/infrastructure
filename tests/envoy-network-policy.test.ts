@@ -15,6 +15,12 @@ const ports = (rules: any[]) =>
   )
 
 test("Envoy allow rules stage without enabling default-deny prematurely", () => {
+  const deny = gateway().find((resource) => resource.kind === "NetworkPolicy")
+  assert.equal(deny.metadata.name, "envoy-gateway-default-deny")
+  assert.equal(deny.metadata.namespace, "envoy-gateway-system")
+  assert.deepEqual(deny.spec.podSelector, {})
+  assert.deepEqual(deny.spec.policyTypes, ["Ingress", "Egress"])
+  assert.equal(deny.metadata.annotations["argocd.argoproj.io/sync-wave"], "1")
   const policies = [...gateway(), ...argo()].filter(
     (resource) =>
       resource.kind === "CiliumNetworkPolicy" &&
@@ -45,7 +51,7 @@ test("Envoy allow rules stage without enabling default-deny prematurely", () => 
 
 test("only the DMZ host reaches shared HTTPS; no unused Envoy services are allowed", () => {
   const resources = gateway()
-  const proxyConfig = resources.find(resource => resource.kind === "EnvoyProxy")
+  const proxyConfig = resources.find((resource) => resource.kind === "EnvoyProxy")
   assert.equal(proxyConfig.spec.provider.kubernetes.envoyService.externalTrafficPolicy, "Local")
   assert.equal(proxyConfig.metadata.labels["platform.dsqr.dev/tier"], "platform-addon")
   const dmz = resources.find((resource) => resource.metadata.name === "envoy-shared-dmz-ingress")

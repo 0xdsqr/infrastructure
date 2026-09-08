@@ -4,3 +4,4 @@ kind: Component
 resources:
   - controller.ciliumnetworkpolicy.yaml
   - proxy.ciliumnetworkpolicy.yaml
+  - default-deny.networkpolicy.yaml
