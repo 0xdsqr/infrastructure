@@ -20,6 +20,9 @@ patches:
         path: /metadata/annotations
         value:
           argocd.argoproj.io/sync-wave: "0"
+      - op: add
+        path: /metadata/labels/platform.dsqr.dev~1tls-reload
+        value: "true"
 
 labels:
   - pairs:

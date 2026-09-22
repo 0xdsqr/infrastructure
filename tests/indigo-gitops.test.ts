@@ -40,6 +40,7 @@ test("Indigo requires controller sync approval while configuration heals automat
     "kubelet-csr-approver",
     "metallb",
     "metrics-server",
+    "reloader",
   ])
   for (const application of applications) {
     const lifecycle = application.metadata.labels["platform.dsqr.dev/lifecycle"]

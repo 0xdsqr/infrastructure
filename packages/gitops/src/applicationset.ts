@@ -48,6 +48,8 @@ export const previewApplicationSet = (applicationSet: YamlRecord): YamlRecord[] 
         throw new Error("Unknown Application lifecycle")
       if (!["standard", "extended"].includes(String(component.retryProfile)))
         throw new Error("Unknown Application retry profile")
+      if (component.includeManifests !== undefined && typeof component.includeManifests !== "boolean")
+        throw new Error("includeManifests must be a boolean")
       return {
         template: spec.template,
         patch: spec.templatePatch,

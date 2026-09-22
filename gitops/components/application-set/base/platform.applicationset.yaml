@@ -71,6 +71,10 @@ spec:
         - repoURL: {{ .repoURL | toJson }}
           targetRevision: {{ .revision | toJson }}
           ref: values
+          {{- if index . "includeManifests" }}
+          # Optional chart companion resources share this Application's owner.
+          path: 'gitops/components/{{ .component }}/overlays/{{ .cluster }}'
+          {{- end }}
       {{- else }}
       source:
         {{- if .remoteSource }}

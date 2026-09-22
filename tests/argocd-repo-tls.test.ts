@@ -81,7 +81,13 @@ test("repo-server certificate preparation renews early without populating the ch
   for (const client of ["server", "controller", "applicationsetcontroller"]) {
     assert.notEqual(values.configs.params[`${client}.repo.server.strict.tls`], "true")
   }
-  assert.equal(JSON.stringify(values).includes(servingSecret), false)
+  assert.equal(values.repoServer.volumes[0].secret.secretName, servingSecret)
+  for (const client of ["server", "controller", "applicationSet"]) {
+    assert.equal(JSON.stringify(values[client]).includes(servingSecret), false)
+    assert.equal((values[client].volumes ?? values[client].extraVolumes)[0].configMap.name, "dsqr-home-root-ca")
+  }
+  assert.equal(secret.target.template.metadata.labels["platform.dsqr.dev/tls-reload"], "true")
+  assert.equal(resource("ConfigMap", "dsqr-home-root-ca", "argocd").metadata.labels["platform.dsqr.dev/tls-reload"], "true")
 })
 
 test("existing generated secrets Application owns repo-server certificate preparation only on Indigo", () => {

@@ -4,6 +4,22 @@ global:
 
 applicationSet:
   replicas: 1
+  deploymentAnnotations:
+    configmap.reloader.stakater.com/reload: dsqr-home-root-ca
+  extraEnv:
+    - name: ARGOCD_APP_CONF_PATH
+      value: /app/dsqr-tls
+  extraVolumes:
+    - name: dsqr-repo-ca
+      configMap:
+        name: dsqr-home-root-ca
+        items:
+          - key: ca.crt
+            path: ca.crt
+  extraVolumeMounts:
+    - name: dsqr-repo-ca
+      mountPath: /app/dsqr-tls/reposerver/tls
+      readOnly: true
   extraArgs:
     - --policy=create-update
     - --enable-scm-providers=false
@@ -18,6 +34,16 @@ configs:
   params:
     # Envoy verifies the Vault-issued argocd-server-tls certificate.
     server.insecure: "false"
+    repo.server: argocd-repo-server.argocd.svc.cluster.local:8081
+    reposerver.disable.tls: "false"
+    # Stage certificate serving and trust first. Strict verification is a
+    # separate rollout after the served chain and renewal path are validated.
+    server.repo.server.strict.tls: "false"
+    controller.repo.server.strict.tls: "false"
+    applicationsetcontroller.repo.server.strict.tls: "false"
+    server.repo.server.plaintext: "false"
+    controller.repo.server.plaintext: "false"
+    applicationsetcontroller.repo.server.plaintext: "false"
   cm:
     users.anonymous.enabled: "false"
     webhook.maxPayloadSizeMB: "5"
@@ -25,7 +51,66 @@ configs:
     githubSecret: "$argocd-github-webhook:secret"
 
 server:
+  deploymentAnnotations:
+    configmap.reloader.stakater.com/reload: dsqr-home-root-ca
+  env:
+    - name: ARGOCD_APP_CONF_PATH
+      value: /app/dsqr-tls
+  volumes:
+    - name: dsqr-repo-ca
+      configMap:
+        name: dsqr-home-root-ca
+        items:
+          - key: ca.crt
+            path: ca.crt
+  volumeMounts:
+    - name: dsqr-repo-ca
+      mountPath: /app/dsqr-tls/server/tls
+      readOnly: true
   # Indigo uses the separately managed Envoy Gateway API routes; never render
   # the chart's legacy Ingress resource.
   ingress:
     enabled: false
+
+controller:
+  statefulsetAnnotations:
+    configmap.reloader.stakater.com/reload: dsqr-home-root-ca
+  env:
+    - name: ARGOCD_APP_CONF_PATH
+      value: /app/dsqr-tls
+  volumes:
+    - name: dsqr-repo-ca
+      configMap:
+        name: dsqr-home-root-ca
+        items:
+          - key: ca.crt
+            path: ca.crt
+  volumeMounts:
+    - name: dsqr-repo-ca
+      mountPath: /app/dsqr-tls/controller/tls
+      readOnly: true
+
+repoServer:
+  deploymentAnnotations:
+    secret.reloader.stakater.com/reload: argocd-repo-server-serving-tls
+  env:
+    - name: ARGOCD_APP_CONF_PATH
+      value: /app/dsqr-tls
+  volumes:
+    - name: dsqr-repo-serving-tls
+      secret:
+        secretName: argocd-repo-server-serving-tls
+        items:
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+  volumeMounts:
+    - name: dsqr-repo-serving-tls
+      mountPath: /app/dsqr-tls/reposerver/tls
+      readOnly: true
+  deploymentStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0

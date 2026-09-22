@@ -21,7 +21,7 @@ test("Indigo has one protected native owner for all platform Applications", () =
     "Prune=confirm,Delete=confirm",
   )
   const apps = previewApplicationSet(owner)
-  assert.equal(apps.length, 14)
+  assert.equal(apps.length, 15)
   assert.ok(apps.some((app) => (app.metadata as { name: string }).name === "argocd"))
   for (const app of apps) {
     const metadata = app.metadata as { namespace: string; finalizers?: string[] }
@@ -31,13 +31,14 @@ test("Indigo has one protected native owner for all platform Applications", () =
 })
 
 test("native inventory rejects empty, duplicate and unknown lifecycle entries", () => {
-  for (const mutation of ["empty", "duplicate", "lifecycle", "missing-field"]) {
+  for (const mutation of ["empty", "duplicate", "lifecycle", "missing-field", "include-manifests"]) {
     const owner = applicationSet()
     const inventory = owner.spec.generators[0].matrix.generators[1].list.elements
     if (mutation === "empty") inventory.splice(0)
     if (mutation === "duplicate") inventory.push(structuredClone(inventory[0]))
     if (mutation === "lifecycle") inventory[0].lifecycle = "unreviewed"
     if (mutation === "missing-field") delete inventory[0].namespace
+    if (mutation === "include-manifests") inventory[0].includeManifests = "true"
     assert.throws(() => previewApplicationSet(owner))
   }
 })

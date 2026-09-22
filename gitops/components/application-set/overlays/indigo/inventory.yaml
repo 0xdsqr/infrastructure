@@ -35,6 +35,54 @@ spec:
                       skipCrds: false
                       parameters: []
                       useValues: true
+                  # Only the renewal controller's rollout marker is excluded.
+                  ignoreDifferences:
+                    - group: apps
+                      kind: Deployment
+                      name: argocd-repo-server
+                      namespace: argocd
+                      jsonPointers: [/spec/template/metadata/annotations/reloader.stakater.com~1last-reloaded-from]
+                    - group: apps
+                      kind: Deployment
+                      name: argocd-server
+                      namespace: argocd
+                      jsonPointers: [/spec/template/metadata/annotations/reloader.stakater.com~1last-reloaded-from]
+                    - group: apps
+                      kind: Deployment
+                      name: argocd-applicationset-controller
+                      namespace: argocd
+                      jsonPointers: [/spec/template/metadata/annotations/reloader.stakater.com~1last-reloaded-from]
+                    - group: apps
+                      kind: StatefulSet
+                      name: argocd-application-controller
+                      namespace: argocd
+                      jsonPointers: [/spec/template/metadata/annotations/reloader.stakater.com~1last-reloaded-from]
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                    - DisableClientSideApplyMigration=true
+                    - ServerSideApply=true
+                    - RespectIgnoreDifferences=true
+                  retryProfile: standard
+                - name: reloader
+                  namespace: argocd
+                  project: platform-reloader
+                  partOf: platform-renewal
+                  tier: platform-addon
+                  lifecycle: controller
+                  version: 1.4.22
+                  wave: "2"
+                  component: reloader
+                  includeManifests: true
+                  remoteSource: {}
+                  charts:
+                    - repoURL: https://stakater.github.io/stakater-charts
+                      chart: reloader
+                      revision: 2.2.17
+                      releaseName: reloader
+                      skipCrds: true
+                      parameters: []
+                      useValues: true
                   ignoreDifferences: []
                   syncOptions:
                     - ApplyOutOfSyncOnly=true

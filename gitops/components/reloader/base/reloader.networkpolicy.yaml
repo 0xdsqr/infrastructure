@@ -1,0 +1,12 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: reloader-default-deny
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: reloader
+      app.kubernetes.io/instance: reloader
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress: []

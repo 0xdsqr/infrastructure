@@ -1,0 +1,32 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: reloader
+rules:
+  # The watch is label-filtered, but RBAC read access is namespace-wide.
+  - apiGroups: [""]
+    resources: [secrets, configmaps]
+    verbs: [get, list, watch]
+  - apiGroups: [apps]
+    resources: [deployments, daemonsets, statefulsets]
+    verbs: [get, list]
+  - apiGroups: [apps]
+    resources: [deployments]
+    resourceNames: [argocd-repo-server, argocd-server, argocd-applicationset-controller]
+    verbs: [update, patch]
+  - apiGroups: [apps]
+    resources: [statefulsets]
+    resourceNames: [argocd-application-controller]
+    verbs: [update, patch]
+  - apiGroups: [""]
+    resources: [events]
+    verbs: [create, patch]
+  # Upstream publishes runtime metadata on startup. Create cannot be name-scoped;
+  # updates are restricted so it cannot overwrite Argo's configuration.
+  - apiGroups: [""]
+    resources: [configmaps]
+    verbs: [create]
+  - apiGroups: [""]
+    resources: [configmaps]
+    resourceNames: [reloader-meta-info]
+    verbs: [update]

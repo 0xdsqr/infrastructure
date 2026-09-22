@@ -107,6 +107,7 @@ test("Only repo-server gets registry HTTPS and DNS inspection for FQDN enforceme
     "kubernetes-sigs.github.io",
     "metallb.github.io",
     "postfinance.github.io",
+    "stakater.github.io",
   ])
   for (const name of ["argocd-internal-dns", "argocd-repository-dns"]) {
     const dns = policy(name)
