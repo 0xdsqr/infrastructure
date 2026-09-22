@@ -4,6 +4,9 @@ loadBalancerClass: metallb.io/metallb
 
 controller:
   priorityClassName: system-cluster-critical
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
 
 speaker:
   tolerateMaster: false

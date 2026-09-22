@@ -2,6 +2,10 @@
 global:
   domain: argocd.indigo.home.arpa
 
+redis:
+  # Redis only serves Argo's cache; it does not call the Kubernetes API.
+  automountServiceAccountToken: false
+
 applicationSet:
   replicas: 1
   deploymentAnnotations:
@@ -90,6 +94,10 @@ controller:
       readOnly: true
 
 repoServer:
+  # Repository rendering uses credentials supplied by Argo, not the Kubernetes API.
+  automountServiceAccountToken: false
+  serviceAccount:
+    automountServiceAccountToken: false
   deploymentAnnotations:
     secret.reloader.stakater.com/reload: argocd-repo-server-serving-tls
   env:
