@@ -77,8 +77,8 @@ export const cloudflare = {
   ],
   r2Buckets: [
     {
-      resourceName: "homelab-backups",
-      name: "dsqr-homelab-backups",
+      resourceName: "dsqr-platform-backups",
+      name: "dsqr-platform-backups",
       location: "enam",
       jurisdiction: "default",
       storageClass: "Standard",

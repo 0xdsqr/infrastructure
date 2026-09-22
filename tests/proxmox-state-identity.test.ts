@@ -56,7 +56,14 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
       [vmToken, "khaos"],
       [vmToken, "knox"],
       [vmToken, "observability"],
+      [vmToken, "pantheon"],
       ["pulumi:providers:proxmoxve", "proxmoxve"],
+      [vmToken, "srv-lx-k8s-indigo-control-01"],
+      [vmToken, "srv-lx-k8s-indigo-control-02"],
+      [vmToken, "srv-lx-k8s-indigo-control-03"],
+      [vmToken, "srv-lx-k8s-indigo-worker-01"],
+      [vmToken, "srv-lx-k8s-indigo-worker-02"],
+      [vmToken, "srv-lx-k8s-indigo-worker-03"],
       [vmToken, "vault"],
     ],
   )
@@ -76,9 +83,76 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
     ["knox", "knox", 1120, 4, 16384, 200, "ssd-dsqr-raid-001", 30, "02:00:00:00:11:20"],
     ["vault", "vault", 1140, 2, 4096, 64, "ssd-dsqr-raid-002", 30, "02:00:00:00:11:40"],
     ["backup", "backup", 1160, 2, 4096, 128, "ssd-dsqr-raid-001", 30, "02:00:00:00:11:60"],
+    ["pantheon", "pantheon", 1180, 4, 8192, 64, "ssd-dsqr-raid-002", 30, "02:00:00:00:11:80"],
     ["k8s-main-cp-01", "k8s-main-cp-01", 1200, 4, 16384, 100, "ssd-dsqr-raid-001", 30, undefined],
     ["k8s-main-w-01", "k8s-main-w-01", 1210, 4, 8192, 100, "ssd-dsqr-raid-001", 30, undefined],
     ["k8s-main-w-02", "k8s-main-w-02", 1220, 4, 8192, 100, "ssd-dsqr-raid-001", 30, undefined],
+    [
+      "srv-lx-k8s-indigo-control-01",
+      "srv-lx-k8s-indigo-control-01",
+      1300,
+      2,
+      4096,
+      64,
+      "ssd-dsqr-raid-002",
+      80,
+      "02:00:00:00:13:00",
+    ],
+    [
+      "srv-lx-k8s-indigo-control-02",
+      "srv-lx-k8s-indigo-control-02",
+      1310,
+      2,
+      4096,
+      64,
+      "ssd-dsqr-raid-002",
+      80,
+      "02:00:00:00:13:10",
+    ],
+    [
+      "srv-lx-k8s-indigo-control-03",
+      "srv-lx-k8s-indigo-control-03",
+      1320,
+      2,
+      4096,
+      64,
+      "ssd-dsqr-raid-002",
+      80,
+      "02:00:00:00:13:20",
+    ],
+    [
+      "srv-lx-k8s-indigo-worker-01",
+      "srv-lx-k8s-indigo-worker-01",
+      1330,
+      4,
+      8192,
+      128,
+      "ssd-dsqr-raid-002",
+      80,
+      "02:00:00:00:13:30",
+    ],
+    [
+      "srv-lx-k8s-indigo-worker-02",
+      "srv-lx-k8s-indigo-worker-02",
+      1340,
+      4,
+      8192,
+      128,
+      "ssd-dsqr-raid-002",
+      80,
+      "02:00:00:00:13:40",
+    ],
+    [
+      "srv-lx-k8s-indigo-worker-03",
+      "srv-lx-k8s-indigo-worker-03",
+      1350,
+      4,
+      8192,
+      128,
+      "ssd-dsqr-raid-002",
+      80,
+      "02:00:00:00:13:50",
+    ],
   ] as const
 
   for (const [
@@ -112,7 +186,11 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
     assert.equal(vm.opts.parent, undefined)
     assert.equal(vm.opts.provider, provider.resource)
     assert.deepEqual(vm.opts.dependsOn, undefined)
-    assert.deepEqual(vm.opts.ignoreChanges, ["clone.datastoreId", "disks[0].speed"])
+    assert.deepEqual(vm.opts.ignoreChanges, [
+      "clone.datastoreId",
+      "disks[0].speed",
+      ...(resourceName === "backup" ? ["disks[1].speed"] : []),
+    ])
     assert.equal(vm.opts.protect, undefined)
     assert.equal(vm.opts.retainOnDelete, undefined)
 
@@ -134,7 +212,9 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
         datastoreId,
         interface: "scsi0",
         size: diskSize,
-        ...(resourceName === "khaos" ? { discard: "on" } : {}),
+        ...(resourceName === "khaos" || resourceName.startsWith("srv-lx-k8s-indigo-")
+          ? { discard: "on" }
+          : {}),
       },
       ...dataDisks,
     ])

@@ -45,7 +45,9 @@ test("Cloudflare checks every ambient credential and identifier", () => {
   assert.equal(
     Exit.isFailure(
       Effect.runSyncExit(
-        loadCloudflareConfig().pipe(Effect.withConfigProvider(ConfigProvider.fromMap(emptyR2Token))),
+        loadCloudflareConfig().pipe(
+          Effect.withConfigProvider(ConfigProvider.fromMap(emptyR2Token)),
+        ),
       ),
     ),
     true,

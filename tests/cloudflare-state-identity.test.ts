@@ -110,8 +110,8 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
       [zoneSettingToken, "fidaraIo-tls-1-3"],
       [tunnelToken, "gateway"],
       [tunnelConfigToken, "gateway-config"],
-      [r2BucketToken, "homelab-backups"],
-      [r2BucketLockToken, "homelab-backups-lock"],
+      [r2BucketToken, "dsqr-platform-backups"],
+      [r2BucketLockToken, "dsqr-platform-backups-lock"],
       [dnsToken, "labs-dsqr-dev"],
       [dnsToken, "s3-dsqr-dev"],
       [dnsToken, "studio-dsqr-dev"],
@@ -125,7 +125,7 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
   )
 
   for (const resource of resources) {
-    if (resource.name === "homelab-backups" || resource.name === "homelab-backups-lock") {
+    if (resource.name === "dsqr-platform-backups" || resource.name === "dsqr-platform-backups-lock") {
       assert.equal(byName(deployment.captured, resource.name).opts.protect, true)
     } else {
       rootOptionsAreStable(deployment, resource.name)
@@ -133,19 +133,19 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
     assert.equal(resource.provider, "")
   }
 
-  const backupBucket = byName(resources, "homelab-backups")
+  const backupBucket = byName(resources, "dsqr-platform-backups")
   assert.deepEqual(backupBucket.inputs, {
     accountId: "account-id",
     jurisdiction: "default",
     location: "enam",
-    name: "dsqr-homelab-backups",
+    name: "dsqr-platform-backups",
     storageClass: "Standard",
   })
 
-  const backupLock = byName(resources, "homelab-backups-lock")
+  const backupLock = byName(resources, "dsqr-platform-backups-lock")
   assert.deepEqual(backupLock.inputs, {
     accountId: "account-id",
-    bucketName: "dsqr-homelab-backups",
+    bucketName: "dsqr-platform-backups",
     jurisdiction: "default",
     rules: [
       {
