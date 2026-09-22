@@ -63,14 +63,14 @@ test("Reloader may mutate only enrolled workloads and has no cluster-wide RBAC o
   assert.deepEqual(allow.egress[1].toPorts[0].ports, [{ port: "53", protocol: "UDP" }, { port: "53", protocol: "TCP" }])
 })
 
-test("pinned Argo chart isolates serving keys and wires each client's CA path before strict verification", {
+test("pinned Argo chart isolates serving keys and enables each client's strict TLS verification", {
   skip: !process.env.ARGOCD_TEST_CHART,
 }, () => {
   const resources = helm("argocd", process.env.ARGOCD_TEST_CHART!)
   const params = resources.find(resource => resource.metadata.name === "argocd-cmd-params-cm").data
   assert.equal(params["repo.server"], "argocd-repo-server.argocd.svc.cluster.local:8081")
   for (const client of ["server", "controller", "applicationsetcontroller"]) {
-    assert.equal(params[`${client}.repo.server.strict.tls`], "false")
+    assert.equal(params[`${client}.repo.server.strict.tls`], "true")
     assert.equal(params[`${client}.repo.server.plaintext`], "false")
   }
   for (const [index, name] of names.entries()) {
@@ -92,6 +92,10 @@ test("pinned Argo chart isolates serving keys and wires each client's CA path be
       assert.equal(workload.metadata.annotations["secret.reloader.stakater.com/reload"], "argocd-repo-server-serving-tls")
       assert.deepEqual(workload.spec.strategy, { type: "RollingUpdate", rollingUpdate: { maxSurge: 1, maxUnavailable: 0 } })
     } else {
+      const strict = container.env.filter(item => item.valueFrom?.configMapKeyRef?.key?.endsWith(".repo.server.strict.tls"))
+      assert.equal(strict.length, 1, `${name} must consume its strict TLS setting`)
+      assert.equal(strict[0].valueFrom.configMapKeyRef.name, "argocd-cmd-params-cm")
+      assert.equal(params[strict[0].valueFrom.configMapKeyRef.key], "true")
       assert.equal(volume.configMap.name, "dsqr-home-root-ca")
       assert.deepEqual(volume.configMap.items, [{ key: "ca.crt", path: "ca.crt" }])
       assert.equal(pod.volumes.some(volume => volume.secret?.secretName === "argocd-repo-server-serving-tls"), false)

@@ -36,11 +36,10 @@ configs:
     server.insecure: "false"
     repo.server: argocd-repo-server.argocd.svc.cluster.local:8081
     reposerver.disable.tls: "false"
-    # Stage certificate serving and trust first. Strict verification is a
-    # separate rollout after the served chain and renewal path are validated.
-    server.repo.server.strict.tls: "false"
-    controller.repo.server.strict.tls: "false"
-    applicationsetcontroller.repo.server.strict.tls: "false"
+    # All repo-server clients authenticate its Vault-issued service identity.
+    server.repo.server.strict.tls: "true"
+    controller.repo.server.strict.tls: "true"
+    applicationsetcontroller.repo.server.strict.tls: "true"
     server.repo.server.plaintext: "false"
     controller.repo.server.plaintext: "false"
     applicationsetcontroller.repo.server.plaintext: "false"

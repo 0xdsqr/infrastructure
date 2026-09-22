@@ -79,7 +79,7 @@ test("repo-server certificate preparation renews early without populating the ch
   assert.equal(resources.some((item) => item.kind === "ExternalSecret" && item.spec.target.name === "argocd-repo-server-tls"), false)
   const values = parse(readFileSync("gitops/components/argocd/overlays/indigo/values-overrides.yaml", "utf8"))
   for (const client of ["server", "controller", "applicationsetcontroller"]) {
-    assert.notEqual(values.configs.params[`${client}.repo.server.strict.tls`], "true")
+    assert.equal(values.configs.params[`${client}.repo.server.strict.tls`], "true")
   }
   assert.equal(values.repoServer.volumes[0].secret.secretName, servingSecret)
   for (const client of ["server", "controller", "applicationSet"]) {
