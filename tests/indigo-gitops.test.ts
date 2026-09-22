@@ -252,7 +252,7 @@ test("Indigo foundation declares only current platform namespaces", async () => 
   )
   assert.match(
     namespaces,
-    /name: gateway-system[\s\S]+pod-security\.kubernetes\.io\/enforce: baseline/,
+    /name: gateway-system[\s\S]+pod-security\.kubernetes\.io\/enforce: restricted/,
   )
   assert.match(
     namespaces,
