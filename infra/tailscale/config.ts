@@ -23,6 +23,8 @@ const tags = {
 
 const hosts = {
   beaconObservability: "100.97.79.78",
+  backupCollector: "100.71.152.103",
+  indigoEtcdSource: "100.102.143.47",
 } as const
 
 type PolicyArgs = {
@@ -78,18 +80,33 @@ function createPolicy(args: PolicyArgs) {
       dst: [tags.location.proxmox],
       ip: ["tcp:22"],
     },
+    // Exact devices, not the whole Indigo tag. OpenSSH additionally pins the
+    // collector key to a forced snapshot-export command on a dedicated user.
+    {
+      src: ["backup-collector"],
+      dst: ["indigo-etcd-source"],
+      ip: ["tcp:22"],
+    },
   ] as const
 
   return {
     tagOwners: tagOwners(args.adminUser),
     hosts: {
       "beacon-observability": hosts.beaconObservability,
+      "backup-collector": hosts.backupCollector,
+      "indigo-etcd-source": hosts.indigoEtcdSource,
     },
     grants,
     // Indigo must not retain tag:server: grants are additive, so that tag would
     // restore lateral access even when the restricted Indigo tag is present.
     // These are network-policy assertions for OpenSSH, not Tailscale SSH rules.
     tests: [
+      {
+        src: hosts.backupCollector,
+        proto: "tcp",
+        accept: ["indigo-etcd-source:22"],
+        deny: ["indigo-etcd-source:2379", "indigo-etcd-source:6443", "indigo-etcd-source:10250"],
+      },
       {
         src: args.adminUser,
         proto: "tcp",

@@ -41,7 +41,7 @@ test("device retagging targets exactly the six verified Indigo nodes", () => {
   })
 })
 
-test("Indigo identity staging preserves every existing network grant and route approval", () => {
+test("Indigo backup adds only a device-specific SSH pull grant and preserves existing access", () => {
   assert.deepEqual(policy.grants, [
     { src: [tailscaleAdminUser], dst: ["*"], ip: ["*"] },
     { src: ["tag:workstation"], dst: ["*"], ip: ["*"] },
@@ -53,9 +53,14 @@ test("Indigo identity staging preserves every existing network grant and route a
     },
     { src: ["tag:mail"], dst: ["tag:backup"], ip: ["tcp:22"] },
     { src: ["tag:backup"], dst: ["tag:proxmox"], ip: ["tcp:22"] },
+    { src: ["backup-collector"], dst: ["indigo-etcd-source"], ip: ["tcp:22"] },
   ])
   assert.deepEqual(policy.autoApprovers, { exitNode: ["tag:exit-node"] })
-  assert.deepEqual(policy.hosts, { "beacon-observability": "100.97.79.78" })
+  assert.deepEqual(policy.hosts, {
+    "beacon-observability": "100.97.79.78",
+    "backup-collector": "100.71.152.103",
+    "indigo-etcd-source": "100.102.143.47",
+  })
   assert.equal("ssh" in policy, false, "Do not switch OpenSSH to Tailscale SSH")
 })
 
@@ -117,9 +122,18 @@ test("policy assertions protect admin SSH and check representative lateral-acces
 test("policy assertions use the configured admin identity rather than a hardcoded account", () => {
   const alternate = tailscale.createPolicy({ adminUser: "admin@example.test" })
   assert.deepEqual(alternate.tagOwners[indigoTag], ["admin@example.test"])
-  assert.deepEqual(alternate.tests[0], {
+  assert.deepEqual(alternate.tests.find(check => check.src === "admin@example.test"), {
     src: "admin@example.test",
     proto: "tcp",
     accept: [`${indigoTag}:22`],
+  })
+})
+
+test("backup policy assertions allow SSH export but deny etcd and Kubernetes API access", () => {
+  assert.deepEqual(policy.tests.find(check => check.src === tailscale.hosts.backupCollector), {
+    src: "100.71.152.103",
+    proto: "tcp",
+    accept: ["indigo-etcd-source:22"],
+    deny: ["indigo-etcd-source:2379", "indigo-etcd-source:6443", "indigo-etcd-source:10250"],
   })
 })
