@@ -48,6 +48,9 @@ patches:
           - group: rbac.authorization.k8s.io
             kind: ClusterRoleBinding
             name: argocd-server-issuer-auth-delegator
+          - group: rbac.authorization.k8s.io
+            kind: ClusterRoleBinding
+            name: argocd-repo-server-issuer-auth-delegator
       - op: add
         path: /spec/namespaceResourceWhitelist/-
         value:

@@ -38,6 +38,7 @@ const issuerKeys = [
   "gatewayCaddy",
   "hubATraefikOrigin",
   "indigoArgocdServer",
+  "indigoArgocdRepoServer",
   "indigoGatewayOrigin",
   "postgresKnoxListener",
   "proxmoxListener",
@@ -112,6 +113,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-hubATraefikOrigin"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoGatewayOrigin"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoArgocdServer"],
+    [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoArgocdRepoServer"],
     [providerToken, "vault"],
   ].sort((left, right) => left[1].localeCompare(right[1]))
 
@@ -231,6 +233,14 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     dependsOn: [
       "pki-issuer-role-indigoArgocdServer",
       "pki-issuer-policy-indigoArgocdServer",
+      "external-secrets-token-self-policy-indigo",
+    ],
+  })
+  lifecycle("pki-issuer-kubernetes-role-indigoArgocdRepoServer", {
+    protect: true,
+    dependsOn: [
+      "pki-issuer-role-indigoArgocdRepoServer",
+      "pki-issuer-policy-indigoArgocdRepoServer",
       "external-secrets-token-self-policy-indigo",
     ],
   })
@@ -405,6 +415,26 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     "dsqr-labs-pki-indigo-argocd-server",
     "indigo-external-secrets-token-self",
   ])
+
+  const repoIssuerRole = byName(resources, "pki-issuer-kubernetes-role-indigoArgocdRepoServer")
+  assert.equal(repoIssuerRole.inputs.backend, "kubernetes-indigo")
+  assert.equal(repoIssuerRole.inputs.roleName, "indigo-argocd-repo-server-issuer")
+  assert.deepEqual(repoIssuerRole.inputs.boundServiceAccountNames, ["argocd-repo-server-issuer"])
+  assert.deepEqual(repoIssuerRole.inputs.boundServiceAccountNamespaces, ["argocd"])
+  assert.equal(repoIssuerRole.inputs.tokenNoDefaultPolicy, true)
+  assert.equal(repoIssuerRole.inputs.tokenTtl, 1_200)
+  assert.equal(repoIssuerRole.inputs.tokenMaxTtl, 3_600)
+  assert.equal(repoIssuerRole.inputs.tokenExplicitMaxTtl, 3_600)
+  assert.deepEqual(repoIssuerRole.inputs.tokenPolicies, [
+    "dsqr-labs-pki-indigo-argocd-repo-server",
+    "indigo-external-secrets-token-self",
+  ])
+  const repoIssuerPolicy = byName(resources, "pki-issuer-policy-indigoArgocdRepoServer")
+  assert.equal(repoIssuerPolicy.inputs.policy, [
+    'path "pki_int/issue/indigo-argocd-repo-server" {',
+    '  capabilities = ["create", "update"]',
+    '}',
+  ].join("\n"))
 
   assert.deepEqual(byName(resources, "audit").inputs, {
     description: "Homelab Vault audit log.",

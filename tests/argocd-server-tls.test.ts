@@ -83,6 +83,7 @@ test("existing generated secrets Application owns certificate preparation with s
   assert.deepEqual(project.spec.clusterResourceWhitelist.filter((item: { kind: string }) => item.kind === "ClusterRoleBinding"), [
     { group: "rbac.authorization.k8s.io", kind: "ClusterRoleBinding", name: "gateway-origin-issuer-auth-delegator" },
     { group: "rbac.authorization.k8s.io", kind: "ClusterRoleBinding", name: "argocd-server-issuer-auth-delegator" },
+    { group: "rbac.authorization.k8s.io", kind: "ClusterRoleBinding", name: "argocd-repo-server-issuer-auth-delegator" },
   ])
 })
 

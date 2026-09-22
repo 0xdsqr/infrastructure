@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Issuance only. Workload mounts, client verification and renewal-triggered
+# restarts are enabled separately. The server-tls component owns the shared
+# dsqr-home-root-ca ConfigMap in this namespace.
+namespace: argocd
+resources:
+  - issuer.serviceaccount.yaml
+  - issuer.clusterrolebinding.yaml
+  - repo-server.externalsecret.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: argocd
+      app.kubernetes.io/part-of: argocd
+      platform.dsqr.dev/owner: platform
+      platform.dsqr.dev/tier: platform-secret
