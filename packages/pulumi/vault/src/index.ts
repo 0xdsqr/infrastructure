@@ -980,13 +980,12 @@ export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(funct
   yield* requireResourceConfigEffect(
     !args.audit.enabled ||
       (args.audit.path.trim().length > 0 &&
-        args.audit.description.trim().length > 0 &&
         Object.keys(args.audit.options).length > 0 &&
         Object.entries(args.audit.options).every(
           ([key, value]) => key.trim().length > 0 && value.trim().length > 0,
         )),
     "vault:audit",
-    "Enabled audit devices require non-empty path, description, and options.",
+    "Enabled audit devices require non-empty path and options.",
   )
 
   const resourceNames = args.resourceNames
@@ -1630,7 +1629,7 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
               description: args.audit.description,
               options: args.audit.options,
             },
-            resourceOptions,
+            { ...resourceOptions, protect: true },
           ),
       )
     : undefined

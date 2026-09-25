@@ -191,10 +191,14 @@ const humanAdminPolicy = {
 const audit = {
   enabled: true,
   type: "file",
-  path: "file",
-  description: "Homelab Vault audit log.",
+  // Adopt the existing device without replacement; description is immutable.
+  path: "file_var_log",
+  description: "",
   options: {
-    file_path: "/var/lib/vault/audit.log",
+    file_path: "/var/log/vault/audit.log",
+    mode: "0600",
+    // Preserve the legacy option verbatim (including quotes) to avoid replacement.
+    description: '"Homelab Vault audit log under /var/log/vault."',
   },
 } satisfies VaultAuditConfig
 

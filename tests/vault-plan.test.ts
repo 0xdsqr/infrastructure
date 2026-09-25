@@ -44,6 +44,28 @@ const foundationArgs = (): VaultFoundationArgs => ({
   audit: vault.audit,
 })
 
+test("Vault accepts an existing audit device with an empty description", () => {
+  assert.doesNotThrow(() => Effect.runSync(planVaultFoundationEffect({
+    ...foundationArgs(), audit: { ...vault.audit, description: "" },
+  })))
+})
+
+test("Vault rejects empty audit paths and options before registering resources", () => {
+  for (const audit of [
+    { ...vault.audit, path: " " },
+    { ...vault.audit, options: {} },
+    { ...vault.audit, options: { file_path: " " } },
+    { ...vault.audit, options: { " ": "/var/log/vault/audit.log" } },
+  ]) {
+    const count = resources.length
+    const error = Effect.runSync(Effect.flip(createVaultFoundationEffect({
+      ...foundationArgs(), audit,
+    })))
+    assert.match(error.message, /audit devices require non-empty path and options/)
+    assert.equal(resources.length, count)
+  }
+})
+
 test("Vault rejects unsafe dedicated CA configuration before registering resources", () => {
   const original = vault.pkiIssuers.indigoHubbleServer
   for (const managedCa of [

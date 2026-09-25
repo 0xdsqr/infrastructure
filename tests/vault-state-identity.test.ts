@@ -196,7 +196,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
       "external-secrets-token-self-policy-indigo",
     ],
   })
-  lifecycle("audit")
+  lifecycle("audit", { protect: true })
   lifecycle("pki-issuer-mount-indigoHubbleServer", { protect: true })
   lifecycle("pki-issuer-root-indigoHubbleServer", {
     protect: true, dependsOn: ["pki-issuer-mount-indigoHubbleServer"],
@@ -483,11 +483,13 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   ].join("\n"))
 
   assert.deepEqual(byName(resources, "audit").inputs, {
-    description: "Homelab Vault audit log.",
+    description: "",
     options: {
-      file_path: "/var/lib/vault/audit.log",
+      file_path: "/var/log/vault/audit.log",
+      mode: "0600",
+      description: '"Homelab Vault audit log under /var/log/vault."',
     },
-    path: "file",
+    path: "file_var_log",
     type: "file",
   })
 })
