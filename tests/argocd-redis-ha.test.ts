@@ -55,10 +55,14 @@ test("graceful-shutdown hook exports Sentinel authentication and refuses missing
   assert.equal(ha.redis.terminationGracePeriodSeconds, 60)
 })
 
-test("lifecycle fix is staged without automatically restarting any Redis pod", { skip: !chart }, () => {
+test("steady-state rolling updates retain authenticated, bounded shutdown hooks", { skip: !chart }, () => {
   const objects = render("indigo")
   const statefulset = objects.find(o => o.kind === "StatefulSet" && o.metadata.name === "argocd-redis-ha-server")
-  assert.deepEqual(statefulset.spec.updateStrategy, { type: "OnDelete" })
+  assert.deepEqual(statefulset.spec.updateStrategy, { type: "RollingUpdate" })
+  const staged = render("indigo", ["--set", "redis-ha.redis.updateStrategy.type=OnDelete"])
+    .find(o => o.kind === "StatefulSet" && o.metadata.name === statefulset.metadata.name)
+  assert.deepEqual(statefulset.spec.template, staged.spec.template,
+    "Restoring RollingUpdate must not change the staged pod template")
   const pod = statefulset.spec.template.spec
   const ha = parse(readFileSync(commonPath, "utf8"))["redis-ha"]
   assert.equal(pod.terminationGracePeriodSeconds, 60)
