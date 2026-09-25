@@ -39,11 +39,8 @@ applicationSet:
 
 configs:
   params:
-    # Migration stage 1: start HA without cutting clients over. Sync WITHOUT
-    # pruning so the existing argocd-redis Deployment/Service remain available.
-    # Remove this override only after HA readiness, auth and quorum validation;
-    # roll clients, then explicitly retire the old standalone resources.
-    redis.server: argocd-redis:6379
+    # Let the chart select its HAProxy endpoint. Its cmd-params checksum rolls
+    # clients when this configuration changes; no imperative restart is needed.
     # Envoy verifies the Vault-issued argocd-server-tls certificate.
     server.insecure: "false"
     repo.server: argocd-repo-server.argocd.svc.cluster.local:8081

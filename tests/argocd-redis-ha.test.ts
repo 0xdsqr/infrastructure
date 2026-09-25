@@ -7,10 +7,11 @@ import { previewApplicationSet } from "../packages/gitops/src/applicationset.ts"
 
 const commonPath = "gitops/components/argocd/base/values-common.yaml"
 const chart = process.env.ARGOCD_TEST_CHART
-const render = (cluster: string) => parseAllDocuments(execFileSync("helm", [
+const render = (cluster: string, overrides: string[] = []) => parseAllDocuments(execFileSync("helm", [
   "template", "argocd", chart!, "--namespace", "argocd", "--kube-version", "1.36.3",
   "--values", commonPath,
   "--values", `gitops/components/argocd/overlays/${cluster}/values-overrides.yaml`,
+  ...overrides,
 ], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 }), { version: "1.1" }).map(d => d.toJSON()).filter(Boolean)
 
 const matches = (selector: any, labels: any) =>
@@ -106,10 +107,12 @@ test("HA policies allow only scoped clients, replication, Sentinel and CoreDNS",
   }
 })
 
-test("staging keeps clients on the old cache and leaves hub-a unchanged", { skip: !chart }, () => {
+test("clients use the chart-selected HA endpoint while preserving credentials and manual no-prune sync", { skip: !chart }, () => {
   const objects = render("indigo")
   const params = objects.find(o => o.kind === "ConfigMap" && o.metadata.name === "argocd-cmd-params-cm")
-  assert.equal(params.data["redis.server"], "argocd-redis:6379")
+  assert.equal(params.data["redis.server"], "argocd-redis-ha-haproxy:6379")
+  const values = parse(readFileSync("gitops/components/argocd/overlays/indigo/values-overrides.yaml", "utf8"))
+  assert.equal(values.configs.params["redis.server"], undefined)
   for (const name of ["argocd-server", "argocd-repo-server", "argocd-application-controller"]) {
     const pod = objects.find(o => ["Deployment", "StatefulSet"].includes(o.kind) && o.metadata.name === name).spec.template.spec
     const env = pod.containers[0].env.find((e: any) => e.name === "REDIS_SERVER")
@@ -117,8 +120,8 @@ test("staging keeps clients on the old cache and leaves hub-a unchanged", { skip
     const password = pod.containers[0].env.find((e: any) => e.name === "REDIS_PASSWORD")
     assert.deepEqual(password.valueFrom.secretKeyRef, { name: "argocd-redis", key: "auth", optional: false })
   }
-  // No-prune is a migration prerequisite: standalone Redis remains live until
-  // clients have been explicitly rolled to the verified HA service.
+  // Keep pruning manual: the old standalone resources remain available for
+  // rollback until the live client cutover has been independently verified.
   const applicationSet = parseAllDocuments(execFileSync("kubectl", ["kustomize", "gitops/clusters/indigo/applications"], { encoding: "utf8" }))[0].toJSON()
   const argo = (previewApplicationSet(applicationSet) as any[]).find(o => o.metadata.name === "argocd")
   assert.equal(argo.spec.syncPolicy.automated.enabled, false)
@@ -126,4 +129,29 @@ test("staging keeps clients on the old cache and leaves hub-a unchanged", { skip
   const hub = render("hub-a")
   assert.equal(hub.some(o => o.metadata.name.includes("redis-ha")), false)
   assert.ok(hub.some(o => o.kind === "Deployment" && o.metadata.name === "argocd-redis"))
+})
+
+test("endpoint cutover rolls Argo through chart checksums without changing the HA backend", { skip: !chart }, () => {
+  const after = render("indigo")
+  const before = render("indigo", ["--set-string", "configs.params.redis\\.server=argocd-redis:6379"])
+  const id = (o: any) => `${o.kind}/${o.metadata.name}`
+  assert.deepEqual(after.map(id), before.map(id))
+  const expectedChanges = [
+    "ConfigMap/argocd-cmd-params-cm",
+    "Deployment/argocd-applicationset-controller",
+    "Deployment/argocd-repo-server",
+    "Deployment/argocd-server",
+    "StatefulSet/argocd-application-controller",
+  ]
+  const changed = after.filter(o => JSON.stringify(o) !== JSON.stringify(before.find(p => id(p) === id(o))))
+  assert.deepEqual(changed.map(id).sort(), expectedChanges.sort())
+  for (const workload of changed.filter(o => ["Deployment", "StatefulSet"].includes(o.kind))) {
+    const previous = before.find(o => id(o) === id(workload))
+    const annotations = workload.spec.template.metadata.annotations
+    const previousAnnotations = previous.spec.template.metadata.annotations
+    assert.notEqual(annotations["checksum/cmd-params"], previousAnnotations["checksum/cmd-params"])
+    const normalized = structuredClone(workload)
+    normalized.spec.template.metadata.annotations["checksum/cmd-params"] = previousAnnotations["checksum/cmd-params"]
+    assert.deepEqual(normalized, previous, id(workload))
+  }
 })
