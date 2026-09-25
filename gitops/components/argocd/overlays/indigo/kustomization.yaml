@@ -37,6 +37,8 @@ patches:
             namespace: gateway-system
           - server: https://kubernetes.default.svc
             namespace: argocd
+          - server: https://kubernetes.default.svc
+            namespace: kube-system
       - op: replace
         path: /spec/clusterResourceWhitelist
         value:
@@ -52,6 +54,9 @@ patches:
           - group: rbac.authorization.k8s.io
             kind: ClusterRoleBinding
             name: argocd-repo-server-issuer-auth-delegator
+          - group: rbac.authorization.k8s.io
+            kind: ClusterRoleBinding
+            name: hubble-server-issuer-auth-delegator
       - op: add
         path: /spec/namespaceResourceWhitelist/-
         value:

@@ -319,6 +319,29 @@ const raftSnapshotAppRole = {
 } satisfies VaultRaftSnapshotAppRoleConfig
 
 const pkiIssuers = {
+  indigoHubbleServer: {
+    backend: "pki_indigo_hubble",
+    managedCa: {
+      commonName: "DSQR Indigo Hubble CA",
+      ttlHours: 3 * 365 * 24,
+    },
+    roleName: "indigo-hubble-server",
+    policyName: "dsqr-labs-pki-indigo-hubble-server",
+    allowedDomains: ["*.indigo.hubble-grpc.cilium.io"],
+    allowWildcardCertificates: true,
+    generateLease: false,
+    ttlHours: 720,
+    maxTtlHours: 720,
+    kubernetesAuthRole: {
+      backend: "kubernetes-indigo",
+      roleName: "indigo-hubble-server-issuer",
+      boundServiceAccountNames: ["hubble-server-issuer"],
+      boundServiceAccountNamespaces: ["kube-system"],
+      tokenTtlSeconds: 1_200,
+      tokenMaxTtlSeconds: 3_600,
+      tokenExplicitMaxTtlSeconds: 3_600,
+    },
+  },
   vaultListener: {
     backend: "pki_int",
     roleName: "vault-listener",

@@ -48,6 +48,9 @@ const issuerKeys = [
 
 test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state contracts", async () => {
   const deployment = await runPulumiMockProgram({
+    newResource: (args) => args.type === "vault:pkiSecret/secretBackendRootCert:SecretBackendRootCert"
+      ? { issuerId: "mock-hubble-issuer", certificate: "PUBLIC-TEST-CA" }
+      : {},
     program: () =>
       runPulumiProgram(
         createVaultFoundationEffect({
@@ -115,6 +118,11 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoArgocdServer"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoArgocdRepoServer"],
     [providerToken, "vault"],
+    [mountToken, "pki-issuer-mount-indigoHubbleServer"],
+    ["vault:pkiSecret/secretBackendRootCert:SecretBackendRootCert", "pki-issuer-root-indigoHubbleServer"],
+    [pkiRoleToken, "pki-issuer-role-indigoHubbleServer"],
+    [policyToken, "pki-issuer-policy-indigoHubbleServer"],
+    [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoHubbleServer"],
   ].sort((left, right) => left[1].localeCompare(right[1]))
 
   assert.equal(resources.length, expectedResources.length)
@@ -189,6 +197,44 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     ],
   })
   lifecycle("audit")
+  lifecycle("pki-issuer-mount-indigoHubbleServer", { protect: true })
+  lifecycle("pki-issuer-root-indigoHubbleServer", {
+    protect: true, dependsOn: ["pki-issuer-mount-indigoHubbleServer"],
+  })
+  lifecycle("pki-issuer-role-indigoHubbleServer", {
+    protect: true, dependsOn: ["pki-issuer-root-indigoHubbleServer"],
+  })
+  lifecycle("pki-issuer-policy-indigoHubbleServer", {
+    protect: true, dependsOn: ["pki-issuer-role-indigoHubbleServer"],
+  })
+  lifecycle("pki-issuer-kubernetes-role-indigoHubbleServer", {
+    protect: true, dependsOn: ["pki-issuer-role-indigoHubbleServer", "pki-issuer-policy-indigoHubbleServer", "external-secrets-token-self-policy-indigo"],
+  })
+  assert.deepEqual(byName(resources, "pki-issuer-mount-indigoHubbleServer").inputs, {
+    path: "pki_indigo_hubble", type: "pki", description: "DSQR Indigo Hubble CA",
+    defaultLeaseTtlSeconds: 720 * 3600, maxLeaseTtlSeconds: 3 * 365 * 24 * 3600,
+  })
+  assert.deepEqual(byName(resources, "pki-issuer-root-indigoHubbleServer").inputs, {
+    backend: "pki_indigo_hubble", type: "internal", commonName: "DSQR Indigo Hubble CA",
+    issuerName: "dsqr-root-v1", keyName: "dsqr-root-v1", ttl: `${3 * 365 * 24 * 3600}s`,
+    keyType: "ec", keyBits: 256, format: "pem", excludeCnFromSans: true, maxPathLength: 0,
+  })
+  const hubbleRole = byName(resources, "pki-issuer-role-indigoHubbleServer").inputs
+  assert.equal(hubbleRole.backend, "pki_indigo_hubble")
+  assert.equal(hubbleRole.issuerRef, "mock-hubble-issuer")
+  assert.deepEqual(hubbleRole.allowedDomains, ["*.indigo.hubble-grpc.cilium.io"])
+  assert.equal(hubbleRole.allowBareDomains, true)
+  assert.equal(hubbleRole.allowWildcardCertificates, true)
+  for (const option of ["allowAnyName", "allowGlobDomains", "allowSubdomains", "allowIpSans", "clientFlag", "generateLease"]) {
+    assert.equal(hubbleRole[option], false, option)
+  }
+  assert.deepEqual(hubbleRole.extKeyUsages, ["ServerAuth"])
+  const hubbleAuth = byName(resources, "pki-issuer-kubernetes-role-indigoHubbleServer").inputs
+  assert.deepEqual(hubbleAuth.boundServiceAccountNames, ["hubble-server-issuer"])
+  assert.deepEqual(hubbleAuth.boundServiceAccountNamespaces, ["kube-system"])
+  assert.deepEqual(hubbleAuth.tokenPolicies, ["dsqr-labs-pki-indigo-hubble-server", "indigo-external-secrets-token-self"])
+  assert.equal(byName(resources, "pki-issuer-policy-indigoHubbleServer").inputs.policy,
+    'path "pki_indigo_hubble/issue/indigo-hubble-server" {\n  capabilities = ["create", "update"]\n}')
 
   for (const key of Object.keys(externalPolicyNames)) {
     lifecycle(`external-secrets-policy-${key}`, { dependsOn: ["kv"] })

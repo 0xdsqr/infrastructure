@@ -44,6 +44,50 @@ const foundationArgs = (): VaultFoundationArgs => ({
   audit: vault.audit,
 })
 
+test("Vault rejects unsafe dedicated CA configuration before registering resources", () => {
+  const original = vault.pkiIssuers.indigoHubbleServer
+  for (const managedCa of [
+    { ...original.managedCa, ttlHours: 720 },
+    { ...original.managedCa, ttlHours: 5 * 365 * 24 + 1 },
+    { ...original.managedCa, commonName: " " },
+  ]) {
+    const count = resources.length
+    const error = Effect.runSync(Effect.flip(createVaultFoundationEffect({
+      ...foundationArgs(), pkiIssuers: { isolated: { ...original, managedCa } },
+    })))
+    assert.match(error.message, /unique managed CA mount/)
+    assert.equal(resources.length, count)
+  }
+  const collision = Effect.runSync(Effect.flip(planVaultFoundationEffect({
+    ...foundationArgs(), pkiIssuers: { isolated: { ...original, backend: vault.kv.path } },
+  })))
+  assert.match(collision.message, /KV mount path/)
+  const duplicate = Effect.runSync(Effect.flip(planVaultFoundationEffect({
+    ...foundationArgs(), pkiIssuers: {
+      isolated: original,
+      duplicate: { ...original, roleName: "other", policyName: "other" },
+    },
+  })))
+  assert.match(duplicate.message, /unique managed CA mount/)
+})
+
+test("Vault accepts only explicitly enabled literal leftmost wildcard names", () => {
+  const original = vault.pkiIssuers.indigoHubbleServer
+  for (const [allowWildcardCertificates, allowedDomains] of [
+    [false, ["*.indigo.hubble-grpc.cilium.io"]],
+    [true, ["*.*.hubble-grpc.cilium.io"]],
+    [true, ["node*.indigo.hubble-grpc.cilium.io"]],
+  ] as const) {
+    const error = Effect.runSync(Effect.flip(planVaultFoundationEffect({
+      ...foundationArgs(), pkiIssuers: { isolated: {
+        ...original, allowWildcardCertificates, allowedDomains,
+      } },
+    })))
+    assert.match(error.message, /exact lowercase DNS names/)
+  }
+  assert.doesNotThrow(() => Effect.runSync(planVaultFoundationEffect(foundationArgs())))
+})
+
 test("Vault validates the complete foundation before provider registration", () => {
   const count = resources.length
   const error = Effect.runSync(

@@ -5,6 +5,7 @@ resources:
   - ../../common
   - ../../../argocd/server-tls/overlays/indigo
   - ../../../argocd/repo-tls/overlays/indigo
+  - ../../../cilium/hubble-tls/overlays/indigo
   - vault-indigo.clustersecretstore.yaml
   - indigo-bootstrap-smoke-test.externalsecret.yaml
   - gateway-origin-issuer.serviceaccount.yaml

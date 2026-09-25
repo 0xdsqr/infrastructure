@@ -338,14 +338,21 @@ test("Vault PKI issuers are exact, least-privilege, and do not persist SecretIDs
 
   for (const issuer of issuers) {
     assert.ok(issuer.allowedDomains.length > 0)
-    assert.ok(issuer.allowedDomains.every((domain) => !domain.includes("*")))
-    assert.equal(issuer.backend, "pki_int")
+    if (issuer === vault.pkiIssuers.indigoHubbleServer) {
+      assert.deepEqual(issuer.allowedDomains, ["*.indigo.hubble-grpc.cilium.io"])
+      assert.equal(issuer.backend, "pki_indigo_hubble")
+      assert.equal(issuer.allowWildcardCertificates, true)
+    } else {
+      assert.ok(issuer.allowedDomains.every((domain) => !domain.includes("*")))
+      assert.equal(issuer.backend, "pki_int")
+      assert.equal(issuer.allowWildcardCertificates, false)
+    }
     assert.ok(issuer.ttlHours <= issuer.maxTtlHours)
     assert.ok(issuer.maxTtlHours <= 720)
 
     const policy = renderPkiIssuePolicy(issuer.backend, issuer.roleName)
-    assert.match(policy, new RegExp(`path "pki_int/issue/${issuer.roleName}"`))
-    assert.doesNotMatch(policy, /pki_int\/issue\/\*/)
+    assert.match(policy, new RegExp(`path "${issuer.backend}/issue/${issuer.roleName}"`))
+    assert.doesNotMatch(policy, /\/issue\/\*/)
     assert.doesNotMatch(policy, /"list"/)
     assert.doesNotMatch(policy, /auth\/token/)
     assert.doesNotMatch(policy, /\/sign\//)

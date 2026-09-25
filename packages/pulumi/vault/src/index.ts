@@ -124,6 +124,12 @@ export type VaultPkiKubernetesAuthRoleConfig = {
 
 export type VaultPkiIssuerConfig = {
   readonly backend: string
+  // Optional isolated trust domain. The signer is generated inside Vault and
+  // is never exported to Pulumi, Git, or a Kubernetes Secret.
+  readonly managedCa?: {
+    readonly commonName: string
+    readonly ttlHours: number
+  } | undefined
   readonly roleName: string
   readonly policyName: string
   readonly allowedDomains: readonly string[]
@@ -137,6 +143,8 @@ export type VaultPkiIssuerConfig = {
         readonly policy?: string | undefined
         readonly appRole?: string | undefined
         readonly kubernetesAuthRole?: string | undefined
+        readonly caMount?: string | undefined
+        readonly caRoot?: string | undefined
       }
     | undefined
   readonly appRole?: VaultPkiAppRoleConfig | undefined
@@ -440,6 +448,7 @@ export function validatePkiIssuerInventoryEffect(
     const policyNames = new Set<string>()
     const appRoleNames = new Set<string>()
     const kubernetesAuthRoleNames = new Set<string>()
+    const managedCaBackends = new Set<string>()
 
     if (Object.keys(issuers).length === 0) {
       return yield* Effect.fail(
@@ -472,6 +481,23 @@ export function validatePkiIssuerInventoryEffect(
       }
       roleNames.add(issuer.roleName)
 
+      if (issuer.managedCa) {
+        if (
+          !isNormalizedMountName(issuer.backend) ||
+          managedCaBackends.has(issuer.backend) ||
+          !issuer.managedCa.commonName.trim() ||
+          !Number.isInteger(issuer.managedCa.ttlHours) ||
+          issuer.managedCa.ttlHours <= issuer.maxTtlHours ||
+          issuer.managedCa.ttlHours > 5 * 365 * 24
+        ) {
+          return yield* Effect.fail(new PulumiResourceConfigError({
+            resource,
+            message: `PKI issuer "${key}" needs a unique managed CA mount and a CA lifetime longer than its leaves, capped at five years.`,
+          }))
+        }
+        managedCaBackends.add(issuer.backend)
+      }
+
       if (!issuer.policyName || policyNames.has(issuer.policyName)) {
         return yield* Effect.fail(
           new PulumiResourceConfigError({
@@ -485,7 +511,14 @@ export function validatePkiIssuerInventoryEffect(
       if (
         issuer.allowedDomains.length === 0 ||
         new Set(issuer.allowedDomains).size !== issuer.allowedDomains.length ||
-        issuer.allowedDomains.some((domain) => domain.includes("*") || !isDnsName(domain))
+        issuer.allowedDomains.some((domain) => {
+          // A literal leftmost wildcard is allowed only by explicit opt-in.
+          // Vault still uses exact matching, never glob/subdomain matching.
+          const name = issuer.allowWildcardCertificates && domain.startsWith("*.")
+            ? domain.slice(2)
+            : domain
+          return name.includes("*") || !isDnsName(name)
+        })
       ) {
         return yield* Effect.fail(
           new PulumiResourceConfigError({
@@ -857,6 +890,8 @@ export type PlannedPkiIssuer = {
     readonly policy: string
     readonly appRole: string
     readonly kubernetesAuthRole: string
+    readonly caMount: string
+    readonly caRoot: string
   }
 }
 
@@ -922,6 +957,12 @@ export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(funct
   yield* validatePkiIssuerInventoryEffect(args.pkiIssuers)
 
   yield* requireResourceConfigEffect(
+    Object.values(args.pkiIssuers).every((issuer) => !issuer.managedCa || issuer.backend !== args.kv.path),
+    "vault:pki-issuers",
+    "A managed PKI CA cannot use the KV mount path.",
+  )
+
+  yield* requireResourceConfigEffect(
     isNormalizedMountName(args.kv.path),
     "vault:kv",
     "KV mount path must be a normalized mount name without slashes or wildcards.",
@@ -965,6 +1006,8 @@ export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(funct
       appRole: issuer.resourceNames?.appRole ?? `pki-issuer-approle-${key}`,
       kubernetesAuthRole:
         issuer.resourceNames?.kubernetesAuthRole ?? `pki-issuer-kubernetes-role-${key}`,
+      caMount: issuer.resourceNames?.caMount ?? `pki-issuer-mount-${key}`,
+      caRoot: issuer.resourceNames?.caRoot ?? `pki-issuer-root-${key}`,
     },
   }))
 
@@ -980,6 +1023,7 @@ export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(funct
       names.policy,
       ...(issuer.appRole ? [names.appRole] : []),
       ...(issuer.kubernetesAuthRole ? [names.kubernetesAuthRole] : []),
+      ...(issuer.managedCa ? [names.caMount, names.caRoot] : []),
     ]),
   ]
   yield* requireResourceConfigEffect(
@@ -1387,6 +1431,38 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
   const pkiIssuers = Object.fromEntries(
     yield* Effect.forEach(pkiIssuerEntries, ({ key, issuer, resourceNames: issuerResourceNames }) =>
       Effect.gen(function* () {
+        const caMount = issuer.managedCa
+          ? yield* registerPulumiResource(issuerResourceNames.caMount, () => new vault.Mount(
+              issuerResourceNames.caMount,
+              {
+                path: issuer.backend,
+                type: "pki",
+                description: issuer.managedCa!.commonName,
+                defaultLeaseTtlSeconds: issuer.ttlHours * 3600,
+                maxLeaseTtlSeconds: issuer.managedCa!.ttlHours * 3600,
+              },
+              protectedPkiResourceOptions,
+            ))
+          : undefined
+        const caRoot = caMount
+          ? yield* registerPulumiResource(issuerResourceNames.caRoot, () => new vault.pkisecret.SecretBackendRootCert(
+              issuerResourceNames.caRoot,
+              {
+                backend: caMount.path,
+                type: "internal",
+                commonName: issuer.managedCa!.commonName,
+                issuerName: "dsqr-root-v1",
+                keyName: "dsqr-root-v1",
+                ttl: `${issuer.managedCa!.ttlHours * 3600}s`,
+                keyType: "ec",
+                keyBits: 256,
+                format: "pem",
+                excludeCnFromSans: true,
+                maxPathLength: 0,
+              },
+              { ...protectedPkiResourceOptions, dependsOn: [caMount] },
+            ))
+          : undefined
         const role = yield* registerPulumiResource(
           issuerResourceNames.role,
           () =>
@@ -1411,7 +1487,7 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
                 enforceHostnames: true,
                 extKeyUsages: ["ServerAuth"],
                 generateLease: issuer.generateLease,
-                issuerRef: "default",
+                issuerRef: caRoot ? caRoot.issuerId : "default",
                 keyBits: 2_048,
                 keyType: "rsa",
                 keyUsages: ["DigitalSignature", "KeyEncipherment"],
@@ -1423,7 +1499,9 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
                 serverFlag: true,
                 ttl: `${issuer.ttlHours * 60 * 60}`,
               },
-              protectedPkiResourceOptions,
+              caRoot
+                ? { ...protectedPkiResourceOptions, dependsOn: [caRoot] }
+                : protectedPkiResourceOptions,
             ),
         )
 
@@ -1518,6 +1596,8 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
             backend: role.backend,
             roleName: role.name,
             policyName: policy.name,
+            // Public material only. Do not expose the resource's privateKey output.
+            ...(caRoot ? { caCertificate: caRoot.certificate } : {}),
             appRole: appRole
               ? {
                   backend: appRole.backend,

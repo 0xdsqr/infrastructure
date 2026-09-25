@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: kube-system
+resources:
+  - ../../base
+  # This CA authenticates Vault's HTTPS endpoint, not Hubble peers.
+  - ../../../../external-secrets-config/common
+  - server.vaultdynamicsecret.yaml
+
+labels:
+  - pairs:
+      platform.dsqr.dev/cluster: indigo
+      platform.dsqr.dev/environment: production
+
+patches:
+  - target:
+      kind: ConfigMap
+      name: dsqr-home-root-ca
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value:
+          argocd.argoproj.io/sync-wave: "0"
+  - target:
+      group: external-secrets.io
+      kind: ExternalSecret
+      name: dsqr-hubble-server-tls
+    patch: |-
+      - op: add
+        path: /spec/target/template/metadata/labels/platform.dsqr.dev~1cluster
+        value: indigo
