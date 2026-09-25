@@ -120,6 +120,20 @@ redis-ha:
       requests: {cpu: 10m, memory: 32Mi}
       limits: {memory: 128Mi}
   redis:
+    updateStrategy:
+      type: RollingUpdate
+    terminationGracePeriodSeconds: 60
+    lifecycle:
+      preStop:
+        exec:
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              # Bundled redis-ha 4.38.0 omits SENTINELAUTH from this container.
+              # This profile intentionally uses the same Secret/key for both.
+              export SENTINELAUTH="${AUTH:?Redis authentication is required}"
+              exec timeout 35 /bin/sh /readonly-config/trigger-failover-if-master.sh
     resources:
       requests: {cpu: 25m, memory: 128Mi}
       limits: {memory: 512Mi}
@@ -132,6 +146,12 @@ redis-ha:
     auth: true
     existingSecret: argocd-redis
     authKey: auth
+    # Ordinary containers terminate concurrently. Keep the local Sentinel alive
+    # beyond Redis's bounded 35s preStop, within the pod's 60s grace period.
+    lifecycle:
+      preStop:
+        exec:
+          command: [/bin/sh, -ec, "sleep 40"]
     resources:
       requests: {cpu: 10m, memory: 32Mi}
       limits: {memory: 128Mi}

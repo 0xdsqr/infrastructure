@@ -31,6 +31,51 @@ test("Redis HA profile uses an existing credential, bounded resources and no API
   assert.equal(ha.rbac.create, false)
   assert.equal(ha.redis.config.save, '""')
   assert.equal(ha.redis.config.maxmemory, "256mb")
+  assert.equal(ha.redis.updateStrategy.type, "RollingUpdate")
+  // The lifecycle bridge is valid only while both services use this same key.
+  assert.equal(ha.sentinel.existingSecret, ha.existingSecret)
+  assert.equal(ha.sentinel.authKey, ha.authKey)
+})
+
+test("graceful-shutdown hook exports Sentinel authentication and refuses missing credentials", () => {
+  const ha = parse(readFileSync(commonPath, "utf8"))["redis-ha"]
+  const [shell, option, command] = ha.redis.lifecycle.preStop.exec.command
+  assert.equal(shell, "/bin/sh")
+  assert.equal(option, "-ec")
+  const invoke = "exec timeout 35 /bin/sh /readonly-config/trigger-failover-if-master.sh"
+  assert.ok(command.trimEnd().endsWith(invoke))
+  // Substitute only the final upstream invocation. A child shell must inherit
+  // the bridge, not just see a local unexported variable. No real keys used.
+  const probe = command.replace(invoke, `exec /bin/sh -ec 'test "$SENTINELAUTH" = "$AUTH"'`)
+  execFileSync(shell, [option, probe], { env: { AUTH: "test-only-value" }, stdio: "pipe" })
+  for (const env of [{}, { AUTH: "" }]) {
+    assert.throws(() => execFileSync(shell, [option, probe], { env, stdio: "pipe" }))
+  }
+  assert.deepEqual(ha.sentinel.lifecycle.preStop.exec.command, ["/bin/sh", "-ec", "sleep 40"])
+  assert.equal(ha.redis.terminationGracePeriodSeconds, 60)
+})
+
+test("lifecycle fix is staged without automatically restarting any Redis pod", { skip: !chart }, () => {
+  const objects = render("indigo")
+  const statefulset = objects.find(o => o.kind === "StatefulSet" && o.metadata.name === "argocd-redis-ha-server")
+  assert.deepEqual(statefulset.spec.updateStrategy, { type: "OnDelete" })
+  const pod = statefulset.spec.template.spec
+  const ha = parse(readFileSync(commonPath, "utf8"))["redis-ha"]
+  assert.equal(pod.terminationGracePeriodSeconds, 60)
+  for (const name of ["redis", "sentinel"]) {
+    const container = pod.containers.find((c: any) => c.name === name)
+    assert.deepEqual(container.lifecycle, ha[name].lifecycle)
+  }
+  const redis = pod.containers.find((c: any) => c.name === "redis")
+  const sentinel = pod.containers.find((c: any) => c.name === "sentinel")
+  assert.deepEqual(redis.env.find((e: any) => e.name === "AUTH").valueFrom.secretKeyRef,
+    sentinel.env.find((e: any) => e.name === "SENTINELAUTH").valueFrom.secretKeyRef)
+  const config = pod.volumes.find((v: any) => v.name === "config")
+  assert.equal(config.configMap.name, "argocd-redis-ha-configmap")
+  assert.ok(redis.volumeMounts.some((m: any) => m.name === "config" && m.mountPath === "/readonly-config" && m.readOnly))
+  const scripts = objects.find(o => o.kind === "ConfigMap" && o.metadata.name === config.configMap.name).data
+  assert.match(scripts["trigger-failover-if-master.sh"], /\$\{SENTINELAUTH\}/)
+  assert.match(scripts["trigger-failover-if-master.sh"], /timeout=30/)
 })
 
 test("HA renders three separated Redis/Sentinel members, two proxies and quorum-safe PDBs", { skip: !chart }, () => {

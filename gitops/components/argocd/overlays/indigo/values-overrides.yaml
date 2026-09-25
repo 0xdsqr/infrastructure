@@ -8,6 +8,12 @@ redis:
 
 redis-ha:
   enabled: true
+  redis:
+    # Temporary lifecycle-fix rollout gate: update replicas first, perform an
+    # authenticated switchover, then replace the former primary. Remove this
+    # override only after all three pods have the corrected lifecycle hooks.
+    updateStrategy:
+      type: OnDelete
 
 applicationSet:
   replicas: 1
