@@ -23,7 +23,7 @@ patches:
       group: argoproj.io
       version: v1alpha1
       kind: AppProject
-      name: platform-(cilium|kubelet-csr-approver)
+      name: platform-(cilium|kubelet-csr-approver|metrics-server)
     patch: |-
       - op: add
         path: /spec/namespaceResourceWhitelist/-
