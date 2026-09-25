@@ -7,7 +7,7 @@ import { parse, parseAllDocuments } from "yaml"
 const valuesPath = "gitops/components/argocd/overlays/indigo/values-overrides.yaml"
 const chart = process.env.ARGOCD_TEST_CHART
 
-test("Indigo enables bounded server/repo availability without changing controller or Redis topology", () => {
+test("Indigo enables bounded server/repo availability without changing controller topology", () => {
   const values = parse(readFileSync(valuesPath, "utf8"))
   for (const name of ["server", "repoServer"]) {
     const component = values[name]
@@ -23,7 +23,7 @@ test("Indigo enables bounded server/repo availability without changing controlle
   }
   assert.equal(values.applicationSet.replicas, 1)
   assert.equal(values.controller.replicas, undefined)
-  assert.equal(values["redis-ha"]?.enabled, undefined)
+  assert.equal(values["redis-ha"]?.enabled, true)
   assert.equal(values.redis.automountServiceAccountToken, false)
   assert.equal(values.repoServer.automountServiceAccountToken, false)
 })
@@ -58,6 +58,6 @@ test("Pinned Argo chart renders replica spreading and matching PDBs only for Ind
       assert.ok(deployment.spec.template.spec.containers[0].resources.requests.memory)
     }
     assert.equal(objects.find(o => o.kind === "StatefulSet" && o.metadata.name === "argocd-application-controller").spec.replicas, 1)
-    assert.ok(objects.some(o => o.kind === "Deployment" && o.metadata.name === "argocd-redis"))
+    assert.equal(objects.some(o => o.kind === "Deployment" && o.metadata.name === "argocd-redis"), cluster === "hub-a")
   }
 })

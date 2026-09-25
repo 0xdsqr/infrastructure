@@ -98,6 +98,71 @@ redisSecretInit:
       cpu: 100m
       memory: 128Mi
 
+# Opt-in HA profile, using the Redis/Sentinel subchart bundled with Argo CD.
+# Three schedulable nodes are required. Redis is a disposable cache, not storage.
+redis-ha:
+  enabled: false
+  replicas: 3
+  hardAntiAffinity: true
+  auth: true
+  existingSecret: argocd-redis
+  authKey: auth
+  persistentVolume:
+    enabled: false
+  serviceAccount:
+    automountToken: false
+  rbac:
+    create: false
+  podDisruptionBudget:
+    minAvailable: 2
+  init:
+    resources:
+      requests: {cpu: 10m, memory: 32Mi}
+      limits: {memory: 128Mi}
+  redis:
+    resources:
+      requests: {cpu: 25m, memory: 128Mi}
+      limits: {memory: 512Mi}
+    config:
+      save: '""'
+      # Leave headroom for replication buffers and Redis process overhead.
+      maxmemory: 256mb
+  sentinel:
+    quorum: 2
+    auth: true
+    existingSecret: argocd-redis
+    authKey: auth
+    resources:
+      requests: {cpu: 10m, memory: 32Mi}
+      limits: {memory: 128Mi}
+  splitBrainDetection:
+    resources:
+      requests: {cpu: 10m, memory: 32Mi}
+      limits: {memory: 128Mi}
+  haproxy:
+    enabled: true
+    replicas: 2
+    hardAntiAffinity: true
+    serviceAccount:
+      automountToken: false
+    podDisruptionBudget:
+      minAvailable: 1
+    deploymentStrategy:
+      type: RollingUpdate
+      rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
+    resources:
+      requests: {cpu: 25m, memory: 64Mi}
+      limits: {memory: 256Mi}
+    init:
+      resources:
+        requests: {cpu: 10m, memory: 32Mi}
+        limits: {memory: 128Mi}
+    # Use the scoped policies below, not the subchart's all-namespace DNS rule.
+    networkPolicy:
+      enabled: false
+  networkPolicy:
+    enabled: false
+
 repoServer:
   metrics:
     enabled: true
@@ -151,6 +216,103 @@ notifications:
   enabled: false
 
 extraObjects:
+  # HA backend policies are chart-owned and only render when HA is enabled.
+  # Ordinary NetworkPolicies and our Cilium client policies are additive.
+  - |
+    {{- if (index .Values "redis-ha").enabled }}
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: argocd-redis-ha-backend
+      namespace: {{ .Release.Namespace }}
+    spec:
+      podSelector:
+        matchLabels: {release: {{ .Release.Name }}, app: redis-ha}
+      policyTypes: [Ingress, Egress]
+      ingress:
+        - from:
+            - podSelector:
+                matchLabels: {release: {{ .Release.Name }}, app: redis-ha}
+            - podSelector:
+                matchLabels: {release: {{ .Release.Name }}, app: redis-ha-haproxy}
+          ports:
+            - {port: 6379, protocol: TCP}
+            - {port: 26379, protocol: TCP}
+      egress:
+        - to:
+            - podSelector:
+                matchLabels: {release: {{ .Release.Name }}, app: redis-ha}
+          ports:
+            - {port: 6379, protocol: TCP}
+            - {port: 26379, protocol: TCP}
+        - to:
+            - namespaceSelector:
+                matchLabels: {kubernetes.io/metadata.name: kube-system}
+              podSelector:
+                matchLabels: {k8s-app: kube-dns}
+          ports:
+            - {port: 53, protocol: UDP}
+            - {port: 53, protocol: TCP}
+    {{- end }}
+  - |
+    {{- if (index .Values "redis-ha").enabled }}
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: argocd-redis-ha-proxy
+      namespace: {{ .Release.Namespace }}
+    spec:
+      podSelector:
+        matchLabels: {release: {{ .Release.Name }}, app: redis-ha-haproxy}
+      policyTypes: [Ingress, Egress]
+      ingress:
+        - from:
+            - podSelector:
+                matchLabels: {app.kubernetes.io/instance: {{ .Release.Name }}}
+                matchExpressions:
+                  - key: app.kubernetes.io/name
+                    operator: In
+                    values: [argocd-application-controller, argocd-server, argocd-repo-server]
+          ports:
+            - {port: 6379, protocol: TCP}
+      egress:
+        - to:
+            - podSelector:
+                matchLabels: {release: {{ .Release.Name }}, app: redis-ha}
+          ports:
+            - {port: 6379, protocol: TCP}
+            - {port: 26379, protocol: TCP}
+        - to:
+            - namespaceSelector:
+                matchLabels: {kubernetes.io/metadata.name: kube-system}
+              podSelector:
+                matchLabels: {k8s-app: kube-dns}
+          ports:
+            - {port: 53, protocol: UDP}
+            - {port: 53, protocol: TCP}
+    {{- end }}
+  - |
+    {{- if (index .Values "redis-ha").enabled }}
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: argocd-redis-ha-clients
+      namespace: {{ .Release.Namespace }}
+    spec:
+      podSelector:
+        matchLabels: {app.kubernetes.io/instance: {{ .Release.Name }}}
+        matchExpressions:
+          - key: app.kubernetes.io/name
+            operator: In
+            values: [argocd-application-controller, argocd-server, argocd-repo-server]
+      policyTypes: [Egress]
+      egress:
+        - to:
+            - podSelector:
+                matchLabels: {release: {{ .Release.Name }}, app: redis-ha-haproxy}
+          ports:
+            - {port: 6379, protocol: TCP}
+    {{- end }}
   - apiVersion: networking.k8s.io/v1
     kind: NetworkPolicy
     metadata:

@@ -6,6 +6,9 @@ redis:
   # Redis only serves Argo's cache; it does not call the Kubernetes API.
   automountServiceAccountToken: false
 
+redis-ha:
+  enabled: true
+
 applicationSet:
   replicas: 1
   deploymentAnnotations:
@@ -36,6 +39,11 @@ applicationSet:
 
 configs:
   params:
+    # Migration stage 1: start HA without cutting clients over. Sync WITHOUT
+    # pruning so the existing argocd-redis Deployment/Service remain available.
+    # Remove this override only after HA readiness, auth and quorum validation;
+    # roll clients, then explicitly retire the old standalone resources.
+    redis.server: argocd-redis:6379
     # Envoy verifies the Vault-issued argocd-server-tls certificate.
     server.insecure: "false"
     repo.server: argocd-repo-server.argocd.svc.cluster.local:8081

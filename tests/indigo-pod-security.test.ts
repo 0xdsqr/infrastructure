@@ -40,7 +40,7 @@ const argoChart = process.env.ARGOCD_TEST_CHART
 test("rendered Argo pods and hooks retain restricted security and correct API access", { skip: !argoChart }, () => {
   for (const cluster of ["indigo", "hub-a"]) {
     const resources = render("argocd", argoChart!, "argocd", cluster)
-    for (const name of ["argocd-redis", "argocd-repo-server"]) {
+    for (const name of cluster === "indigo" ? ["argocd-repo-server", "argocd-redis-ha-haproxy"] : ["argocd-redis", "argocd-repo-server"]) {
       assert.equal(resources.find(r => r.kind === "Deployment" && r.metadata.name === name).spec.template.spec.automountServiceAccountToken, cluster !== "indigo")
     }
     if (cluster !== "indigo") continue
