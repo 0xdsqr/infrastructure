@@ -4,6 +4,10 @@ kind: Kustomization
 resources:
   - namespaces.yaml
 
+# Only the disruption budget is GitOps-owned; kubeadm owns CoreDNS itself.
+components:
+  - ../../coredns-availability
+
 labels:
   - pairs:
       platform.dsqr.dev/cluster: indigo

@@ -15,3 +15,28 @@ bypassHostnameCheck: false
 allowedDnsNames: 1
 ignoreNonSystemNode: false
 skipDenyStep: false
+
+# Retain leader election and approval checks; keep the two replicas on
+# different nodes, including across node maintenance and rescheduling.
+affinity:
+  podAntiAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      - topologyKey: kubernetes.io/hostname
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: kubelet-csr-approver
+            app.kubernetes.io/instance: kubelet-csr-approver
+
+# The pinned chart exposes extraObjects rather than a dedicated PDB option.
+extraObjects:
+  - apiVersion: policy/v1
+    kind: PodDisruptionBudget
+    metadata:
+      name: kubelet-csr-approver
+      namespace: kube-system
+    spec:
+      minAvailable: 1
+      selector:
+        matchLabels:
+          app.kubernetes.io/name: kubelet-csr-approver
+          app.kubernetes.io/instance: kubelet-csr-approver

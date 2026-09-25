@@ -21,6 +21,8 @@ spec:
       namespace: argocd
     - server: https://kubernetes.default.svc
       namespace: external-secrets
+    - server: https://kubernetes.default.svc
+      namespace: kube-system
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
@@ -41,6 +43,9 @@ spec:
       kind: ClusterRoleBinding
       name: indigo-platform-admins
   namespaceResourceWhitelist:
+    # cluster-foundation owns the CoreDNS budget, not its Deployment.
+    - group: policy
+      kind: PodDisruptionBudget
     # argocd-config owns the opt-in Argo network isolation component.
     - group: networking.k8s.io
       kind: NetworkPolicy

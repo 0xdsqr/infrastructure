@@ -43,6 +43,15 @@ gatewayAPI:
 
 operator:
   replicas: 2
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+    maxUnavailable: null
 
 routingMode: tunnel
 tunnelProtocol: vxlan

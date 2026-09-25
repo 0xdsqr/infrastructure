@@ -23,6 +23,17 @@ patches:
       group: argoproj.io
       version: v1alpha1
       kind: AppProject
+      name: platform-(cilium|kubelet-csr-approver)
+    patch: |-
+      - op: add
+        path: /spec/namespaceResourceWhitelist/-
+        value:
+          group: policy
+          kind: PodDisruptionBudget
+  - target:
+      group: argoproj.io
+      version: v1alpha1
+      kind: AppProject
       name: platform-external-secrets
     patch: |-
       - op: add
