@@ -141,7 +141,7 @@ test("only hub-a renders the legacy Cilium tracking exception", () => {
   for (const cluster of ["hub-a", "indigo"]) {
     const applications = renderApplications(cluster)
     const rules = applications.find((application) => application.metadata.name === "cilium").spec
-      .ignoreDifferences
+      .ignoreDifferences ?? []
     assert.equal(
       rules.some((rule) =>
         rule.jsonPointers.includes("/metadata/annotations/argocd.argoproj.io~1tracking-id"),
@@ -153,7 +153,7 @@ test("only hub-a renders the legacy Cilium tracking exception", () => {
         .filter((rule) => rule.kind === "Secret")
         .map((rule) => rule.name)
         .sort(),
-      ["cilium-ca", "hubble-server-certs"],
+      cluster === "hub-a" ? ["cilium-ca", "hubble-server-certs"] : [],
     )
   }
 })

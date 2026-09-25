@@ -143,17 +143,7 @@ spec:
                       skipCrds: false
                       parameters: []
                       useValues: true
-                  ignoreDifferences:
-                    - jsonPointers:
-                        - /data
-                      kind: Secret
-                      name: cilium-ca
-                      namespace: kube-system
-                    - jsonPointers:
-                        - /data
-                      kind: Secret
-                      name: hubble-server-certs
-                      namespace: kube-system
+                  ignoreDifferences: []
                   syncOptions:
                     - ApplyOutOfSyncOnly=true
                     - FailOnSharedResource=true

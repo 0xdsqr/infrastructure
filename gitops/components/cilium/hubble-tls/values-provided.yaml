@@ -1,7 +1,6 @@
-# Prepared cutover values, NOT included by any Application yet.
-# Gate: issue/verify the replacement certificate, distribute old+new public
-# trust to every consumer, then activate this file in the generated inventory.
-# Remove the old CA from trust after validating the serving-certificate rollout.
+# Reusable provided-certificate profile. Indigo selects these settings directly
+# in its cluster override; this file is not an additional active values layer.
+# Each cluster must configure and verify its own CA bundle before adoption.
 updateStrategy:
   rollingUpdate:
     maxUnavailable: 1

@@ -90,7 +90,7 @@ test("Hubble serving cutover stays Indigo-only with no new Application or automa
     .some(item => /hubble/.test(item.metadata.name)), false)
 })
 
-test("serving cutover preserves exactly the old and new public CAs", () => {
+test("Hubble trusts only the dedicated Vault CA and rolls agents when trust changes", () => {
   const active = parse(readFileSync("gitops/components/cilium/overlays/indigo/values-overrides.yaml", "utf8"))
   const bundle = active.tls.caBundle
   assert.equal(bundle.enabled, true)
@@ -101,20 +101,21 @@ test("serving cutover preserves exactly the old and new public CAs", () => {
   const certificates = [...bundle.content.matchAll(/-----BEGIN CERTIFICATE-----[\s\S]*?-----END CERTIFICATE-----/g)]
     .map(match => new X509Certificate(match[0]))
   assert.deepEqual(certificates.map(cert => cert.fingerprint256), [
-    "ED:0F:56:69:EF:2A:BA:3D:D0:48:0B:62:A5:56:43:A1:00:F8:0A:AB:C0:8C:3F:7E:DD:3E:E8:C1:FF:94:F2:BB",
     "62:05:DB:A2:1C:4A:AA:53:F3:74:61:8D:F4:02:1B:67:04:38:19:B3:B6:47:6E:56:B0:73:AE:D6:E6:C2:B8:B0",
   ])
   for (const cert of certificates) {
     assert.equal(cert.ca, true)
     assert.equal(cert.verify(cert.publicKey), true)
   }
+  assert.equal(active.podAnnotations["platform.dsqr.dev/hubble-ca-sha256"],
+    certificates[0].fingerprint256.replaceAll(":", "").toLowerCase())
   assert.equal(active.hubble.tls.server.existingSecret, "dsqr-hubble-server-tls")
   assert.equal(active.updateStrategy.rollingUpdate.maxUnavailable, 1)
   const hubA = parse(readFileSync("gitops/components/cilium/overlays/hub-a/values-overrides.yaml", "utf8"))
   assert.equal(hubA.tls?.caBundle, undefined)
 })
 
-test("pinned Cilium serving-stage render mounts the Vault-issued Secret and dual-CA ConfigMap", {
+test("pinned Cilium render mounts the Vault-issued Secret and new-only CA ConfigMap", {
   skip: !process.env.HUBBLE_CILIUM_CHART,
 }, () => {
   const args = ["template", "cilium", process.env.HUBBLE_CILIUM_CHART!, "--namespace", "kube-system",
@@ -126,9 +127,11 @@ test("pinned Cilium serving-stage render mounts the Vault-issued Secret and dual
   assert.equal(rendered.some(item => item.kind === "Secret"), false)
   const cm = rendered.find(item => item.kind === "ConfigMap" && item.metadata.name === "dsqr-hubble-ca-bundle")
   assert.equal(cm.metadata.namespace, "kube-system")
-  assert.equal((cm.data["ca.crt"].match(/BEGIN CERTIFICATE/g) ?? []).length, 2)
+  assert.equal((cm.data["ca.crt"].match(/BEGIN CERTIFICATE/g) ?? []).length, 1)
   const agent = rendered.find(item => item.kind === "DaemonSet" && item.metadata.name === "cilium")
   assert.equal(agent.spec.updateStrategy.rollingUpdate.maxUnavailable, 1)
+  assert.equal(agent.spec.template.metadata.annotations["platform.dsqr.dev/hubble-ca-sha256"],
+    new X509Certificate(cm.data["ca.crt"]).fingerprint256.replaceAll(":", "").toLowerCase())
   const volume = agent.spec.template.spec.volumes.find((item: { name: string }) => item.name === "hubble-tls")
   assert.equal(volume.projected.sources[0].secret.name, "dsqr-hubble-server-tls")
   assert.deepEqual(volume.projected.sources[0].secret.items, [
