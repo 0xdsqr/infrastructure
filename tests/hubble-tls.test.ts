@@ -65,7 +65,7 @@ test("Hubble issuance prepares a separate automatically renewed Secret without c
   assert.equal(declarations.some(item => item.kind === "ExternalSecret" && ["cilium-ca", "hubble-server-certs"].includes(item.spec.target.name)), false)
 })
 
-test("Hubble preparation stays Indigo-only with no new Application or active Cilium cutover", () => {
+test("Hubble serving cutover stays Indigo-only with no new Application or automatic sync", () => {
   const apps = render("gitops/clusters/indigo/applications")
     .flatMap(item => item.kind === "ApplicationSet" ? previewApplicationSet(item) : [item])
   assert.equal(apps.some(item => /hubble/.test(item.metadata.name)), false)
@@ -75,7 +75,7 @@ test("Hubble preparation stays Indigo-only with no new Application or active Cil
   assert.equal(JSON.stringify(cilium).includes("values-provided.yaml"), false)
   const active = parse(readFileSync("gitops/components/cilium/overlays/indigo/values-overrides.yaml", "utf8"))
   assert.deepEqual(active.hubble.tls, {
-    enabled: true, auto: { enabled: false }, server: { existingSecret: "hubble-server-certs" },
+    enabled: true, auto: { enabled: false }, server: { existingSecret: "dsqr-hubble-server-tls" },
   })
   assert.equal(cilium.spec.syncPolicy.automated.enabled, false)
   assert.equal(cilium.spec.syncPolicy.automated.prune, false)
@@ -90,7 +90,7 @@ test("Hubble preparation stays Indigo-only with no new Application or active Cil
     .some(item => /hubble/.test(item.metadata.name)), false)
 })
 
-test("trust stage pins exactly the old and new public CAs without switching the serving identity", () => {
+test("serving cutover preserves exactly the old and new public CAs", () => {
   const active = parse(readFileSync("gitops/components/cilium/overlays/indigo/values-overrides.yaml", "utf8"))
   const bundle = active.tls.caBundle
   assert.equal(bundle.enabled, true)
@@ -108,13 +108,13 @@ test("trust stage pins exactly the old and new public CAs without switching the 
     assert.equal(cert.ca, true)
     assert.equal(cert.verify(cert.publicKey), true)
   }
-  assert.equal(active.hubble.tls.server.existingSecret, "hubble-server-certs")
+  assert.equal(active.hubble.tls.server.existingSecret, "dsqr-hubble-server-tls")
   assert.equal(active.updateStrategy.rollingUpdate.maxUnavailable, 1)
   const hubA = parse(readFileSync("gitops/components/cilium/overlays/hub-a/values-overrides.yaml", "utf8"))
   assert.equal(hubA.tls?.caBundle, undefined)
 })
 
-test("pinned Cilium trust-stage render keeps the old Secret and mounts the dual-CA ConfigMap", {
+test("pinned Cilium serving-stage render mounts the Vault-issued Secret and dual-CA ConfigMap", {
   skip: !process.env.HUBBLE_CILIUM_CHART,
 }, () => {
   const args = ["template", "cilium", process.env.HUBBLE_CILIUM_CHART!, "--namespace", "kube-system",
@@ -130,7 +130,7 @@ test("pinned Cilium trust-stage render keeps the old Secret and mounts the dual-
   const agent = rendered.find(item => item.kind === "DaemonSet" && item.metadata.name === "cilium")
   assert.equal(agent.spec.updateStrategy.rollingUpdate.maxUnavailable, 1)
   const volume = agent.spec.template.spec.volumes.find((item: { name: string }) => item.name === "hubble-tls")
-  assert.equal(volume.projected.sources[0].secret.name, "hubble-server-certs")
+  assert.equal(volume.projected.sources[0].secret.name, "dsqr-hubble-server-tls")
   assert.deepEqual(volume.projected.sources[0].secret.items, [
     { key: "tls.crt", path: "server.crt" }, { key: "tls.key", path: "server.key" },
   ])

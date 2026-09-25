@@ -47,8 +47,8 @@ operator:
 routingMode: tunnel
 tunnelProtocol: vxlan
 
-# Hubble CA rotation, stage 1: trust both issuers while retaining the current
-# serving identity. Disable Helm's random certificate generation. The legacy
+# Hubble CA rotation, stage 2: serve the Vault-issued identity while retaining
+# both trusted issuers. Disable Helm's random certificate generation. The legacy
 # Secrets must remain until the serving-certificate cutover is verified:
 # sync this controller with prune=false (also its generated policy default).
 updateStrategy:
@@ -61,7 +61,7 @@ hubble:
     auto:
       enabled: false
     server:
-      existingSecret: hubble-server-certs
+      existingSecret: dsqr-hubble-server-tls
 
 tls:
   caBundle:
