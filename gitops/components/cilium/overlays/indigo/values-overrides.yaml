@@ -46,3 +46,59 @@ operator:
 
 routingMode: tunnel
 tunnelProtocol: vxlan
+
+# Hubble CA rotation, stage 1: trust both issuers while retaining the current
+# serving identity. Disable Helm's random certificate generation. The legacy
+# Secrets must remain until the serving-certificate cutover is verified:
+# sync this controller with prune=false (also its generated policy default).
+updateStrategy:
+  rollingUpdate:
+    maxUnavailable: 1
+
+hubble:
+  tls:
+    enabled: true
+    auto:
+      enabled: false
+    server:
+      existingSecret: hubble-server-certs
+
+tls:
+  caBundle:
+    enabled: true
+    name: dsqr-hubble-ca-bundle
+    key: ca.crt
+    useSecret: false
+    # Public certificates only. Keep the exposed old CA only for the short
+    # transition; remove it after all consumers use the Vault-issued identity.
+    content: |
+      -----BEGIN CERTIFICATE-----
+      MIIDEzCCAfugAwIBAgIQGRjJXo4ji3HWqoy2Fe4KADANBgkqhkiG9w0BAQsFADAU
+      MRIwEAYDVQQDEwlDaWxpdW0gQ0EwHhcNMjYwOTA0MTg0MzU5WhcNMjkwOTAzMTg0
+      MzU5WjAUMRIwEAYDVQQDEwlDaWxpdW0gQ0EwggEiMA0GCSqGSIb3DQEBAQUAA4IB
+      DwAwggEKAoIBAQDenDHmjd2uYGoLc5yXrCFmzTbR5zRRpdJcxNYXt3IxC0iCUfz2
+      ylJyu2seKi6PFS0cs0rTQbFceP/7Pt/UvXopnQTzFZQafCP1K5qTbvpk4KjdGQ9Y
+      3JnfDMFVnkxZTf2ntsB4OMxBA3dHZWdGf8htt+jdCfQfQuxwwcyyCg7CN9Psboyz
+      fH0l0p6gAC7XKIKCSTuxzO6c0W8GMKGhHMnh4Clfz6AaRsAcpT2uyRzPBoajWeYD
+      SdxTT1PCOxIy1QP8+MgYRh1C+JcEesDYVyCjCHs2rnar14tAmqddT2DJGaZp28Lz
+      a/Zatpk6LYfnnjTI7kRlpYAzJU3obudcnMgdAgMBAAGjYTBfMA4GA1UdDwEB/wQE
+      AwICpDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwDwYDVR0TAQH/BAUw
+      AwEB/zAdBgNVHQ4EFgQUJb8HMcTkymjODcIM2RU2AfISImcwDQYJKoZIhvcNAQEL
+      BQADggEBAAH8xJApmV51o7kxASy9QNCsFlkh7XLJsGARHXUCJSYyrTMsWB5MqVS8
+      gSzMN/W0Iew5IYgzSx468AnrPmUeja/0nV5rF8yy+KIB1/ECKa4OhQNOXDiojZ7h
+      3fcLJa+vnMjeVb+f2gPuhOekw5F01Th6qxq7rp1ju51Hx0ocnmS0Vg2BorxdRvS3
+      9Jc/jVzf7EFZ6wov8F1hXiQ37Q+E6NZj4TgkfHHFWdLl5vmSGo55LVLBXb5Cr7LI
+      i5okmAy8/2OkyWi6kHMgS50gL/mho03QR0Q95/hWsiTPPCDN+k5QO7dmpvx8C8Gy
+      FjBHcM8VrUFwxsKJft035iflxWuvaJs=
+      -----END CERTIFICATE-----
+      -----BEGIN CERTIFICATE-----
+      MIIBqDCCAU6gAwIBAgIUX2so5X6UdC0sruom8PMZDQTm0rIwCgYIKoZIzj0EAwIw
+      IDEeMBwGA1UEAxMVRFNRUiBJbmRpZ28gSHViYmxlIENBMB4XDTI2MDkyNTE0MjU0
+      MFoXDTI5MDkyNDE0MjYxMFowIDEeMBwGA1UEAxMVRFNRUiBJbmRpZ28gSHViYmxl
+      IENBMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEUNoCa96dmvTe3AmNYOb3ezi7
+      Szk6woQgBV/27oGXD1PbKoCt65R1MpPsXFSwNinRTnWH8P+OxwCPe/3Ire9m9qNm
+      MGQwDgYDVR0PAQH/BAQDAgEGMBIGA1UdEwEB/wQIMAYBAf8CAQAwHQYDVR0OBBYE
+      FP30i0hCU/hXL466gpejYuHm/q5ZMB8GA1UdIwQYMBaAFP30i0hCU/hXL466gpej
+      YuHm/q5ZMAoGCCqGSM49BAMCA0gAMEUCID8Trp7XfcNYUjvWXbDJdOhvAJqrtbq2
+      dv0IAoXqQMXtAiEAwInralM9RzFOaf4L5ECoZ3uWnMGjRLX1LfnlfZ8C1VY=
+      -----END CERTIFICATE-----
