@@ -79,6 +79,9 @@ patches:
           - group: rbac.authorization.k8s.io
             kind: ClusterRoleBinding
             name: hubble-server-issuer-auth-delegator
+          - group: rbac.authorization.k8s.io
+            kind: ClusterRoleBinding
+            name: metrics-server-issuer-auth-delegator
       - op: add
         path: /spec/namespaceResourceWhitelist/-
         value:

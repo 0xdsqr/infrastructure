@@ -1,0 +1,23 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+  - server.vaultdynamicsecret.yaml
+
+# The owning external-secrets-config Application already supplies the shared
+# dsqr-home-root-ca ConfigMap in kube-system through its Hubble TLS overlay.
+labels:
+  - pairs:
+      platform.dsqr.dev/cluster: indigo
+      platform.dsqr.dev/environment: production
+
+patches:
+  - target:
+      group: external-secrets.io
+      kind: ExternalSecret
+      name: metrics-server-serving-tls
+    patch: |-
+      - op: add
+        path: /spec/target/template/metadata/labels/platform.dsqr.dev~1cluster
+        value: indigo

@@ -40,6 +40,7 @@ const issuerKeys = [
   "indigoArgocdServer",
   "indigoArgocdRepoServer",
   "indigoGatewayOrigin",
+  "indigoMetricsServer",
   "postgresKnoxListener",
   "proxmoxListener",
   "rustfsKhaosListener",
@@ -117,6 +118,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoGatewayOrigin"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoArgocdServer"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoArgocdRepoServer"],
+    [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoMetricsServer"],
     [providerToken, "vault"],
     [mountToken, "pki-issuer-mount-indigoHubbleServer"],
     ["vault:pkiSecret/secretBackendRootCert:SecretBackendRootCert", "pki-issuer-root-indigoHubbleServer"],
@@ -287,6 +289,14 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     dependsOn: [
       "pki-issuer-role-indigoArgocdRepoServer",
       "pki-issuer-policy-indigoArgocdRepoServer",
+      "external-secrets-token-self-policy-indigo",
+    ],
+  })
+  lifecycle("pki-issuer-kubernetes-role-indigoMetricsServer", {
+    protect: true,
+    dependsOn: [
+      "pki-issuer-role-indigoMetricsServer",
+      "pki-issuer-policy-indigoMetricsServer",
       "external-secrets-token-self-policy-indigo",
     ],
   })
@@ -463,6 +473,20 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   ])
 
   const repoIssuerRole = byName(resources, "pki-issuer-kubernetes-role-indigoArgocdRepoServer")
+  const metricsIssuerRole = byName(resources, "pki-issuer-kubernetes-role-indigoMetricsServer").inputs
+  assert.equal(metricsIssuerRole.backend, "kubernetes-indigo")
+  assert.equal(metricsIssuerRole.roleName, "indigo-metrics-server-issuer")
+  assert.deepEqual(metricsIssuerRole.boundServiceAccountNames, ["metrics-server-issuer"])
+  assert.deepEqual(metricsIssuerRole.boundServiceAccountNamespaces, ["kube-system"])
+  assert.equal(metricsIssuerRole.tokenNoDefaultPolicy, true)
+  assert.equal(metricsIssuerRole.tokenTtl, 1_200)
+  assert.equal(metricsIssuerRole.tokenMaxTtl, 3_600)
+  assert.equal(metricsIssuerRole.tokenExplicitMaxTtl, 3_600)
+  assert.deepEqual(metricsIssuerRole.tokenPolicies, [
+    "dsqr-labs-pki-indigo-metrics-server", "indigo-external-secrets-token-self",
+  ])
+  assert.equal(byName(resources, "pki-issuer-policy-indigoMetricsServer").inputs.policy,
+    'path "pki_int/issue/indigo-metrics-server" {\n  capabilities = ["create", "update"]\n}')
   assert.equal(repoIssuerRole.inputs.backend, "kubernetes-indigo")
   assert.equal(repoIssuerRole.inputs.roleName, "indigo-argocd-repo-server-issuer")
   assert.deepEqual(repoIssuerRole.inputs.boundServiceAccountNames, ["argocd-repo-server-issuer"])

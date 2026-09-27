@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Issuance first; the chart's serving-certificate cutover is a separate step.
+namespace: kube-system
+resources:
+  - issuer.serviceaccount.yaml
+  - issuer.clusterrolebinding.yaml
+  - server.externalsecret.yaml
+
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: argocd
+      app.kubernetes.io/part-of: metrics-server
+      platform.dsqr.dev/owner: platform
+      platform.dsqr.dev/tier: platform-secret

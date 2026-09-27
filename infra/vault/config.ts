@@ -323,6 +323,29 @@ const raftSnapshotAppRole = {
 } satisfies VaultRaftSnapshotAppRoleConfig
 
 const pkiIssuers = {
+  indigoMetricsServer: {
+    backend: "pki_int",
+    roleName: "indigo-metrics-server",
+    policyName: "dsqr-labs-pki-indigo-metrics-server",
+    allowedDomains: [
+      "metrics-server.kube-system.svc",
+      "metrics-server.kube-system.svc.cluster.local",
+    ],
+    allowWildcardCertificates: false,
+    // ESO reissues independently of its short-lived Vault login token.
+    generateLease: false,
+    ttlHours: 720,
+    maxTtlHours: 720,
+    kubernetesAuthRole: {
+      backend: "kubernetes-indigo",
+      roleName: "indigo-metrics-server-issuer",
+      boundServiceAccountNames: ["metrics-server-issuer"],
+      boundServiceAccountNamespaces: ["kube-system"],
+      tokenTtlSeconds: 1_200,
+      tokenMaxTtlSeconds: 3_600,
+      tokenExplicitMaxTtlSeconds: 3_600,
+    },
+  },
   indigoHubbleServer: {
     backend: "pki_indigo_hubble",
     managedCa: {
