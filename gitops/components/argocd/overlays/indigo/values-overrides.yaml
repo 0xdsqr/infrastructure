@@ -10,7 +10,23 @@ redis-ha:
   enabled: true
 
 applicationSet:
-  replicas: 1
+  # The pinned chart enables leader election when replicas > 1. Migrate the
+  # existing non-electing singleton through a paused revision before syncing.
+  replicas: 0
+  pdb:
+    enabled: true
+    minAvailable: 1
+  topologySpreadConstraints:
+    - maxSkew: 1
+      minDomains: 2
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      nodeTaintsPolicy: Honor
+  deploymentStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   deploymentAnnotations:
     configmap.reloader.stakater.com/reload: dsqr-home-root-ca
   extraEnv:

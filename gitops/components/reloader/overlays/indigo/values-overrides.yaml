@@ -1,2 +1,19 @@
-# Namespace-local controller; RBAC and network policy are generated alongside it.
-{}
+# Namespace-local active/standby controller. Pause the old non-electing singleton
+# through a GitOps revision before the initial HA sync; later rolls use election.
+reloader:
+  enableHA: true
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  deployment:
+    replicas: 0
+    topologySpreadConstraints:
+      - maxSkew: 1
+        minDomains: 2
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        nodeTaintsPolicy: Honor
+        labelSelector:
+          matchLabels:
+            app: reloader
+            release: reloader
