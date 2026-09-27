@@ -1,0 +1,15 @@
+# Keep existing workload/Secret permissions unchanged. Kubernetes cannot
+# restrict create by resourceName; reads/updates use only the upstream lock.
+- op: add
+  path: /rules/-
+  value:
+    apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [create]
+- op: add
+  path: /rules/-
+  value:
+    apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    resourceNames: [stakater-reloader-lock]
+    verbs: [get, update]

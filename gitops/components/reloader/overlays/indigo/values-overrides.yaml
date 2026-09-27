@@ -6,7 +6,7 @@ reloader:
     enabled: true
     minAvailable: 1
   deployment:
-    replicas: 0
+    replicas: 2
     topologySpreadConstraints:
       - maxSkew: 1
         minDomains: 2

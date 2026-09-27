@@ -12,7 +12,7 @@ redis-ha:
 applicationSet:
   # The pinned chart enables leader election when replicas > 1. Migrate the
   # existing non-electing singleton through a paused revision before syncing.
-  replicas: 0
+  replicas: 2
   pdb:
     enabled: true
     minAvailable: 1

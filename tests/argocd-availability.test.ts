@@ -7,9 +7,9 @@ import { parse, parseAllDocuments } from "yaml"
 const valuesPath = "gitops/components/argocd/overlays/indigo/values-overrides.yaml"
 const chart = process.env.ARGOCD_TEST_CHART
 
-test("Indigo enables bounded server/repo availability without changing controller topology", () => {
+test("Indigo enables bounded serving and ApplicationSet availability without sharding the application controller", () => {
   const values = parse(readFileSync(valuesPath, "utf8"))
-  for (const name of ["server", "repoServer"]) {
+  for (const name of ["server", "repoServer", "applicationSet"]) {
     const component = values[name]
     assert.equal(component.replicas, 2)
     assert.deepEqual(component.pdb, { enabled: true, minAvailable: 1 })
@@ -21,7 +21,7 @@ test("Indigo enables bounded server/repo availability without changing controlle
       whenUnsatisfiable: "DoNotSchedule", nodeTaintsPolicy: "Honor",
     }])
   }
-  assert.equal(values.applicationSet.replicas, 1)
+  assert.deepEqual(values.applicationSet.extraArgs, ["--policy=create-update", "--enable-scm-providers=false"])
   assert.equal(values.controller.replicas, undefined)
   assert.equal(values["redis-ha"]?.enabled, true)
   assert.equal(values.redis.automountServiceAccountToken, false)
@@ -35,10 +35,10 @@ test("Pinned Argo chart renders replica spreading and matching PDBs only for Ind
       "--values", "gitops/components/argocd/base/values-common.yaml",
       "--values", `gitops/components/argocd/overlays/${cluster}/values-overrides.yaml`,
     ], { encoding: "utf8", maxBuffer: 16 * 1024 * 1024 })).map(d => d.toJSON()).filter(Boolean)
-    for (const name of ["argocd-server", "argocd-repo-server"]) {
+    for (const name of ["argocd-server", "argocd-repo-server", "argocd-applicationset-controller"]) {
       const deployment = objects.find(o => o.kind === "Deployment" && o.metadata.name === name)
       const pdb = objects.find(o => o.kind === "PodDisruptionBudget" && o.metadata.name === name)
-      assert.equal(deployment.spec.replicas, cluster === "indigo" ? 2 : 1)
+      assert.equal(deployment.spec.replicas, cluster === "indigo" ? 2 : name === "argocd-applicationset-controller" ? 0 : 1)
       if (cluster === "hub-a") {
         assert.equal(pdb, undefined)
         continue
@@ -57,6 +57,8 @@ test("Pinned Argo chart renders replica spreading and matching PDBs only for Ind
       assert.equal(spread.whenUnsatisfiable, "DoNotSchedule")
       assert.ok(deployment.spec.template.spec.containers[0].resources.requests.memory)
     }
+    const params = objects.find(o => o.kind === "ConfigMap" && o.metadata.name === "argocd-cmd-params-cm")
+    assert.equal(params.data["applicationsetcontroller.enable.leader.election"], cluster === "indigo" ? "true" : "false")
     assert.equal(objects.find(o => o.kind === "StatefulSet" && o.metadata.name === "argocd-application-controller").spec.replicas, 1)
     assert.equal(objects.some(o => o.kind === "Deployment" && o.metadata.name === "argocd-redis"), cluster === "hub-a")
   }

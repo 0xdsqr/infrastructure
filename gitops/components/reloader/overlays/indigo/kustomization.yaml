@@ -3,6 +3,13 @@ kind: Kustomization
 namespace: argocd
 resources:
   - ../../base
+patches:
+  - path: reloader-leader-election.patch.yaml
+    target:
+      group: rbac.authorization.k8s.io
+      version: v1
+      kind: Role
+      name: reloader
 labels:
   - pairs:
       app.kubernetes.io/managed-by: argocd
