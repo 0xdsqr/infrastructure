@@ -69,7 +69,7 @@ test("ESO renews early and retains the certificate without declaring private mat
   assert.equal(es.target.template.metadata.labels["platform.dsqr.dev/tls-reload"], undefined)
 })
 
-test("issuance uses existing generated ownership, leaves chart cutover manual and does not touch hub-a", () => {
+test("issuance uses existing generated ownership, keeps serving cutover manual and does not touch hub-a", () => {
   const apps = kustomize("gitops/clusters/indigo/applications")
     .flatMap(o => o.kind === "ApplicationSet" ? previewApplicationSet(o) : [o])
   assert.equal(apps.some(o => /metrics.*tls/.test(o.metadata.name)), false)
@@ -79,7 +79,8 @@ test("issuance uses existing generated ownership, leaves chart cutover manual an
   assert.equal(metrics.spec.syncPolicy.automated.enabled, false)
   assert.equal(JSON.stringify(metrics).includes("values-provided.yaml"), false)
   const active = parse(readFileSync("gitops/components/metrics-server/overlays/indigo/values-overrides.yaml", "utf8"))
-  assert.equal(active.tls, undefined)
+  assert.deepEqual(active.tls, prepared.tls)
+  // Strict verification is a later checkpoint after both endpoints roll out.
   assert.equal(active.apiService, undefined)
   const project = kustomize("gitops/components/argocd/overlays/indigo").find(o => o.kind === "AppProject" && o.metadata.name === "secrets").spec
   assert.ok(project.destinations.some((o: any) => o.namespace === "kube-system"))

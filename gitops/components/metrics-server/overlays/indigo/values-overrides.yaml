@@ -3,6 +3,14 @@
 args:
   - --kubelet-certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
 
+# The Vault-issued Secret is verified before this manual controller rollout.
+# Both endpoints must serve it before enabling strict APIService verification.
+tls:
+  type: existingSecret
+  existingSecret:
+    name: metrics-server-serving-tls
+    lookup: false
+
 replicas: 2
 
 updateStrategy:

@@ -1,4 +1,4 @@
-# Prepared cutover values, deliberately not referenced by an Application yet.
+# Reusable serving-certificate values, mirrored in Indigo's active overlay.
 # First issue/verify the Secret, then roll both replicas onto these settings.
 # Enable APIService CA verification only after both endpoints serve the new cert.
 tls:
