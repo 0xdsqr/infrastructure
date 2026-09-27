@@ -3,13 +3,30 @@
 args:
   - --kubelet-certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt
 
-# The Vault-issued Secret is verified before this manual controller rollout.
-# Both endpoints must serve it before enabling strict APIService verification.
+# Both endpoints were verified against the Vault-issued certificate before
+# enabling APIService verification. The mounted Secret supports native reload.
 tls:
   type: existingSecret
   existingSecret:
     name: metrics-server-serving-tls
     lookup: false
+
+# Public trust anchor only, kept identical to dsqr-home-root-ca by tests.
+# Argo renders offline: never derive APIService trust using Helm lookup.
+apiService:
+  insecureSkipTLSVerify: false
+  caBundle: |
+    -----BEGIN CERTIFICATE-----
+    MIIBoTCCAUegAwIBAgIUMeqr/7ZX65uFmlz/stdj1gtfNmAwCgYIKoZIzj0EAwIw
+    HjEcMBoGA1UEAwwTIkRTUVIgSG9tZSBSb290IENBIjAeFw0yNjA2MjkxNTIzNDVa
+    Fw0zNjA2MjYxNTI0MTVaMB4xHDAaBgNVBAMMEyJEU1FSIEhvbWUgUm9vdCBDQSIw
+    WTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQ8nCCk+sQcWNEK/eFKh+hxxuE4cQSs
+    ZSI8XWOvzly8XSro/5l2AlVhLl5iJVHFSDD3Uu0cKDSFtJOaGmGDVe7xo2MwYTAO
+    BgNVHQ8BAf8EBAMCAQYwDwYDVR0TAQH/BAUwAwEB/zAdBgNVHQ4EFgQUSknfxmOd
+    LhP7M/wN26HJtDXyL8EwHwYDVR0jBBgwFoAUSknfxmOdLhP7M/wN26HJtDXyL8Ew
+    CgYIKoZIzj0EAwIDSAAwRQIhAO9fdta70L1ym8PARL2HD6NpD6GfgGzkPEHrX4It
+    +4pbAiAkQhS1sVTcuv3ZXt46z6l1fOTTEMRfh1GNXu9EXAu66g==
+    -----END CERTIFICATE-----
 
 replicas: 2
 

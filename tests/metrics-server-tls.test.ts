@@ -80,8 +80,9 @@ test("issuance uses existing generated ownership, keeps serving cutover manual a
   assert.equal(JSON.stringify(metrics).includes("values-provided.yaml"), false)
   const active = parse(readFileSync("gitops/components/metrics-server/overlays/indigo/values-overrides.yaml", "utf8"))
   assert.deepEqual(active.tls, prepared.tls)
-  // Strict verification is a later checkpoint after both endpoints roll out.
-  assert.equal(active.apiService, undefined)
+  assert.equal(active.apiService.insecureSkipTLSVerify, false)
+  assert.equal(active.apiService.caBundle, get("ConfigMap", "dsqr-home-root-ca", "kube-system").data["ca.crt"])
+  assert.doesNotMatch(active.apiService.caBundle, /PRIVATE KEY/)
   const project = kustomize("gitops/components/argocd/overlays/indigo").find(o => o.kind === "AppProject" && o.metadata.name === "secrets").spec
   assert.ok(project.destinations.some((o: any) => o.namespace === "kube-system"))
   assert.ok(project.clusterResourceWhitelist.some((o: any) => o.kind === "ClusterRoleBinding" && o.name === "metrics-server-issuer-auth-delegator"))
@@ -93,18 +94,23 @@ test("pinned chart supports deterministic directory-mounted certificates and exp
 }, () => {
   assert.deepEqual(prepared.tls, { type: "existingSecret", existingSecret: { name: secretName, lookup: false } })
   const ca = get("ConfigMap", "dsqr-home-root-ca", "kube-system").data["ca.crt"]
-  // Exercise the future verified cutover offline, not in the active values.
   const args = ["template", "metrics-server", process.env.METRICS_SERVER_TEST_CHART!, "--namespace", "kube-system",
     "-f", "gitops/components/metrics-server/base/values-common.yaml",
-    "-f", "gitops/components/metrics-server/overlays/indigo/values-overrides.yaml", "-f", "-"]
-  const input = stringify({ ...prepared, apiService: { insecureSkipTLSVerify: false, caBundle: ca } })
-  const rendered = execFileSync("helm", args, { encoding: "utf8", input })
-  assert.equal(execFileSync("helm", args, { encoding: "utf8", input }), rendered)
+    "-f", "gitops/components/metrics-server/overlays/indigo/values-overrides.yaml"]
+  const rendered = execFileSync("helm", args, { encoding: "utf8" })
+  assert.equal(execFileSync("helm", args, { encoding: "utf8" }), rendered)
   const resources = decode(rendered)
   assert.equal(resources.some(o => o.kind === "Secret"), false)
   const api = resources.find(o => o.kind === "APIService").spec
   assert.notEqual(api.insecureSkipTLSVerify, true)
   assert.equal(Buffer.from(api.caBundle, "base64").toString(), ca)
+  // This final checkpoint changes API trust only: no workload restart or RBAC changes.
+  const before = decode(execFileSync("helm", [...args, "-f", "-"], {
+    encoding: "utf8", input: stringify({ apiService: { insecureSkipTLSVerify: true, caBundle: "" } }),
+  }))
+  assert.deepEqual(resources.filter(o => o.kind !== "APIService"), before.filter(o => o.kind !== "APIService"))
+  const hubValues = parse(readFileSync("gitops/components/metrics-server/overlays/hub-a/values-overrides.yaml", "utf8"))
+  assert.equal(hubValues.apiService, undefined)
   const deploy = resources.find(o => o.kind === "Deployment")
   assert.equal(deploy.spec.replicas, 2)
   assert.equal(deploy.spec.strategy.rollingUpdate.maxUnavailable, 0)
