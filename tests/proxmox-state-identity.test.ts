@@ -64,6 +64,9 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
       [vmToken, "srv-lx-k8s-indigo-worker-01"],
       [vmToken, "srv-lx-k8s-indigo-worker-02"],
       [vmToken, "srv-lx-k8s-indigo-worker-03"],
+      [vmToken, "srv-lx-k8s-indigo-worker-04"],
+      [vmToken, "srv-lx-k8s-indigo-worker-05"],
+      [vmToken, "srv-lx-k8s-indigo-worker-06"],
       [vmToken, "vault"],
     ],
   )
@@ -153,6 +156,9 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
       80,
       "02:00:00:00:13:50",
     ],
+    ["srv-lx-k8s-indigo-worker-04", "srv-lx-k8s-indigo-worker-04", 1360, 4, 8192, 128, "ssd-dsqr-raid-002", 80, "02:00:00:00:13:60"],
+    ["srv-lx-k8s-indigo-worker-05", "srv-lx-k8s-indigo-worker-05", 1370, 4, 8192, 128, "ssd-dsqr-raid-002", 80, "02:00:00:00:13:70"],
+    ["srv-lx-k8s-indigo-worker-06", "srv-lx-k8s-indigo-worker-06", 1380, 4, 8192, 128, "ssd-dsqr-raid-002", 80, "02:00:00:00:13:80"],
   ] as const
 
   for (const [

@@ -483,15 +483,19 @@ test("Indigo Metrics Server keeps kubelet TLS verification enabled", async () =>
   assert.doesNotMatch(values, /--kubelet-insecure-tls/)
 })
 
-test("Indigo kubelet serving CSR approval is restricted to its six nodes", async () => {
+test("Indigo kubelet serving CSR approval is restricted to three controls and six workers", async () => {
   const values = await read(
     "gitops/components/kubelet-csr-approver/overlays/indigo/values-overrides.yaml",
   )
 
-  assert.match(values, /\^srv-lx-k8s-indigo-\(control\|worker\)-0\[1-3\]\$/)
-  for (let address = 100; address <= 105; address += 1) {
-    assert.match(values, new RegExp(`10\\.10\\.80\\.${address}/32`))
+  const config = parseAllDocuments(values)[0].toJSON()
+  const names = new RegExp(config.providerRegex)
+  for (let i = 1; i <= 3; i += 1) assert.ok(names.test(`srv-lx-k8s-indigo-control-0${i}`))
+  for (let i = 1; i <= 6; i += 1) assert.ok(names.test(`srv-lx-k8s-indigo-worker-0${i}`))
+  for (const name of ["srv-lx-k8s-indigo-control-04", "srv-lx-k8s-indigo-worker-07", "srv-lx-k8s-indigo-worker-00", "other-worker-04", "srv-lx-k8s-indigo-worker-04-extra"]) {
+    assert.equal(names.test(name), false, name)
   }
+  assert.deepEqual(config.providerIpPrefixes, Array.from({ length: 9 }, (_, i) => `10.10.80.${100 + i}/32`))
   assert.match(values, /bypassDnsResolution: true/)
   assert.match(values, /bypassHostnameCheck: false/)
   assert.match(values, /ignoreNonSystemNode: false/)
