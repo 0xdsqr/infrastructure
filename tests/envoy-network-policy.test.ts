@@ -26,7 +26,7 @@ test("Envoy allow rules stage without enabling default-deny prematurely", () => 
       resource.kind === "CiliumNetworkPolicy" &&
       resource.metadata.namespace === "envoy-gateway-system",
   )
-  assert.equal(policies.length, 4)
+  assert.equal(policies.length, 5)
   for (const policy of policies) {
     assert.equal(policy.metadata.annotations["argocd.argoproj.io/sync-wave"], "0")
     assert.deepEqual(policy.spec.enableDefaultDeny, { ingress: false, egress: false })
@@ -47,6 +47,16 @@ test("Envoy allow rules stage without enabling default-deny prematurely", () => 
       )
     }
   }
+})
+
+test("certificate hook gets API-only egress without inheriting controller or proxy access", () => {
+  const policy = gateway().find(resource => resource.metadata.name === "envoy-gateway-certgen-access").spec
+  assert.deepEqual(policy.endpointSelector.matchLabels, {
+    app: "certgen",
+    "k8s:io.cilium.k8s.policy.serviceaccount": "envoy-gateway-gateway-helm-certgen",
+  })
+  assert.equal(policy.ingress, undefined)
+  assert.deepEqual(policy.egress, [{ toEntities: ["kube-apiserver"], toPorts: [{ ports: [{ port: "6443", protocol: "TCP" }] }] }])
 })
 
 test("only the DMZ host reaches shared HTTPS; no unused Envoy services are allowed", () => {

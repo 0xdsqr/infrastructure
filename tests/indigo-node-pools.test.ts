@@ -116,6 +116,11 @@ for (const [component, variable, namespace] of cases) {
       assert.equal(redis.spec.template.spec.affinity.podAntiAffinity.requiredDuringSchedulingIgnoredDuringExecution[0].topologyKey, "kubernetes.io/hostname")
       assert.equal(objects.find(o => o.kind === "PodDisruptionBudget" && o.metadata.name === "argocd-redis-ha-pdb").spec.minAvailable, 2)
     }
+    if (component === "envoy-gateway") {
+      const job = targets.find(o => o.kind === "Job")
+      assert.equal(job.spec.template.metadata.labels.app, "certgen")
+      assert.equal(job.spec.template.spec.serviceAccountName, "envoy-gateway-gateway-helm-certgen")
+    }
   })
 }
 

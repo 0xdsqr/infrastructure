@@ -1,0 +1,28 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: envoy-gateway-certgen-access
+  namespace: envoy-gateway-system
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: cluster-ingress
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-policy
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  # The pre-upgrade certificate hook is not an Envoy controller Pod. Retain
+  # default deny and allow only its dedicated service account to contact the API.
+  endpointSelector:
+    matchLabels:
+      app: certgen
+      k8s:io.cilium.k8s.policy.serviceaccount: envoy-gateway-gateway-helm-certgen
+  enableDefaultDeny:
+    ingress: false
+    egress: false
+  egress:
+    - toEntities: [kube-apiserver]
+      toPorts:
+        - ports:
+            - port: "6443"
+              protocol: TCP
