@@ -101,7 +101,7 @@ server:
   pdb:
     enabled: true
     minAvailable: 1
-  # Use built-in node identity; custom worker pools are a separate rollout.
+  # Spread replicas across distinct node hostnames within the platform pool.
   topologySpreadConstraints:
     - maxSkew: 1
       minDomains: 2
