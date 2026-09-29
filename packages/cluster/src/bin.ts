@@ -4,6 +4,7 @@ import { Command, Path } from "@effect/platform"
 import { NodeContext, NodeRuntime } from "@effect/platform-node"
 import { Config, Console, Data, Effect, Option, Stream } from "effect"
 import { assertReservationSafe, dedicatedKey, indigoWorkers, labelPatch, poolLabel, reservationPatch, validateWorkers, type Node, type Pod, type Workload } from "./node-pools.ts"
+import { joinWorker, parseJoinArgs, type JoinOptions, type ProcessOptions } from "./join-worker.ts"
 
 const usage = `Usage:
   cluster bootstrap indigo --step argocd
@@ -11,6 +12,8 @@ const usage = `Usage:
   cluster bootstrap indigo --step cilium-adoption
   cluster validate indigo
   cluster node-pools indigo --stage plan|labels|reserve|verify
+  cluster join-worker indigo --worker 04 --identity /absolute/ssh/key --check-only
+  cluster join-worker indigo --worker 04 --identity /absolute/ssh/key --apply
 
 The bootstrap commands are deliberately explicit and safe to rerun. They
 require KUBECONFIG and refuse to mutate a cluster whose API server is not the
@@ -38,12 +41,13 @@ type Result = {
   readonly stdout: string
 }
 
-const run = Effect.fn("Cluster.run")(function* (command: string, args: readonly string[]) {
+const run = Effect.fn("Cluster.run")(function* (command: string, args: readonly string[], options: ProcessOptions = {}) {
   return yield* Effect.scoped(
     Effect.gen(function* () {
-      const process = yield* Command.start(Command.make(command, ...args)).pipe(
+      const spec = Command.make(command, ...args)
+      const process = yield* Command.start(options.input === undefined ? spec : Command.feed(spec, options.input)).pipe(
         Effect.mapError(
-          (cause) => new ClusterError({ message: `Unable to start ${command}: ${String(cause)}` }),
+          (cause) => new ClusterError({ message: options.sensitive ? `Unable to start ${command}; sensitive diagnostics suppressed.` : `Unable to start ${command}: ${String(cause)}` }),
         ),
       )
       const result = yield* Effect.all(
@@ -61,13 +65,13 @@ const run = Effect.fn("Cluster.run")(function* (command: string, args: readonly 
         { concurrency: "unbounded" },
       ).pipe(
         Effect.mapError(
-          (cause) => new ClusterError({ message: `Unable to run ${command}: ${String(cause)}` }),
+          (cause) => new ClusterError({ message: options.sensitive ? `Unable to run ${command}; sensitive diagnostics suppressed.` : `Unable to run ${command}: ${String(cause)}` }),
         ),
       )
 
       if (result.exitCode !== 0) {
         return yield* new ClusterError({
-          message: `${command} ${args.join(" ")} failed (${result.exitCode})${
+          message: options.sensitive ? `${command} failed (${result.exitCode}); sensitive diagnostics suppressed.` : `${command} ${args.join(" ")} failed (${result.exitCode})${
             result.stderr.trim() === "" ? "" : `\n${result.stderr.trim()}`
           }`,
         })
@@ -370,8 +374,16 @@ const parse = (argv: readonly string[]): Effect.Effect<Action, ClusterError> => 
   return Effect.fail(new ClusterError({ message: `Invalid arguments.\n\n${usage}` }))
 }
 
-const program = parse(process.argv.slice(2)).pipe(
+const argv = process.argv.slice(2)
+const selected: Effect.Effect<Action | JoinOptions, ClusterError> = argv[0] === "join-worker" && !argv.includes("--help") && !argv.includes("-h")
+  ? Effect.try({ try: () => parseJoinArgs(argv), catch: cause => new ClusterError({ message: String(cause) }) })
+  : parse(argv)
+const program = selected.pipe(
   Effect.flatMap((action) => {
+    if (typeof action !== "string") {
+      return kubeconfig().pipe(Effect.flatMap(config => joinWorker({ run }, action, config)),
+        Effect.mapError(cause => new ClusterError({ message: cause.message })))
+    }
     switch (action) {
       case "pool-plan":
       case "pool-labels":

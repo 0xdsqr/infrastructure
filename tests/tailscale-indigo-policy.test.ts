@@ -6,7 +6,7 @@ import { tailscale, tailscaleAdminUser } from "../infra/tailscale/config.ts"
 const policy = tailscale.createPolicy({ adminUser: tailscaleAdminUser })
 const indigoTag = tailscale.tags.cluster.indigoNode
 
-test("device retagging targets exactly the six verified Indigo nodes", () => {
+test("device retagging targets exactly the nine verified Indigo nodes", () => {
   assert.deepEqual(tailscale.deviceTagSpecs, {
     indigoControl01: {
       resourceName: "dsqr-indigo-control-01-tags",
@@ -36,6 +36,21 @@ test("device retagging targets exactly the six verified Indigo nodes", () => {
     indigoWorker03: {
       resourceName: "dsqr-indigo-worker-03-tags",
       deviceId: "n35gDmGxvw11CNTRL",
+      tags: [indigoTag],
+    },
+    indigoWorker04: {
+      resourceName: "dsqr-indigo-worker-04-tags",
+      deviceId: "npWfR3aXau11CNTRL",
+      tags: [indigoTag],
+    },
+    indigoWorker05: {
+      resourceName: "dsqr-indigo-worker-05-tags",
+      deviceId: "ngDfnjfsdC21CNTRL",
+      tags: [indigoTag],
+    },
+    indigoWorker06: {
+      resourceName: "dsqr-indigo-worker-06-tags",
+      deviceId: "nBNGiopbXz11CNTRL",
       tags: [indigoTag],
     },
   })

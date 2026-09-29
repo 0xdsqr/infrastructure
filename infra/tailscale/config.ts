@@ -187,6 +187,21 @@ export const tailscale = {
       deviceId: "n35gDmGxvw11CNTRL",
       tags: [tags.cluster.indigoNode],
     },
+    indigoWorker04: {
+      resourceName: "dsqr-indigo-worker-04-tags",
+      deviceId: "npWfR3aXau11CNTRL",
+      tags: [tags.cluster.indigoNode],
+    },
+    indigoWorker05: {
+      resourceName: "dsqr-indigo-worker-05-tags",
+      deviceId: "ngDfnjfsdC21CNTRL",
+      tags: [tags.cluster.indigoNode],
+    },
+    indigoWorker06: {
+      resourceName: "dsqr-indigo-worker-06-tags",
+      deviceId: "nBNGiopbXz11CNTRL",
+      tags: [tags.cluster.indigoNode],
+    },
   },
   keySpecs: {
     indigoNode: {

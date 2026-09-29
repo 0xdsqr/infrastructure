@@ -8,6 +8,7 @@ let
   runtimePath = lib.makeBinPath [
     pkgs.kubectl
     pkgs.kubernetes-helm
+    pkgs.openssh
   ];
 in
 pkgs.stdenvNoCC.mkDerivation {

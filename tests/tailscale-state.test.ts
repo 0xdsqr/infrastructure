@@ -63,6 +63,9 @@ test("Tailscale infrastructure manages its policy and rotating server bootstrap 
   for (const key of [
     "indigoWorker01",
     "indigoWorker02",
+    "indigoWorker04",
+    "indigoWorker05",
+    "indigoWorker06",
     "indigoControl01",
     "indigoControl02",
     "indigoControl03",
@@ -86,6 +89,9 @@ test("Tailscale infrastructure manages its policy and rotating server bootstrap 
     ["tailscale:index/deviceTags:DeviceTags", "dsqr-indigo-worker-01-tags"],
     ["tailscale:index/deviceTags:DeviceTags", "dsqr-indigo-worker-02-tags"],
     ["tailscale:index/deviceTags:DeviceTags", "dsqr-indigo-worker-03-tags"],
+    ["tailscale:index/deviceTags:DeviceTags", "dsqr-indigo-worker-04-tags"],
+    ["tailscale:index/deviceTags:DeviceTags", "dsqr-indigo-worker-05-tags"],
+    ["tailscale:index/deviceTags:DeviceTags", "dsqr-indigo-worker-06-tags"],
     ["tailscale:index/tailnetKey:TailnetKey", "homelab-backup-key"],
     ["tailscale:index/tailnetKey:TailnetKey", "homelab-server-key"],
     ["tailscale:index/acl:Acl", "tailnet-policy"],
@@ -138,6 +144,11 @@ test("Tailscale infrastructure manages its policy and rotating server bootstrap 
     deviceId: "n35gDmGxvw11CNTRL",
     tags: ["tag:dsqr-indigo-node"],
   })
+  for (const [suffix, deviceId] of [["04", "npWfR3aXau11CNTRL"], ["05", "ngDfnjfsdC21CNTRL"], ["06", "nBNGiopbXz11CNTRL"]]) {
+    assert.deepEqual(resources.find(r => r.name === `dsqr-indigo-worker-${suffix}-tags`)?.inputs, {
+      deviceId, tags: ["tag:dsqr-indigo-node"],
+    })
+  }
 })
 
 test("Tailscale rejects unsafe device-tag inventories before registering resources", async () => {
