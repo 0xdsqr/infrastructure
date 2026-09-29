@@ -40,6 +40,16 @@ test("pool inventory is three platform and three applications, never control pla
   }
 })
 
+test("bootstrap labels allow registered NotReady nodes without weakening reservation checks", () => {
+  const partial = nodes().slice(0, 1)
+  partial[0]!.status.conditions = []
+  delete partial[0]!.metadata.labels![poolLabel]
+  validateWorkers(partial, false, true)
+  assert.throws(() => validateWorkers(partial, true))
+  partial[0]!.status.addresses = []
+  assert.throws(() => validateWorkers(partial, false, true), /unexpected InternalIP/)
+})
+
 test("node patches are race guarded, idempotent and preserve unrelated labels and taints", () => {
   const n = nodes()[0]!
   n.spec.taints = [{ key: "maintenance", value: "keep", effect: "PreferNoSchedule" }, platformTaint]

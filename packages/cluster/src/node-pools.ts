@@ -43,14 +43,17 @@ export const toleratesPlatform = (pod: PodSpec) => (pod.tolerations ?? []).some(
   (t.operator === "Exists" ? !t.key || t.key === dedicatedKey : t.key === dedicatedKey && t.value === "platform"),
 )
 
-export function validateWorkers(nodes: Node[], requireLabels = false): void {
+export function validateWorkers(nodes: Node[], requireLabels = false, registrationOnly = false): void {
   for (const target of indigoWorkers) {
     const node = nodes.find(n => n.metadata.name === target.name)
+    // Cilium's operator may itself need these labels to make new nodes Ready.
+    // Labels may be applied incrementally; reservation requires the full pool.
+    if (!node && registrationOnly) continue
     if (!node || !node.status.addresses?.some(a => a.type === "InternalIP" && a.address === target.address)) {
       throw new Error(`Missing node or unexpected InternalIP: ${target.name}`)
     }
     if ("node-role.kubernetes.io/control-plane" in (node.metadata.labels ?? {})) throw new Error(`Refusing control-plane node: ${target.name}`)
-    if (node.spec.unschedulable || !node.status.conditions?.some(c => c.type === "Ready" && c.status === "True")) {
+    if (!registrationOnly && (node.spec.unschedulable || !node.status.conditions?.some(c => c.type === "Ready" && c.status === "True"))) {
       throw new Error(`Node is not Ready and schedulable: ${target.name}`)
     }
     const current = node.metadata.labels?.[poolLabel]

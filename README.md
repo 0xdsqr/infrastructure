@@ -22,7 +22,9 @@ nix run .#cluster -- node-pools indigo --stage plan
 nix run .#cluster -- node-pools indigo --stage labels
 ```
 
-Label before syncing the Indigo placement templates. CoreDNS stays kubeadm-owned:
+Label before syncing the Indigo placement templates. During initial bootstrap,
+`labels` can run incrementally as workers register, before Cilium makes them Ready;
+`reserve` still requires all six workers Ready. CoreDNS stays kubeadm-owned:
 apply its `corednsdeployment-platform+strategic.yaml` patch from `nixos-config`,
 and deploy that repository's control-plane configuration to preserve it on upgrades.
 After all rollouts finish, `--stage reserve` adds the platform `NoSchedule` taint

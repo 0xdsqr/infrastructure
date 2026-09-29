@@ -318,7 +318,7 @@ const nodePools = Effect.fn("Cluster.nodePools")(function* (stage: string) {
     }
     return
   }
-  yield* poolCheck(() => validateWorkers(nodes, stage !== "labels"))
+  yield* poolCheck(() => validateWorkers(nodes, stage !== "labels", stage === "labels"))
   if (stage === "reserve" || stage === "verify") {
     const workloads = (yield* readJson<{ items: Workload[] }>(["get", "deployments,statefulsets,daemonsets", "-A"])).items
     const pods = (yield* readJson<{ items: Pod[] }>(["get", "pods", "-A"])).items
@@ -335,6 +335,10 @@ const nodePools = Effect.fn("Cluster.nodePools")(function* (stage: string) {
   }
   for (const target of indigoWorkers) {
     if (stage === "reserve" && target.pool !== "platform") continue
+    if (!nodes.some(n => n.metadata.name === target.name)) {
+      yield* Console.log(`not registered yet: ${target.name}; rerun labels after registration`)
+      continue
+    }
     const node = yield* readJson<Node>(["get", "node", target.name])
     const patch = stage === "labels" ? labelPatch(node, target.pool) : reservationPatch(node)
     yield* kubectl(["patch", "node", target.name, "--type=json", "--patch", JSON.stringify(patch)])
