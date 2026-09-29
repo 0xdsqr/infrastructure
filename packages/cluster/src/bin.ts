@@ -324,17 +324,16 @@ const nodePools = Effect.fn("Cluster.nodePools")(function* (stage: string) {
     const pods = (yield* readJson<{ items: Pod[] }>(["get", "pods", "-A"])).items
     yield* poolCheck(() => assertReservationSafe(nodes, workloads, pods))
     if (stage === "verify") {
-      for (const target of indigoWorkers.filter(w => w.pool === "platform")) {
-        if (!nodes.find(n => n.metadata.name === target.name)?.spec.taints?.some(t => t.key === dedicatedKey && t.value === "platform" && t.effect === "NoSchedule")) {
-          return yield* new ClusterError({ message: `Platform reservation missing: ${target.name}` })
+      for (const target of indigoWorkers) {
+        if (!nodes.find(n => n.metadata.name === target.name)?.spec.taints?.some(t => t.key === dedicatedKey && t.value === target.pool && t.effect === "NoSchedule")) {
+          return yield* new ClusterError({ message: `Pool reservation missing: ${target.name}` })
         }
       }
-      yield* Console.log("Platform placement, reservations, node agents and rollouts verified.")
+      yield* Console.log("Platform placement, both pool reservations, empty application pool and node agents verified.")
       return
     }
   }
   for (const target of indigoWorkers) {
-    if (stage === "reserve" && target.pool !== "platform") continue
     if (!nodes.some(n => n.metadata.name === target.name)) {
       yield* Console.log(`not registered yet: ${target.name}; rerun labels after registration`)
       continue

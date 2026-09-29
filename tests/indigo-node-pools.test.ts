@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process"
 import { readFileSync } from "node:fs"
 import test from "node:test"
 import { parseAllDocuments } from "yaml"
-import { assertReservationSafe, dedicatedKey, indigoWorkers, labelPatch, platformTaint, platformWorkloads, poolLabel, reservationPatch, toleratesPlatform, validateWorkers, type Node, type Workload } from "../packages/cluster/src/node-pools.ts"
+import { applicationsTaint, assertReservationSafe, dedicatedKey, indigoWorkers, labelPatch, platformTaint, platformWorkloads, poolLabel, reservationPatch, toleratesApplications, toleratesPlatform, validateWorkers, type Node, type Workload, type Pod } from "../packages/cluster/src/node-pools.ts"
 
 const nodes = (): Node[] => indigoWorkers.map(w => ({
   metadata: { name: w.name, resourceVersion: "7", labels: { [poolLabel]: w.pool, existing: "keep" } }, spec: {},
@@ -19,7 +19,7 @@ const workloads = (): Workload[] => [
   }),
   ...[["kube-system", "cilium", 9], ["kube-system", "cilium-envoy", 9], ["metallb-system", "metallb-speaker", 6]].map(([namespace, name, count]) => ({
     kind: "DaemonSet", metadata: { namespace: String(namespace), name: String(name), generation: 1 },
-    spec: { template: { spec: { tolerations: [platformTaint] } } },
+    spec: { template: { spec: { tolerations: [platformTaint, applicationsTaint] } } },
     status: { observedGeneration: 1, desiredNumberScheduled: Number(count), numberReady: Number(count), updatedNumberScheduled: Number(count) },
   })),
 ]
@@ -58,6 +58,37 @@ test("node patches are race guarded, idempotent and preserve unrelated labels an
   assert.deepEqual(patch[1]!.value, n.spec.taints)
   assert.deepEqual(labelPatch(n, "platform")[1]!.value, n.metadata.labels)
   assert.equal(platformTaint.effect, "NoSchedule")
+  const app = nodes()[3]!
+  app.spec.taints = [{ key: "maintenance", effect: "PreferNoSchedule" }, applicationsTaint]
+  assert.deepEqual(reservationPatch(app)[1]!.value, app.spec.taints)
+  validateWorkers([n, ...nodes().slice(1, 3), app, ...nodes().slice(4)], true)
+  app.metadata.name = "unknown"
+  assert.throws(() => reservationPatch(app), /Unknown or mislabelled/)
+})
+
+test("application pool stays empty except for healthy identified node agents", () => {
+  const ws = workloads()
+  const speaker = ws.at(-1)!
+  speaker.metadata.uid = "speaker-uid"
+  const pod: Pod = {
+    metadata: { name: "speaker-pod", namespace: "metallb-system", ownerReferences: [
+      { kind: "DaemonSet", name: "metallb-speaker", uid: "speaker-uid", controller: true },
+    ] },
+    spec: { nodeName: indigoWorkers[3].name, tolerations: [applicationsTaint] },
+    status: { phase: "Running", conditions: [{ type: "Ready", status: "True" }] },
+  }
+  assertReservationSafe(nodes(), ws, [pod])
+  for (const mutate of [
+    (p: Pod) => { p.metadata.ownerReferences = [] },
+    (p: Pod) => { p.metadata.ownerReferences![0]!.uid = "wrong-owner" },
+    (p: Pod) => { p.spec.tolerations = [platformTaint] },
+    (p: Pod) => { p.status.conditions = [] },
+  ]) {
+    const copy = structuredClone(pod); mutate(copy)
+    assert.throws(() => assertReservationSafe(nodes(), ws, [copy]), /only healthy approved node agents/)
+  }
+  speaker.spec.template.spec.tolerations = [platformTaint]
+  assert.throws(() => assertReservationSafe(nodes(), ws, []), /Node-wide agent/)
 })
 
 test("reservation requires every platform template and healthy node-wide agents", () => {
@@ -108,6 +139,7 @@ for (const [component, variable, namespace] of cases) {
     for (const o of targets) {
       const pod = o.spec.template.spec
       assert.ok(toleratesPlatform(pod), o.metadata.name)
+      assert.equal(toleratesApplications(pod), o.kind === "DaemonSet", o.metadata.name)
       assert.equal(pod.nodeSelector?.[poolLabel], o.kind === "DaemonSet" ? undefined : "platform", o.metadata.name)
     }
     if (component === "argocd") {

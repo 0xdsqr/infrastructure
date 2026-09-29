@@ -27,8 +27,14 @@ Label before syncing the Indigo placement templates. During initial bootstrap,
 `reserve` still requires all six workers Ready. CoreDNS stays kubeadm-owned:
 apply its `corednsdeployment-platform+strategic.yaml` patch from `nixos-config`,
 and deploy that repository's control-plane configuration to preserve it on upgrades.
-After all rollouts finish, `--stage reserve` adds the platform `NoSchedule` taint
-only after checking placement, tolerations and readiness; `--stage verify` is
-read-only. Rerun this sequence after replacing/joining workers. Update the explicit
+After all rollouts finish, `--stage reserve` adds each pool's matching
+`platform.dsqr.dev/dedicated=<pool>:NoSchedule` taint only after checking placement,
+tolerations and readiness; `--stage verify` is read-only. The application pool is
+held empty except for Cilium, Cilium Envoy and MetalLB speaker node agents. The
+gate rejects other running Pods there. During future application onboarding,
+update that empty-pool check and explicitly pair required application-pool
+selection with its matching toleration. Taints are scheduler controls, not an
+authorization boundary against workloads allowed to set tolerations or nodeName.
+Rerun this sequence after replacing/joining workers. Update the explicit
 inventory and expected node-agent counts when expanding. These commands never
 drain nodes, delete workloads or touch Tailscale/SSH configuration.

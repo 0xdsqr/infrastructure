@@ -19,6 +19,10 @@ speaker:
   tolerations:
     - key: platform.dsqr.dev/dedicated
       operator: Equal
+      value: applications
+      effect: NoSchedule
+    - key: platform.dsqr.dev/dedicated
+      operator: Equal
       value: platform
       effect: NoSchedule
   tolerateMaster: false

@@ -3,6 +3,7 @@
 export const poolLabel = "platform.dsqr.dev/node-pool"
 export const dedicatedKey = "platform.dsqr.dev/dedicated"
 export const platformTaint = { key: dedicatedKey, value: "platform", effect: "NoSchedule" } as const
+export const applicationsTaint = { key: dedicatedKey, value: "applications", effect: "NoSchedule" } as const
 export const indigoWorkers = [
   { name: "srv-lx-k8s-indigo-worker-01", address: "10.10.80.103", pool: "platform" },
   { name: "srv-lx-k8s-indigo-worker-02", address: "10.10.80.104", pool: "platform" },
@@ -12,7 +13,7 @@ export const indigoWorkers = [
   { name: "srv-lx-k8s-indigo-worker-06", address: "10.10.80.108", pool: "applications" },
 ] as const
 
-type Metadata = { name: string; namespace?: string; resourceVersion?: string; generation?: number; labels?: Record<string, string> }
+type Metadata = { name: string; namespace?: string; uid?: string; ownerReferences?: { kind: string; name: string; uid: string; controller?: boolean }[]; resourceVersion?: string; generation?: number; labels?: Record<string, string> }
 type Taint = { key: string; value?: string; effect: string }
 type Toleration = { key?: string; value?: string; effect?: string; operator?: string }
 export type Node = {
@@ -38,10 +39,12 @@ export const platformWorkloads = [
   "metallb-system/metallb-controller",
 ] as const
 
-export const toleratesPlatform = (pod: PodSpec) => (pod.tolerations ?? []).some(t =>
+const toleratesPool = (pod: PodSpec, pool: string) => (pod.tolerations ?? []).some(t =>
   (!t.effect || t.effect === platformTaint.effect) &&
-  (t.operator === "Exists" ? !t.key || t.key === dedicatedKey : t.key === dedicatedKey && t.value === "platform"),
+  (t.operator === "Exists" ? !t.key || t.key === dedicatedKey : t.key === dedicatedKey && t.value === pool),
 )
+export const toleratesPlatform = (pod: PodSpec) => toleratesPool(pod, "platform")
+export const toleratesApplications = (pod: PodSpec) => toleratesPool(pod, "applications")
 
 export function validateWorkers(nodes: Node[], requireLabels = false, registrationOnly = false): void {
   for (const target of indigoWorkers) {
@@ -61,7 +64,7 @@ export function validateWorkers(nodes: Node[], requireLabels = false, registrati
       throw new Error(`Unexpected pool on ${target.name}; expected ${target.pool}, found ${current ?? "unlabelled"}`)
     }
     for (const taint of node.spec.taints ?? []) {
-      if (taint.key === dedicatedKey && (target.pool !== "platform" || taint.value !== "platform" || taint.effect !== "NoSchedule")) {
+      if (taint.key === dedicatedKey && (taint.value !== target.pool || taint.effect !== "NoSchedule")) {
         throw new Error(`Conflicting dedicated taint on ${target.name}`)
       }
     }
@@ -96,15 +99,28 @@ export function assertReservationSafe(nodes: Node[], workloads: Workload[], pods
   }
   for (const [name, count] of [["kube-system/cilium", 9], ["kube-system/cilium-envoy", 9], ["metallb-system/metallb-speaker", 6]] as const) {
     const w = workloads.find(w => id(w) === name && w.kind === "DaemonSet")
-    if (!w || !toleratesPlatform(w.spec.template.spec) || w.spec.template.spec.nodeSelector?.[poolLabel] ||
+    if (!w || !toleratesPlatform(w.spec.template.spec) || !toleratesApplications(w.spec.template.spec) || w.spec.template.spec.nodeSelector?.[poolLabel] ||
         w.status?.desiredNumberScheduled !== count || w.status?.numberReady !== count || w.status?.updatedNumberScheduled !== count ||
         (w.status?.observedGeneration ?? 0) < (w.metadata.generation ?? 1)) {
       throw new Error(`Node-wide agent must tolerate the pool and remain fully rolled out: ${name}`)
     }
   }
   const platformNodes = new Set<string>(indigoWorkers.filter(w => w.pool === "platform").map(w => w.name))
+  const applicationNodes = new Set<string>(indigoWorkers.filter(w => w.pool === "applications").map(w => w.name))
+  const allowedAgents = new Set(["kube-system/cilium", "kube-system/cilium-envoy", "metallb-system/metallb-speaker"])
   for (const pod of pods) {
     if (["Succeeded", "Failed"].includes(pod.status.phase)) continue
+    // This pool is intentionally held empty until application onboarding.
+    // NoSchedule does not evict existing Pods, so refuse to reserve over them.
+    if (applicationNodes.has(pod.spec.nodeName ?? "")) {
+      const owner = pod.metadata.ownerReferences?.find(o => o.controller && o.kind === "DaemonSet")
+      const agent = owner && workloads.find(w => w.kind === "DaemonSet" &&
+        w.metadata.namespace === pod.metadata.namespace && w.metadata.name === owner.name &&
+        w.metadata.uid === owner.uid && allowedAgents.has(id(w)))
+      if (!agent || !toleratesApplications(pod.spec) || !pod.status.conditions?.some(c => c.type === "Ready" && c.status === "True")) {
+        throw new Error(`Application pool must contain only healthy approved node agents: ${pod.metadata.namespace}/${pod.metadata.name}`)
+      }
+    }
     if (pod.spec.nodeSelector?.[poolLabel] === "platform" && !platformNodes.has(pod.spec.nodeName ?? "")) {
       throw new Error(`Platform Pod is pending or on the wrong node: ${pod.metadata.namespace}/${pod.metadata.name}`)
     }
@@ -123,8 +139,10 @@ export function labelPatch(node: Node, pool: string) {
   ]
 }
 export function reservationPatch(node: Node) {
+  const target = indigoWorkers.find(w => w.name === node.metadata.name)
+  if (!target || node.metadata.labels?.[poolLabel] !== target.pool) throw new Error(`Unknown or mislabelled worker: ${node.metadata.name}`)
   return [
     { op: "test", path: "/metadata/resourceVersion", value: node.metadata.resourceVersion },
-    { op: "add", path: "/spec/taints", value: [...(node.spec.taints ?? []).filter(t => t.key !== dedicatedKey), platformTaint] },
+    { op: "add", path: "/spec/taints", value: [...(node.spec.taints ?? []).filter(t => t.key !== dedicatedKey), target.pool === "platform" ? platformTaint : applicationsTaint] },
   ]
 }
