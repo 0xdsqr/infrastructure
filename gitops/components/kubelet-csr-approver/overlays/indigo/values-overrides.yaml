@@ -18,6 +18,13 @@ bypassHostnameCheck: false
 allowedDnsNames: 1
 ignoreNonSystemNode: false
 skipDenyStep: false
+nodeSelector:
+  platform.dsqr.dev/node-pool: platform
+tolerations:
+  - key: platform.dsqr.dev/dedicated
+    operator: Equal
+    value: platform
+    effect: NoSchedule
 
 # Retain leader election and approval checks; keep the two replicas on
 # different nodes, including across node maintenance and rescheduling.

@@ -1,6 +1,13 @@
 # Indigo Helm value overrides for the bootstrap Argo CD release.
 global:
   domain: argocd.indigo.home.arpa
+  nodeSelector:
+    platform.dsqr.dev/node-pool: platform
+  tolerations:
+    - key: platform.dsqr.dev/dedicated
+      operator: Equal
+      value: platform
+      effect: NoSchedule
 
 redis:
   # Redis only serves Argo's cache; it does not call the Kubernetes API.
@@ -8,6 +15,21 @@ redis:
 
 redis-ha:
   enabled: true
+  nodeSelector:
+    platform.dsqr.dev/node-pool: platform
+  tolerations:
+    - key: platform.dsqr.dev/dedicated
+      operator: Equal
+      value: platform
+      effect: NoSchedule
+  haproxy:
+    nodeSelector:
+      platform.dsqr.dev/node-pool: platform
+    tolerations:
+      - key: platform.dsqr.dev/dedicated
+        operator: Equal
+        value: platform
+        effect: NoSchedule
 
 applicationSet:
   # The pinned chart enables leader election when replicas > 1. Migrate the

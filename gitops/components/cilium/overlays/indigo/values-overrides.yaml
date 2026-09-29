@@ -42,6 +42,22 @@ gatewayAPI:
   enabled: false
 
 operator:
+  nodeSelector:
+    platform.dsqr.dev/node-pool: platform
+  tolerations:
+    # Preserve upstream bootstrap/system exceptions when overriding this list.
+    - key: node-role.kubernetes.io/control-plane
+      operator: Exists
+    - key: node-role.kubernetes.io/master
+      operator: Exists
+    - key: node.kubernetes.io/not-ready
+      operator: Exists
+    - key: node.cloudprovider.kubernetes.io/uninitialized
+      operator: Exists
+    - key: platform.dsqr.dev/dedicated
+      operator: Equal
+      value: platform
+      effect: NoSchedule
   replicas: 2
   updateStrategy:
     type: RollingUpdate

@@ -21,5 +21,22 @@ patches:
       name: shared
     patch: |-
       - op: add
+        path: /spec/provider/kubernetes/envoyDeployment/pod/nodeSelector
+        value:
+          platform.dsqr.dev/node-pool: platform
+      - op: add
+        path: /spec/provider/kubernetes/envoyDeployment/pod/tolerations
+        value:
+          - key: platform.dsqr.dev/dedicated
+            operator: Equal
+            value: platform
+            effect: NoSchedule
+      - op: add
+        path: /spec/provider/kubernetes/envoyDeployment/pod/topologySpreadConstraints/0/minDomains
+        value: 2
+      - op: add
+        path: /spec/provider/kubernetes/envoyDeployment/pod/topologySpreadConstraints/0/nodeTaintsPolicy
+        value: Honor
+      - op: add
         path: /spec/provider/kubernetes/envoyService/annotations/metallb.io~1loadBalancerIPs
         value: 10.10.80.200

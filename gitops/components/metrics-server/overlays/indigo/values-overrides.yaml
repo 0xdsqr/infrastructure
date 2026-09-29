@@ -29,6 +29,13 @@ apiService:
     -----END CERTIFICATE-----
 
 replicas: 2
+nodeSelector:
+  platform.dsqr.dev/node-pool: platform
+tolerations:
+  - key: platform.dsqr.dev/dedicated
+    operator: Equal
+    value: platform
+    effect: NoSchedule
 
 updateStrategy:
   type: RollingUpdate

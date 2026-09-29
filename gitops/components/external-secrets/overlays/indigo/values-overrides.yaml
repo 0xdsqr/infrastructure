@@ -6,6 +6,13 @@ leaderElect: true
 # The chart supplies a different label selector for each of its three components.
 # Two healthy replicas must span two eligible nodes, including during maintenance.
 global:
+  nodeSelector:
+    platform.dsqr.dev/node-pool: platform
+  tolerations:
+    - key: platform.dsqr.dev/dedicated
+      operator: Equal
+      value: platform
+      effect: NoSchedule
   topologySpreadConstraints:
     - maxSkew: 1
       minDomains: 2

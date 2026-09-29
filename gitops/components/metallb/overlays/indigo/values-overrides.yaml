@@ -1,14 +1,26 @@
 # Indigo runs MetalLB as the sole controller for explicitly classed LoadBalancer Services.
-# L2 speakers stay on the three workers so north/south traffic does not land on control-plane nodes.
+# L2 speakers stay on all six workers, including the reserved platform pool.
 loadBalancerClass: metallb.io/metallb
 
 controller:
+  nodeSelector:
+    platform.dsqr.dev/node-pool: platform
+  tolerations:
+    - key: platform.dsqr.dev/dedicated
+      operator: Equal
+      value: platform
+      effect: NoSchedule
   priorityClassName: system-cluster-critical
   securityContext:
     seccompProfile:
       type: RuntimeDefault
 
 speaker:
+  tolerations:
+    - key: platform.dsqr.dev/dedicated
+      operator: Equal
+      value: platform
+      effect: NoSchedule
   tolerateMaster: false
   priorityClassName: system-node-critical
 

@@ -6,6 +6,13 @@ reloader:
     enabled: true
     minAvailable: 1
   deployment:
+    nodeSelector:
+      platform.dsqr.dev/node-pool: platform
+    tolerations:
+      - key: platform.dsqr.dev/dedicated
+        operator: Equal
+        value: platform
+        effect: NoSchedule
     replicas: 2
     topologySpreadConstraints:
       - maxSkew: 1

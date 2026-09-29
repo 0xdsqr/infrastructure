@@ -10,3 +10,23 @@
 Declarative homelab infrastructure, cluster GitOps, and operational tooling.
 
 </div>
+
+## Indigo worker pools
+
+Workers 01–03 are `platform`; 04–06 are `applications`. Pool membership is
+declared in `packages/cluster/src/node-pools.ts`. Node objects are not Argo-owned
+and must never be pruned. With Indigo's explicit `KUBECONFIG`, run:
+
+```text
+nix run .#cluster -- node-pools indigo --stage plan
+nix run .#cluster -- node-pools indigo --stage labels
+```
+
+Label before syncing the Indigo placement templates. CoreDNS stays kubeadm-owned:
+apply its `corednsdeployment-platform+strategic.yaml` patch from `nixos-config`,
+and deploy that repository's control-plane configuration to preserve it on upgrades.
+After all rollouts finish, `--stage reserve` adds the platform `NoSchedule` taint
+only after checking placement, tolerations and readiness; `--stage verify` is
+read-only. Rerun this sequence after replacing/joining workers. Update the explicit
+inventory and expected node-agent counts when expanding. These commands never
+drain nodes, delete workloads or touch Tailscale/SSH configuration.

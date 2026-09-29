@@ -1,3 +1,28 @@
-# Indigo currently uses the shared production Envoy Gateway defaults.
-# Keep cluster-specific controller scheduling and sizing overrides here.
-{}
+# Keep controller replicas separate within Indigo's reserved platform pool.
+certgen:
+  job:
+    nodeSelector:
+      platform.dsqr.dev/node-pool: platform
+    tolerations:
+      - key: platform.dsqr.dev/dedicated
+        operator: Equal
+        value: platform
+        effect: NoSchedule
+deployment:
+  pod:
+    nodeSelector:
+      platform.dsqr.dev/node-pool: platform
+    tolerations:
+      - key: platform.dsqr.dev/dedicated
+        operator: Equal
+        value: platform
+        effect: NoSchedule
+    topologySpreadConstraints:
+      - maxSkew: 1
+        minDomains: 2
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        nodeTaintsPolicy: Honor
+        labelSelector:
+          matchLabels:
+            control-plane: envoy-gateway
