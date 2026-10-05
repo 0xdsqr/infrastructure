@@ -4,6 +4,11 @@
 dsqr:
   # Legacy ingress is opt-in; new clusters declare their own Gateway routes.
   legacyTraefikIngress: false
+  # Defaults preserve hub-a. Indigo opts into namespace-local discovery and
+  # points the existing metrics policies at its standalone Alloy collectors.
+  indigoMetrics: false
+  metricsCollectorInstance: k8s-monitoring-alloy-metrics
+  metricsCollectorName: alloy-metrics
 
 global:
   addPrometheusAnnotations: false
@@ -236,6 +241,60 @@ notifications:
   enabled: false
 
 extraObjects:
+  - |
+    {{- if .Values.dsqr.indigoMetrics }}
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: Role
+    metadata:
+      name: indigo-metrics-discovery
+      namespace: {{ .Release.Namespace }}
+    rules:
+      - apiGroups: [""]
+        resources: [pods]
+        verbs: [list, watch]
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: indigo-metrics-discovery
+      namespace: {{ .Release.Namespace }}
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: Role
+      name: indigo-metrics-discovery
+    subjects:
+      - kind: ServiceAccount
+        name: indigo-metrics
+        namespace: observability
+    {{- end }}
+  - |
+    {{- if .Values.dsqr.indigoMetrics }}
+    {{- range $entry := list
+      (dict "name" "applicationset" "selector" (dict "app.kubernetes.io/instance" "argocd" "app.kubernetes.io/name" "argocd-applicationset-controller") "port" 8080)
+      (dict "name" "haproxy" "selector" (dict "release" "argocd" "app" "redis-ha-haproxy") "port" 9101)
+      (dict "name" "reloader" "selector" (dict "app.kubernetes.io/instance" "reloader" "app.kubernetes.io/name" "reloader") "port" 9090)
+    }}
+    ---
+    apiVersion: networking.k8s.io/v1
+    kind: NetworkPolicy
+    metadata:
+      name: indigo-metrics-{{ $entry.name }}
+      namespace: {{ $.Release.Namespace }}
+    spec:
+      podSelector:
+        matchLabels: {{ $entry.selector | toJson }}
+      policyTypes: [Ingress]
+      ingress:
+        - from:
+            - namespaceSelector:
+                matchLabels: {kubernetes.io/metadata.name: observability}
+              podSelector:
+                matchLabels:
+                  app.kubernetes.io/instance: {{ $.Values.dsqr.metricsCollectorInstance }}
+                  app.kubernetes.io/name: {{ $.Values.dsqr.metricsCollectorName }}
+          ports: [{protocol: TCP, port: {{ $entry.port }}}]
+    {{- end }}
+    {{- end }}
   # HA backend policies are chart-owned and only render when HA is enabled.
   # Ordinary NetworkPolicies and our Cilium client policies are additive.
   - |
@@ -376,8 +435,8 @@ extraObjects:
                   kubernetes.io/metadata.name: observability
               podSelector:
                 matchLabels:
-                  app.kubernetes.io/instance: k8s-monitoring-alloy-metrics
-                  app.kubernetes.io/name: alloy-metrics
+                  app.kubernetes.io/instance: {{ .Values.dsqr.metricsCollectorInstance }}
+                  app.kubernetes.io/name: {{ .Values.dsqr.metricsCollectorName }}
           ports:
             - port: 8083
               protocol: TCP
@@ -419,8 +478,8 @@ extraObjects:
                   kubernetes.io/metadata.name: observability
               podSelector:
                 matchLabels:
-                  app.kubernetes.io/instance: k8s-monitoring-alloy-metrics
-                  app.kubernetes.io/name: alloy-metrics
+                  app.kubernetes.io/instance: {{ .Values.dsqr.metricsCollectorInstance }}
+                  app.kubernetes.io/name: {{ .Values.dsqr.metricsCollectorName }}
           ports:
             - port: 8084
               protocol: TCP
@@ -443,8 +502,8 @@ extraObjects:
                   kubernetes.io/metadata.name: observability
               podSelector:
                 matchLabels:
-                  app.kubernetes.io/instance: k8s-monitoring-alloy-metrics
-                  app.kubernetes.io/name: alloy-metrics
+                  app.kubernetes.io/instance: '{{ .Values.dsqr.metricsCollectorInstance }}'
+                  app.kubernetes.io/name: '{{ .Values.dsqr.metricsCollectorName }}'
           ports:
             - port: 8082
               protocol: TCP

@@ -56,10 +56,10 @@ test("collector access is only explicit node metrics and API metrics, not secret
 })
 
 test("metrics pipeline verifies all TLS peers, reloads mounted credentials, and shards shared scrapes", () => {
-  assert.doesNotMatch(config, /insecure_skip_verify\s*=\s*true|nodes\/proxy|discovery\.kubernetes|loki\.|otelcol\.|pyroscope\./)
+  assert.doesNotMatch(config, /insecure_skip_verify\s*=\s*true|nodes\/proxy|loki\.|otelcol\.|pyroscope\./)
   assert.match(config, /https:\/\/beacon-telemetry\.service\.home\.arpa:9443\/api\/v1\/write/)
   assert.equal((config.match(/insecure_skip_verify = false/g) ?? []).length, 4)
-  assert.equal((config.match(/clustering \{ enabled = true \}/g) ?? []).length, 4)
+  assert.equal((config.match(/clustering \{ enabled = true \}/g) ?? []).length, 5)
   assert.equal((config.match(/:10250", node =/g) ?? []).length, 9)
   assert.equal((config.match(/:6443", instance =/g) ?? []).length, 3)
   assert.match(config, /external_labels = \{cluster = "indigo", env = "production"\}/)
@@ -76,7 +76,7 @@ test("default-deny exceptions expose only peer membership, object metrics, and s
   const policy = resources.find(r => r.kind === "NetworkPolicy").spec
   assert.deepEqual(policy.ingress[0].ports, [{protocol: "TCP", port: 12345}])
   assert.deepEqual(policy.egress.at(-1), {to: [{ipBlock: {cidr: "10.10.30.102/32"}}], ports: [{protocol: "TCP", port: 9443}]})
-  assert.equal(policy.egress.length, 4)
+  assert.equal(policy.egress.length, 7)
   const host = resources.find(r => r.kind === "CiliumNetworkPolicy").spec
   assert.deepEqual(host.egress[0], {toEntities: ["kube-apiserver"], toPorts: [{ports: [{port: "6443", protocol: "TCP"}]}]})
   assert.deepEqual(host.egress[1].toPorts, [{ports: [{port: "10250", protocol: "TCP"}]}])

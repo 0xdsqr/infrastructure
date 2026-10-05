@@ -32,7 +32,29 @@ spec:
             matchLabels:
               app.kubernetes.io/instance: kube-state-metrics
       ports: [{protocol: TCP, port: 8080}]
+    # Named pod ports prevent granting Argo UI/RPC access alongside metrics.
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: argocd}
+          podSelector:
+            matchLabels: {app.kubernetes.io/instance: argocd}
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [argocd-application-controller, argocd-applicationset-controller, argocd-server, argocd-repo-server]
+      ports: [{protocol: TCP, port: metrics}]
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: argocd}
+          podSelector:
+            matchLabels: {release: argocd, app: redis-ha-haproxy}
+      ports: [{protocol: TCP, port: 9101}]
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: argocd}
+          podSelector:
+            matchLabels: {app.kubernetes.io/instance: reloader, app.kubernetes.io/name: reloader}
+      ports: [{protocol: TCP, port: 9090}]
     - to:
         - ipBlock: {cidr: 10.10.30.102/32}
       ports: [{protocol: TCP, port: 9443}]
-

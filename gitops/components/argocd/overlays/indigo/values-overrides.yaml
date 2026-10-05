@@ -1,4 +1,9 @@
 # Indigo Helm value overrides for the bootstrap Argo CD release.
+dsqr:
+  indigoMetrics: true
+  metricsCollectorInstance: indigo-metrics
+  metricsCollectorName: alloy
+
 global:
   domain: argocd.indigo.home.arpa
   nodeSelector:

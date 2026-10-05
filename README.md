@@ -153,7 +153,7 @@ servers), while Mimir admitted only 150,000. Both series and ingestion-rate
 rejections were active. Some samples were discarded; historical gaps are not
 repaired by increasing limits. Phase 9B is not signed off yet.
 
-Collector tuning prepared, **not yet deployed**: an API-server-only relabel stage removes five
+Collector tuning deployed and verified on October 5: an API-server-only relabel stage removes five
 diagnostic bucket families (`apiserver_request_body_size_bytes`,
 `apiserver_response_sizes`, `apiserver_watch_events_sizes`,
 `apiserver_watch_cache_read_wait_seconds`, `apiserver_watch_list_duration_seconds`)
@@ -204,7 +204,75 @@ shared tenant exceeds it. DNS monitoring remains last in 9G.
 Beacon was rebuilt on October 5 and its live `/config` endpoint confirmed the
 300,000-series, 20,000-samples/s, 200,000-sample burst limits and two-week retention.
 Mimir `/ready` returned ready; Mimir, Prometheus, and Caddy were active. Collector
-tuning still awaits publication/manual sync and the acceptance checks above.
+revision `fe5aae0969a1825843522a0c635411177922ee0c` then synced successfully. Both
+Alloy pods hot-reloaded with zero restarts. Fresh-series queries showed ~191,760
+series, all expected targets up in both backends, the 11 retained request-latency
+and 14 etcd-latency boundaries, and all 22 existing SLI boundaries. No removed
+diagnostic buckets had fresh samples. Five-minute Mimir rate-limit rejection and
+remote-write failure rates were zero; the write queue was current (~5 seconds
+highest-sent lag). Beacon had ~4.7 GiB memory available and 84 GiB filesystem space.
+Longer-term head compaction/capacity checks remain part of 9F; these observations
+do not erase earlier ingestion gaps or complete certificate-renewal testing.
+
+### 9C first slice: Argo and renewal-controller metrics
+
+Prepared, **not yet deployed**: reuse existing Argo/Reloader listeners. No new
+exporter, sidecar, ServiceMonitor CRD, chart version, VM build, or pod-spec change.
+Scrape each Running pod independently (including unready pods) through
+namespace-local discovery, with exact component/port-name/port-number filters:
+
+- Application controller: 1 target on 8082 (application sync/health/reconciliation).
+- ApplicationSet: 2 targets on 8080 (reconciliation and leader/standby health).
+- Argo server: 2 targets on 8083; repo-server: 2 targets on 8084.
+- Existing Redis HAProxy metrics: 2 targets on 9101 (backend routing health).
+- Reloader: 2 targets on 9090 (certificate/config renewal restart handling).
+
+These 11 targets are assigned across the two Alloy peers, not scraped twice or
+through load-balanced Services. Labels are `cluster`, `env`, `job`, `namespace`,
+`pod`, and pod-name `instance`; arbitrary pod labels are not copied. Do not sum
+duplicated application inventory across replicas in later dashboards. Preserve
+the distinction between an absent target and a healthy zero. A 10,000-sample
+per-target limit makes runaway cardinality fail visibly (`up=0`); observed sample
+counts on one pod per component ranged from 110 to 2,408, projecting ~10k extra
+series / ~330 samples per second at the 30-second interval. Standby pod output
+may differ. No API bearer token is sent to these HTTP metric endpoints.
+
+The HTTP endpoints remain private in-cluster, not end-to-end TLS; NetworkPolicies
+restrict both ends to the explicit collector/component pods and metric ports.
+Existing Argo metric ingress policies are reused with an Indigo-only collector
+selector override; new policies cover ApplicationSet, HAProxy and Reloader.
+Pod discovery gets only `list/watch pods` in `argocd` via a Role/RoleBinding, not
+cluster-wide inventory or Secret access. Label filtering is not an RBAC boundary:
+this identity can list pod specs throughout that namespace. It cannot exec/proxy
+pods or write objects. API discovery and Beacon remote write still verify TLS.
+
+Ownership and rollout order:
+
+1. Manually sync `argocd` (chart 10.2.1 + the published Git revision), no prune.
+   Its existing AppProject already permits namespace-local roles and policies.
+   Tests assert all workload and Service specs remain unchanged and hub-a renders
+   identically. Argo owns the new Role/RoleBinding and metrics ingress policies;
+   there is no bootstrap AppProject expansion or cross-application ownership move.
+2. Verify the two permissions and scoped ingress rules, then manually sync
+   `indigo-metrics` (chart 1.13.0 + the same revision), no prune. This installs
+   collector egress rules and hot-reloads the discovery/scrape configuration.
+3. Verify 11 targets, app sync/health/reconcile metrics, HAProxy backend metrics,
+   and Reloader counters in both Beacon backends. Check discovery/reload errors,
+   sample limits, queue lag, and Mimir rejection/capacity before dashboard work.
+
+Rollback collector configuration first; then remove only the new discovery
+grant/policies if necessary. No broad namespace access or firewall changes are
+needed. ApplicationSet's listener was already active despite its metrics Service
+being disabled; direct pod discovery avoids adding that redundant Service.
+Redis/Sentinel has no exporter today: HAProxy and KSM provide backend/pod health,
+not full Redis internals. That remaining gap must not be marked complete.
+
+Remaining 9C slices: External Secrets (operator listener exists; inventory webhook
+and certificate-controller coverage), Envoy control/data plane, Cilium/operator,
+MetalLB, CSR approver, metrics-server, and supporting VM/service coverage and
+OPNsense firewall/system logs. Inspect each existing listener/auth/network policy
+before enabling collection. CoreDNS and Unbound remain deferred to 9G; dashboards
+are 9D, alert rules 9E, and delivery remains deferred.
 
 Include OPNsense firewall/system logs in 9C. Defer DNS visibility (Unbound and
 CoreDNS) to 9G, after the other core monitoring setup. Start with resolver

@@ -150,6 +150,66 @@ prometheus.scrape "kube_state_metrics" {
   forward_to = [prometheus.remote_write.beacon.receiver]
 }
 
+// Namespace-scoped pod discovery scrapes every replica, never a load-balanced
+// Service. A Role in argocd grants only list/watch pods (no Secret reads).
+discovery.kubernetes "argocd" {
+  role = "pod"
+  namespaces { names = ["argocd"] }
+  selectors {
+    role = "pod"
+    label = "app.kubernetes.io/name in (argocd-application-controller,argocd-applicationset-controller,argocd-server,argocd-repo-server,argocd-redis-ha-haproxy,reloader)"
+  }
+}
+
+discovery.relabel "argocd" {
+  targets = discovery.kubernetes.argocd.targets
+  rule {
+    source_labels = ["__meta_kubernetes_pod_phase"]
+    regex = "Running"
+    action = "keep"
+  }
+  // Keep unready Running pods so failed metrics endpoints produce up=0.
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_init"]
+    regex = "false"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name", "__meta_kubernetes_pod_container_port_name", "__meta_kubernetes_pod_container_port_number"]
+    regex = "argocd-application-controller;metrics;8082|argocd-applicationset-controller;metrics;8080|argocd-server;metrics;8083|argocd-repo-server;metrics;8084|argocd-redis-ha-haproxy;metrics-port;9101|reloader;http;9090"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+    target_label = "job"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label = "namespace"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "pod"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "instance"
+  }
+}
+
+prometheus.scrape "argocd" {
+  targets = discovery.relabel.argocd.output
+  // Existing in-cluster HTTP listeners, restricted by both ingress and egress
+  // policies. No API bearer token is sent to these application endpoints.
+  scheme = "http"
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  // A runaway target fails visibly (up=0), rather than flooding both backends.
+  sample_limit = 10000
+  clustering { enabled = true }
+  forward_to = [prometheus.remote_write.beacon.receiver]
+}
+
 prometheus.exporter.self "alloy" {}
 prometheus.scrape "self" {
   targets = prometheus.exporter.self.alloy.targets
