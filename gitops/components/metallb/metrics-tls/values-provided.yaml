@@ -1,5 +1,5 @@
-# PREPARED ONLY: not included in active chart values.
-# Issue and verify both certificates BEFORE applying this serving cutover.
+# Reusable certificate settings, mirrored in Indigo's desired chart values.
+# Both certificates were issued and verified before preparing the manual sync.
 # MetalLB v0.16.1 / controller-runtime v0.22.3 watches full-directory projected
 # certificates natively. Do not use subPath mounts or add a broad Reloader.
 tls:

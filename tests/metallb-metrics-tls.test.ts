@@ -106,8 +106,11 @@ test("issuance has one GitOps owner while serving cutover stays manual", () => {
   assert.equal(metallb.spec.syncPolicy.automated.enabled, false)
   assert.equal(JSON.stringify(metallb).includes("values-provided.yaml"), false)
   const activeValues = parse(readFileSync("gitops/components/metallb/overlays/indigo/values-overrides.yaml", "utf8"))
-  assert.equal(activeValues.tls?.controllerMetricsTLSSecret, undefined)
-  assert.equal(activeValues.tls?.speakerMetricsTLSSecret, undefined)
+  assert.deepEqual(activeValues.tls, {
+    controllerMetricsTLSSecret: "metallb-controller-metrics-tls",
+    speakerMetricsTLSSecret: "metallb-speaker-metrics-tls",
+  })
+  assert.deepEqual(activeValues.tls, parse(readFileSync(`${path}/values-provided.yaml`, "utf8")).tls)
   assert.doesNotMatch(readFileSync("gitops/components/application-set/overlays/indigo/inventory.yaml", "utf8"), /metrics-tls/)
 })
 
@@ -117,8 +120,12 @@ test("pinned MetalLB chart cutover changes only directory-mounted serving certif
   const args = ["template", "metallb", process.env.METALLB_TEST_CHART!, "--namespace", "metallb-system",
     "-f", "gitops/components/metallb/base/values-common.yaml",
     "-f", "gitops/components/metallb/overlays/indigo/values-overrides.yaml"]
-  const before = decode(execFileSync("helm", args, { encoding: "utf8" }))
-  const after = decode(execFileSync("helm", [...args, "-f", `${path}/values-provided.yaml`], { encoding: "utf8" }))
+  // Reconstruct the previously deployed state by removing only these settings.
+  const before = decode(execFileSync("helm", [...args, "--set-string",
+    "tls.controllerMetricsTLSSecret=,tls.speakerMetricsTLSSecret="], { encoding: "utf8" }))
+  const rendered = execFileSync("helm", args, { encoding: "utf8" })
+  assert.equal(execFileSync("helm", args, { encoding: "utf8" }), rendered)
+  const after = decode(rendered)
   for (const [component, kind] of [["controller", "Deployment"], ["speaker", "DaemonSet"]]) {
     const resource = after.find(o => o.kind === kind && o.metadata.name === `metallb-${component}`)
     const pod = resource.spec.template.spec

@@ -2,6 +2,12 @@
 # L2 speakers stay on all six workers, including the reserved platform pool.
 loadBalancerClass: metallb.io/metallb
 
+# Issued and verified before this manual-sync serving cutover. The chart mounts
+# full Secret directories; controller-runtime reloads renewed certificates.
+tls:
+  controllerMetricsTLSSecret: metallb-controller-metrics-tls
+  speakerMetricsTLSSecret: metallb-speaker-metrics-tls
+
 controller:
   nodeSelector:
     platform.dsqr.dev/node-pool: platform
