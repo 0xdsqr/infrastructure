@@ -28,6 +28,10 @@ test("Indigo collectors are pinned manual-sync applications without changing hub
     assert.equal(app.spec.syncPolicy.automated.prune, false)
     assert.equal(app.spec.syncPolicy.automated.selfHeal, false)
     assert.ok(app.spec.sources[1].path.endsWith("/overlays/indigo"))
+    const downloads = render("gitops/components/argocd/overlays/indigo")
+      .find(r => r.kind === "CiliumNetworkPolicy" && r.metadata.name === "argocd-repository-downloads")
+    const hosts = downloads.spec.egress.flatMap((rule: any) => rule.toFQDNs ?? []).map((host: any) => host.matchName)
+    assert.ok(hosts.includes(new URL(app.spec.sources[0].repoURL).hostname), `${name} chart repository must be reachable`)
   }
   const old = render("gitops/clusters/hub-a/applications")
   assert.equal(old.some(a => a.metadata.name === "indigo-metrics"), false)

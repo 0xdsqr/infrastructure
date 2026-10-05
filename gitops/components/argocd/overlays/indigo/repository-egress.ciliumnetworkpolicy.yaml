@@ -40,6 +40,8 @@ spec:
         - matchName: metallb.github.io
         - matchName: postfinance.github.io
         - matchName: stakater.github.io
+        - matchName: grafana.github.io
+        - matchName: prometheus-community.github.io
       toPorts:
         - ports:
             - port: "443"
