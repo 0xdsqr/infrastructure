@@ -106,6 +106,35 @@ prometheus.scrape "apiserver" {
     insecure_skip_verify = false
   }
   clustering { enabled = true }
+  forward_to = [prometheus.relabel.apiserver.receiver]
+}
+
+prometheus.relabel "apiserver" {
+  // Bound diagnostic cardinality at the source, before the WAL and both Beacon
+  // backends. Retain every counter/gauge and histogram sum/count. These five
+  // bucket families are not part of our core health/latency SLI contract; their
+  // quantiles will no longer be available (averages and totals still are).
+  rule {
+    source_labels = ["__name__"]
+    regex = "apiserver_(request_body_size_bytes|response_sizes|watch_events_sizes|watch_cache_read_wait_seconds|watch_list_duration_seconds)_bucket"
+    action = "drop"
+  }
+  // Classic buckets are cumulative: removing selected boundaries preserves a
+  // valid, lower-resolution histogram. Keep +Inf and every identity label.
+  // Request latency retains .1/.2/.4/.8/1/2/5/10/30/60/+Inf seconds.
+  // The separate apiserver_request_sli_duration_seconds histogram is UNCHANGED.
+  rule {
+    source_labels = ["__name__", "le"]
+    regex = "apiserver_request_duration_seconds_bucket;(0[.](005|025|05|6)|1[.](25|5)|[3468]([.]0)?|15([.]0)?|20([.]0)?|45([.]0)?)"
+    action = "drop"
+  }
+  // etcd latency additionally retains .005/.025/.05 seconds for storage health.
+  // Only known redundant boundaries are removed; future buckets pass through.
+  rule {
+    source_labels = ["__name__", "le"]
+    regex = "etcd_request_duration_seconds_bucket;(0[.]6|1[.](25|5)|[3468]([.]0)?|15([.]0)?|20([.]0)?|45([.]0)?)"
+    action = "drop"
+  }
   forward_to = [prometheus.remote_write.beacon.receiver]
 }
 

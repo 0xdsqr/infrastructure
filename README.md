@@ -100,19 +100,19 @@ on October 5: one exact DNS identity and one issuer service account in
 Leaf keys are not Pulumi resources. GitOps certificate preparation was deployed
 and verified on October 5: a restricted, default-deny `observability` namespace,
 dedicated issuer identity, independent root CA bundle, and an ExternalSecret that
-reissues a 30-day client certificate every 10 days. No collectors are deployed yet.
+reissues a 30-day client certificate every 10 days. No collectors were deployed
+at that certificate-preparation checkpoint.
 The bootstrap AppProject permissions were updated using their existing field
 manager, and the configuration applications recovered through their existing
 auto-sync retries. All 16 Argo applications were Synced and Healthy. The
 ExternalSecret was Ready; its public certificate matched the exact Indigo DNS
 identity, carried only ClientAuth EKU, and verified against the independent root
-CA. It expires November 4, 2026. No private key was displayed, and no collector
-pods were deployed. Live renewal validation, DNS monitoring, and end-to-end
-canary ingestion remain pending. Also review the
+CA. It expires November 4, 2026. No private key was displayed. Live renewal
+validation, DNS monitoring, and end-to-end canary ingestion remain pending. Also review the
 certificate's unreachable OCSP URL before transport sign-off. Existing ingestion
 stays unchanged.
 
-The first 9B collector slice is defined in Git and awaits manual deployment:
+The first 9B collector slice was manually deployed on October 5:
 `indigo-metrics` uses the standalone Alloy chart 1.13.0 (Alloy v1.20.0), and
 `kube-state-metrics` uses chart 8.6.0 (v2.20.0). Both are manually synced
 controller Applications with two restricted replicas, platform-pool placement,
@@ -135,13 +135,76 @@ native per-request TLS file reload (verified against its pinned
 [Prometheus transport implementation](https://github.com/prometheus/common/blob/v0.71.0/config/http_config.go)).
 A local fixture test verified untrusted-server rejection and client-certificate
 rotation without a process restart or remote-write queue rebuild. Live Secret
-projection, network reachability, and samples arriving at Beacon still require
-validation after manual sync. The WAL uses a bounded 2 GiB `emptyDir`, not durable
+projection/renewal still requires live validation. After adding only TCP 9443 to
+the existing OPNsense `OBSERVABILITY_INGEST_PORTS` alias, Beacon Prometheus showed
+all nine kubelets, nine cAdvisor targets, three API servers, the logical KSM target,
+and both Alloy peers up. No new firewall rule was created. The WAL uses a bounded 2 GiB `emptyDir`, not durable
 storage: pod replacement can lose queued samples, and long outages exceed its
 one-hour configured retention. This is collector failover, not zero-loss storage.
 Rendered-chart tests, native Alloy validation, and server-side dry-run passed.
 To repeat optional tests, supply unpacked pinned charts through `ALLOY_TEST_CHART`
 and `KSM_TEST_CHART`, and the pinned executable through `ALLOY_TEST_BINARY`.
+
+### 9B metric volume and Mimir rollout gate
+
+Initial ingestion exposed a backend capacity mismatch, not a TLS failure:
+Beacon Prometheus had about 252,000 active series (146,000 from Indigo API
+servers), while Mimir admitted only 150,000. Both series and ingestion-rate
+rejections were active. Some samples were discarded; historical gaps are not
+repaired by increasing limits. Phase 9B is not signed off yet.
+
+Collector tuning prepared, **not yet deployed**: an API-server-only relabel stage removes five
+diagnostic bucket families (`apiserver_request_body_size_bytes`,
+`apiserver_response_sizes`, `apiserver_watch_events_sizes`,
+`apiserver_watch_cache_read_wait_seconds`, `apiserver_watch_list_duration_seconds`)
+and thins known boundaries in `apiserver_request_duration_seconds` and
+`etcd_request_duration_seconds`. Every sum/count, counter, gauge, identity label,
+and the complete `apiserver_request_sli_duration_seconds` histogram is retained.
+The five diagnostic families retain averages/counts but lose quantiles; the two
+thinned latency histograms retain `+Inf` with reduced quantile resolution. Future
+unknown boundaries pass through. Do not remove identity labels to reduce series:
+that could merge distinct observations. Kubelet, cAdvisor, KSM, host collection,
+and hub-a are unchanged. This follows Prometheus's
+[classic-histogram model](https://prometheus.io/docs/practices/histograms/) and
+uses Alloy's [source relabeling](https://grafana.com/docs/alloy/latest/reference/components/prometheus/prometheus.relabel/).
+
+A read-only query against current data projected 60,358 fewer series (~24% of
+Beacon's total), leaving about 191,000; this is an estimate, not rollout evidence.
+The companion NixOS change in `hosts/srv-lx-beacon/mimir.nix` sets finite shared-
+tenant budgets of 300,000 series, 20,000 samples/s, and a 200,000-sample burst,
+preserving 14-day retention and existing storage. The observed pre-filter append
+rate was ~10,000 samples/s and Beacon had ~5 GiB available of 8 GiB. Budgets provide
+churn/replay headroom, not a guarantee that future workloads fit. These are Mimir's
+[per-tenant admission limits](https://grafana.com/docs/mimir/latest/configure/configuration-parameters/).
+
+Rollout and acceptance:
+
+1. Review/rebuild Beacon first; expect a brief Mimir restart. Check readiness and
+   effective limits. Do not delete TSDB/WAL data or reduce retention to clear caps.
+2. Publish this collector change, then manually sync **only `indigo-metrics`**
+   against that exact Git revision (Alloy chart stays 1.13.0). KSM needs no sync.
+3. Verify all expected targets in **both** Prometheus and Mimir. Check 5-minute
+   rates of `cortex_discarded_samples_total` by reason, remote-write failed/retried
+   samples, pending samples, and highest-sent timestamp lag. Recent rejection
+   rates must settle to zero; cumulative counters will not reset to zero.
+4. Confirm the remaining API/etcd latency buckets (including `+Inf`), complete SLI
+   histogram, request/error counters, object state, and resource metrics in Mimir.
+   Check memory, CPU, disk, and query responsiveness during normal ingestion and
+   after queues catch up. Do not declare success from Argo health alone.
+5. Recheck head-series counts after normal compaction: filtered inactive series
+   can remain in Mimir's in-memory limit accounting until TSDB compaction. Do not
+   force a restart or delete data just to accelerate this. Include ingestion
+   rejection, lag, capacity, and missing-target alerts in 9E (delivery deferred).
+
+Rollback: revert the collector commit and manually sync the previous revision;
+keep the bounded higher Mimir budget while checking the restored volume. Do not
+blindly restore the old 150,000-series cap or decrease the rate limit while the
+shared tenant exceeds it. DNS monitoring remains last in 9G.
+
+Beacon was rebuilt on October 5 and its live `/config` endpoint confirmed the
+300,000-series, 20,000-samples/s, 200,000-sample burst limits and two-week retention.
+Mimir `/ready` returned ready; Mimir, Prometheus, and Caddy were active. Collector
+tuning still awaits publication/manual sync and the acceptance checks above.
 
 Include OPNsense firewall/system logs in 9C. Defer DNS visibility (Unbound and
 CoreDNS) to 9G, after the other core monitoring setup. Start with resolver
