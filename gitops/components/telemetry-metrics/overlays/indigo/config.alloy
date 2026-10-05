@@ -210,6 +210,174 @@ prometheus.scrape "argocd" {
   forward_to = [prometheus.remote_write.beacon.receiver]
 }
 
+// Exact component discovery, scoped to a namespace Role (list/watch pods only).
+discovery.kubernetes "external_secrets" {
+  role = "pod"
+  namespaces { names = ["external-secrets"] }
+  selectors {
+    role = "pod"
+    label = "app.kubernetes.io/instance=external-secrets,app.kubernetes.io/name in (external-secrets,external-secrets-cert-controller,external-secrets-webhook)"
+  }
+}
+discovery.relabel "external_secrets" {
+  targets = discovery.kubernetes.external_secrets.targets
+  rule {
+    source_labels = ["__meta_kubernetes_pod_phase"]
+    regex = "Running"
+    action = "keep"
+  }
+  // Unready Running pods remain visible as failed scrapes, not missing targets.
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_init"]
+    regex = "false"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name", "__meta_kubernetes_pod_container_port_name", "__meta_kubernetes_pod_container_port_number"]
+    regex = "external-secrets;metrics;8080|external-secrets-cert-controller;metrics;8080|external-secrets-webhook;metrics;8080"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+    target_label = "job"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label = "namespace"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "pod"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "instance"
+  }
+}
+prometheus.scrape "external_secrets" {
+  targets = discovery.relabel.external_secrets.output
+  // Existing private HTTP metrics only; never send the API token to the listener.
+  scheme = "http"
+  metrics_path = "/metrics"
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  sample_limit = 10000
+  clustering { enabled = true }
+  forward_to = [prometheus.remote_write.beacon.receiver]
+}
+
+// Exact component discovery, scoped to a namespace Role (list/watch pods only).
+discovery.kubernetes "envoy_gateway" {
+  role = "pod"
+  namespaces { names = ["envoy-gateway-system"] }
+  selectors {
+    role = "pod"
+    label = "app.kubernetes.io/instance=envoy-gateway,app.kubernetes.io/name=gateway-helm,control-plane=envoy-gateway"
+  }
+}
+discovery.relabel "envoy_gateway" {
+  targets = discovery.kubernetes.envoy_gateway.targets
+  rule {
+    source_labels = ["__meta_kubernetes_pod_phase"]
+    regex = "Running"
+    action = "keep"
+  }
+  // Unready Running pods remain visible as failed scrapes, not missing targets.
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_init"]
+    regex = "false"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name", "__meta_kubernetes_pod_container_port_name", "__meta_kubernetes_pod_container_port_number"]
+    regex = "gateway-helm;metrics;19001"
+    action = "keep"
+  }
+  rule {
+    replacement = "envoy-gateway"
+    target_label = "job"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label = "namespace"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "pod"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "instance"
+  }
+}
+prometheus.scrape "envoy_gateway" {
+  targets = discovery.relabel.envoy_gateway.output
+  // Existing private HTTP metrics only; never send the API token to the listener.
+  scheme = "http"
+  metrics_path = "/metrics"
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  sample_limit = 10000
+  clustering { enabled = true }
+  forward_to = [prometheus.remote_write.beacon.receiver]
+}
+
+// Exact component discovery, scoped to a namespace Role (list/watch pods only).
+discovery.kubernetes "envoy_proxy" {
+  role = "pod"
+  namespaces { names = ["envoy-gateway-system"] }
+  selectors {
+    role = "pod"
+    label = "app.kubernetes.io/name=envoy,app.kubernetes.io/component=proxy,gateway.envoyproxy.io/owning-gateway-name=shared,gateway.envoyproxy.io/owning-gateway-namespace=gateway-system"
+  }
+}
+discovery.relabel "envoy_proxy" {
+  targets = discovery.kubernetes.envoy_proxy.targets
+  rule {
+    source_labels = ["__meta_kubernetes_pod_phase"]
+    regex = "Running"
+    action = "keep"
+  }
+  // Unready Running pods remain visible as failed scrapes, not missing targets.
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_init"]
+    regex = "false"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name", "__meta_kubernetes_pod_container_port_name", "__meta_kubernetes_pod_container_port_number"]
+    regex = "envoy;metrics;19001"
+    action = "keep"
+  }
+  rule {
+    replacement = "envoy-proxy"
+    target_label = "job"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label = "namespace"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "pod"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "instance"
+  }
+}
+prometheus.scrape "envoy_proxy" {
+  targets = discovery.relabel.envoy_proxy.output
+  // Existing private HTTP metrics only; never send the API token to the listener.
+  scheme = "http"
+  metrics_path = "/stats/prometheus"
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  sample_limit = 10000
+  clustering { enabled = true }
+  forward_to = [prometheus.remote_write.beacon.receiver]
+}
+
 prometheus.exporter.self "alloy" {}
 prometheus.scrape "self" {
   targets = prometheus.exporter.self.alloy.targets

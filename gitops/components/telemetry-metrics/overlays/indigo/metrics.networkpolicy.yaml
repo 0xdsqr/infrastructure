@@ -56,5 +56,34 @@ spec:
             matchLabels: {app.kubernetes.io/instance: reloader, app.kubernetes.io/name: reloader}
       ports: [{protocol: TCP, port: 9090}]
     - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: external-secrets}
+          podSelector:
+            matchLabels: {app.kubernetes.io/instance: external-secrets}
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values: [external-secrets, external-secrets-cert-controller, external-secrets-webhook]
+      ports: [{protocol: TCP, port: 8080}]
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: envoy-gateway-system}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: envoy-gateway
+              app.kubernetes.io/name: gateway-helm
+              control-plane: envoy-gateway
+      ports: [{protocol: TCP, port: 19001}]
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: envoy-gateway-system}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: envoy
+              app.kubernetes.io/component: proxy
+              gateway.envoyproxy.io/owning-gateway-name: shared
+              gateway.envoyproxy.io/owning-gateway-namespace: gateway-system
+      ports: [{protocol: TCP, port: 19001}]
+    - to:
         - ipBlock: {cidr: 10.10.30.102/32}
       ports: [{protocol: TCP, port: 9443}]

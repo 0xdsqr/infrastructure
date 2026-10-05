@@ -21,7 +21,7 @@ const targets = [
 
 test("pod discovery is limited to argocd and does not grant cluster-wide pod or Secret access", () => {
   const discovery = config.split('discovery.kubernetes "argocd" {')[1].split('discovery.relabel "argocd"')[0]
-  assert.equal((config.match(/discovery.kubernetes "/g) ?? []).length, 1)
+  assert.equal((config.match(/discovery.kubernetes "argocd"/g) ?? []).length, 1)
   assert.match(discovery, /role = "pod"/)
   assert.match(discovery, /namespaces \{ names = \["argocd"\] \}/)
   for (const [name] of targets) assert.ok(discovery.includes(name))

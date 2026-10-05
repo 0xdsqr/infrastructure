@@ -223,6 +223,7 @@ spec:
                   version: 1.9.1
                   wave: "3"
                   component: envoy-gateway
+                  includeManifests: true
                   remoteSource: {}
                   charts:
                     - repoURL: docker.io/envoyproxy

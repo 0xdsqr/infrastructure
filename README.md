@@ -216,7 +216,7 @@ do not erase earlier ingestion gaps or complete certificate-renewal testing.
 
 ### 9C first slice: Argo and renewal-controller metrics
 
-Prepared, **not yet deployed**: reuse existing Argo/Reloader listeners. No new
+Deployed and verified on October 5: reuse existing Argo/Reloader listeners. No new
 exporter, sidecar, ServiceMonitor CRD, chart version, VM build, or pod-spec change.
 Scrape each Running pod independently (including unready pods) through
 namespace-local discovery, with exact component/port-name/port-number filters:
@@ -267,8 +267,68 @@ being disabled; direct pod discovery avoids adding that redundant Service.
 Redis/Sentinel has no exporter today: HAProxy and KSM provide backend/pod health,
 not full Redis internals. That remaining gap must not be marked complete.
 
-Remaining 9C slices: External Secrets (operator listener exists; inventory webhook
-and certificate-controller coverage), Envoy control/data plane, Cilium/operator,
+Both applications synced revision `87ffeba6da6a4c58c3ded40efbfb030f0fe0659f`.
+All 11 targets reported `up=1` in Prometheus and Mimir; application inventory,
+Git requests, ApplicationSet and HAProxy metrics arrived. Both Alloy pods
+hot-reloaded without restarts, and the last five minutes showed no new
+remote-write failures. This completes this scrape slice, not dashboards/alerts
+or the remaining service coverage.
+
+### 9C second slice: External Secrets and Envoy
+
+Prepared, **collector scrapes not yet deployed**. Reuse existing pod listeners:
+
+- External Secrets controller, certificate controller and webhook: two replicas
+  each, HTTP `/metrics` on 8080.
+- Envoy Gateway controller: two replicas, HTTP `/metrics` on 19001.
+- Shared Envoy proxy: two replicas, HTTP `/stats/prometheus` on 19001.
+  The administrative listener on 19000 remains loopback-only and is not allowed
+  by collector egress. No public Service or gateway route exposes these scrapes.
+
+The ten new targets use three clustered scrape jobs with exact namespace,
+component and port filters; proxies are further limited to gateway-system/shared.
+Labels and 30-second intervals follow the Argo slice, with a 10,000-sample limit
+per target. Unready Running pods remain discoverable so failures produce `up=0`.
+No API bearer token is sent to private HTTP metrics listeners. API discovery and
+Beacon transport retain verified TLS; these in-cluster listeners are still an
+explicit HTTP exception, not end-to-end encrypted.
+
+Read-only endpoint probes confirmed 239–675 samples on ESO controller replicas,
+239 on one cert-controller, 246 on one webhook, 536 on one Envoy controller and
+1,849 on one proxy. Roughly 6–8k additional series (~200–270 samples/sec) is a
+planning estimate, not a cap on total series or a guarantee of all replica output.
+The active ESO controller exports sync, status-condition, provider-call and
+reconciliation/error metrics; standby replicas mostly expose runtime health.
+Do not treat an absent leader-only metric as zero, or sum duplicated inventory.
+See the upstream [ESO metrics guide](https://external-secrets.io/latest/api/metrics/)
+and [Envoy proxy metrics guide](https://gateway.envoyproxy.io/docs/tasks/observability/proxy-metric/).
+
+Ownership and rollout:
+
+1. Publication lets existing auto-sync `external-secrets-config` and `gateway`
+   update only their metrics-ingress collector identity. Their DNS, Vault,
+   admission, xDS, probes, default-deny and application traffic rules are unchanged.
+   The ApplicationSet adds a companion-manifest path to `envoy-gateway`'s existing
+   Git values source; the chart applications remain manual-sync.
+2. Manually sync `external-secrets` (2.8.0 + published Git revision) and
+   `envoy-gateway` (v1.9.1 CRDs + v1.9.1 controller + same Git revision), no prune.
+   Each application owns its namespace's `indigo-metrics-discovery` Role and
+   RoleBinding. Existing AppProjects already permit both kinds; no project
+   privilege expansion, ownership transfer, chart upgrade or workload change.
+3. Verify both grants and the ingress changes, then manually sync
+   `indigo-metrics` (1.13.0 + same revision), no prune, to add narrow egress and
+   hot-reload discovery. No NixOS rebuild, new sidecar or exporter is needed.
+4. Verify all ten new targets (21 with Argo/Reloader), actual service metrics,
+   fresh data in both Beacon backends, queue lag, errors and cardinality.
+
+Each Role grants only `list/watch pods`, in `external-secrets` or
+`envoy-gateway-system`, to the observability/indigo-metrics ServiceAccount.
+Discovery label selectors are not an RBAC security boundary: pod specifications
+throughout those namespaces are readable. There is no Secret read, exec/proxy,
+write permission or cluster-wide pod discovery. Roll back the collector first,
+then remove only this slice's grants and revert its ingress-selector changes.
+
+Remaining 9C slices after deploying and verifying the above: Cilium/operator,
 MetalLB, CSR approver, metrics-server, and supporting VM/service coverage and
 OPNsense firewall/system logs. Inspect each existing listener/auth/network policy
 before enabling collection. CoreDNS and Unbound remain deferred to 9G; dashboards

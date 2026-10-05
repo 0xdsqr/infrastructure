@@ -24,6 +24,17 @@ patches:
   - target:
       group: cilium.io
       kind: CiliumNetworkPolicy
+      name: external-secrets-operator-access
+    patch: |-
+      - op: replace
+        path: /spec/ingress/0/fromEndpoints/0/matchLabels/app.kubernetes.io~1instance
+        value: indigo-metrics
+      - op: replace
+        path: /spec/ingress/0/fromEndpoints/0/matchLabels/app.kubernetes.io~1name
+        value: alloy
+  - target:
+      group: cilium.io
+      kind: CiliumNetworkPolicy
       name: external-secrets-webhook-access
     patch: |-
       apiVersion: cilium.io/v2

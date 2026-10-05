@@ -15,6 +15,28 @@ labels:
 
 patches:
   - target:
+      group: cilium.io
+      kind: CiliumNetworkPolicy
+      name: envoy-gateway-controller-access
+    patch: |-
+      - op: replace
+        path: /spec/ingress/3/fromEndpoints/0/matchLabels/app.kubernetes.io~1instance
+        value: indigo-metrics
+      - op: replace
+        path: /spec/ingress/3/fromEndpoints/0/matchLabels/app.kubernetes.io~1name
+        value: alloy
+  - target:
+      group: cilium.io
+      kind: CiliumNetworkPolicy
+      name: envoy-shared-proxy-access
+    patch: |-
+      - op: replace
+        path: /spec/ingress/1/fromEndpoints/0/matchLabels/app.kubernetes.io~1instance
+        value: indigo-metrics
+      - op: replace
+        path: /spec/ingress/1/fromEndpoints/0/matchLabels/app.kubernetes.io~1name
+        value: alloy
+  - target:
       group: gateway.envoyproxy.io
       version: v1alpha1
       kind: EnvoyProxy
