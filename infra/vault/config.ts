@@ -323,6 +323,44 @@ const raftSnapshotAppRole = {
 } satisfies VaultRaftSnapshotAppRoleConfig
 
 const pkiIssuers = {
+  indigoTelemetryClient: {
+    backend: "pki_int",
+    certificatePurpose: "client",
+    roleName: "indigo-telemetry-client",
+    policyName: "dsqr-labs-pki-indigo-telemetry-client",
+    allowedDomains: ["indigo.telemetry-client.home.arpa"],
+    allowWildcardCertificates: false,
+    generateLease: false,
+    ttlHours: 720,
+    maxTtlHours: 720,
+    kubernetesAuthRole: {
+      backend: "kubernetes-indigo",
+      roleName: "indigo-telemetry-client-issuer",
+      boundServiceAccountNames: ["telemetry-client-issuer"],
+      boundServiceAccountNamespaces: ["observability"],
+      tokenTtlSeconds: 1_200,
+      tokenMaxTtlSeconds: 3_600,
+      tokenExplicitMaxTtlSeconds: 3_600,
+    },
+  },
+  beaconTelemetry: {
+    backend: "pki_int",
+    roleName: "beacon-telemetry-listener",
+    policyName: "homelab-pki-beacon-telemetry-listener",
+    // Dedicated identity for the new telemetry listener, not Grafana or the
+    // existing Prometheus HTTP endpoint. No legacy collector cutover here.
+    allowedDomains: ["beacon-telemetry.service.home.arpa"],
+    allowWildcardCertificates: false,
+    generateLease: false,
+    ttlHours: 720,
+    maxTtlHours: 720,
+    appRole: {
+      ...renewableAppRoleDefaults,
+      roleName: "beacon-telemetry-listener-renewer",
+      secretIdBoundCidrs: ["10.10.30.102/32"],
+      tokenBoundCidrs: ["10.10.30.102/32"],
+    },
+  },
   indigoMetricsServer: {
     backend: "pki_int",
     roleName: "indigo-metrics-server",

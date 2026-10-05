@@ -35,6 +35,7 @@ const externalPolicyNames = {
 } as const
 
 const issuerKeys = [
+  "beaconTelemetry",
   "gatewayCaddy",
   "hubATraefikOrigin",
   "indigoArgocdServer",
@@ -107,6 +108,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     ]),
     ...(
       [
+        "beaconTelemetry",
         "gatewayCaddy",
         "postgresKnoxListener",
         "proxmoxListener",
@@ -119,6 +121,9 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoArgocdServer"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoArgocdRepoServer"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoMetricsServer"],
+    [pkiRoleToken, "pki-issuer-role-indigoTelemetryClient"],
+    [policyToken, "pki-issuer-policy-indigoTelemetryClient"],
+    [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoTelemetryClient"],
     [providerToken, "vault"],
     [mountToken, "pki-issuer-mount-indigoHubbleServer"],
     ["vault:pkiSecret/secretBackendRootCert:SecretBackendRootCert", "pki-issuer-root-indigoHubbleServer"],
@@ -249,6 +254,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     })
   }
   for (const key of [
+    "beaconTelemetry",
     "gatewayCaddy",
     "postgresKnoxListener",
     "proxmoxListener",
@@ -418,6 +424,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   }
 
   for (const key of [
+    "beaconTelemetry",
     "gatewayCaddy",
     "postgresKnoxListener",
     "proxmoxListener",
@@ -438,6 +445,49 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   }
 
   const traefikRole = byName(resources, "pki-issuer-kubernetes-role-hubATraefikOrigin")
+  const telemetryRole = byName(resources, "pki-issuer-role-indigoTelemetryClient").inputs
+  assert.deepEqual(telemetryRole.allowedDomains, ["indigo.telemetry-client.home.arpa"])
+  for (const option of ["allowAnyName", "allowGlobDomains", "allowLocalhost", "allowSubdomains", "allowWildcardCertificates", "allowIpSans", "serverFlag", "generateLease"]) {
+    assert.equal(telemetryRole[option], false, option)
+  }
+  assert.equal(telemetryRole.clientFlag, true)
+  assert.deepEqual(telemetryRole.extKeyUsages, ["ClientAuth"])
+  assert.equal(telemetryRole.ttl, "2592000")
+  assert.equal(telemetryRole.maxTtl, "2592000")
+  const telemetryAuth = byName(resources, "pki-issuer-kubernetes-role-indigoTelemetryClient").inputs
+  assert.equal(telemetryAuth.backend, "kubernetes-indigo")
+  assert.deepEqual(telemetryAuth.boundServiceAccountNames, ["telemetry-client-issuer"])
+  assert.deepEqual(telemetryAuth.boundServiceAccountNamespaces, ["observability"])
+  assert.deepEqual(telemetryAuth.tokenPolicies, ["dsqr-labs-pki-indigo-telemetry-client", "indigo-external-secrets-token-self"])
+  assert.equal(telemetryAuth.tokenNoDefaultPolicy, true)
+  assert.equal(telemetryAuth.tokenExplicitMaxTtl, 3600)
+  assert.equal(byName(resources, "pki-issuer-policy-indigoTelemetryClient").inputs.policy,
+    'path "pki_int/issue/indigo-telemetry-client" {\n  capabilities = ["create", "update"]\n}')
+  lifecycle("pki-issuer-role-indigoTelemetryClient", { protect: true })
+  lifecycle("pki-issuer-policy-indigoTelemetryClient", {
+    protect: true, dependsOn: ["pki-issuer-role-indigoTelemetryClient"],
+  })
+  lifecycle("pki-issuer-kubernetes-role-indigoTelemetryClient", {
+    protect: true, dependsOn: ["pki-issuer-role-indigoTelemetryClient", "pki-issuer-policy-indigoTelemetryClient", "external-secrets-token-self-policy-indigo"],
+  })
+  const beaconRole = byName(resources, "pki-issuer-role-beaconTelemetry").inputs
+  assert.deepEqual(beaconRole.allowedDomains, ["beacon-telemetry.service.home.arpa"])
+  assert.equal(beaconRole.allowGlobDomains, false)
+  assert.equal(beaconRole.allowLocalhost, false)
+  assert.equal(beaconRole.allowWildcardCertificates, false)
+  assert.equal(beaconRole.allowIpSans, false)
+  assert.equal(beaconRole.clientFlag, false)
+  assert.deepEqual(beaconRole.extKeyUsages, ["ServerAuth"])
+  assert.equal(beaconRole.generateLease, false)
+  const beaconAuth = byName(resources, "pki-issuer-approle-beaconTelemetry").inputs
+  assert.deepEqual(beaconAuth.secretIdBoundCidrs, ["10.10.30.102/32"])
+  assert.deepEqual(beaconAuth.tokenBoundCidrs, ["10.10.30.102/32"])
+  assert.deepEqual(beaconAuth.tokenPolicies, ["homelab-pki-beacon-telemetry-listener"])
+  assert.equal(beaconAuth.bindSecretId, true)
+  assert.equal(byName(resources, "pki-issuer-policy-beaconTelemetry").inputs.policy,
+    'path "pki_int/issue/beacon-telemetry-listener" {\n  capabilities = ["create", "update"]\n}')
+  // The bootstrap secret and leaf private key are not Pulumi resources.
+  assert.ok(!resources.some(resource => /secretid|secretbackendcert/i.test(resource.type)))
   assert.equal(traefikRole.inputs.roleName, "hub-a-traefik-origin-issuer")
   assert.deepEqual(traefikRole.inputs.boundServiceAccountNames, ["traefik-origin-issuer"])
   assert.deepEqual(traefikRole.inputs.boundServiceAccountNamespaces, ["traefik"])

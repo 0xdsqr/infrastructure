@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: telemetry-client-issuer-auth-delegator
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+# Follow Indigo's existing Vault login-JWT reviewer pattern. This identity
+# is for issuance only, not the collector workload's service account.
+subjects:
+  - kind: ServiceAccount
+    name: telemetry-client-issuer
+    namespace: observability
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator

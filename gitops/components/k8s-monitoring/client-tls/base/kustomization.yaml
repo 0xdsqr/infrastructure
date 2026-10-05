@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Issuance only. Collector mounts and certificate reload behavior are staged
+# separately; cluster-foundation owns this namespace and its default-deny policy.
+namespace: observability
+resources:
+  - ../../../external-secrets-config/common
+  - issuer.serviceaccount.yaml
+  - issuer.clusterrolebinding.yaml
+  - client.externalsecret.yaml
+
+patches:
+  - target:
+      version: v1
+      kind: ConfigMap
+      name: dsqr-home-root-ca
+    patch: |-
+      - op: add
+        path: /metadata/annotations
+        value:
+          argocd.argoproj.io/sync-wave: "0"
+
+labels:
+  - pairs:
+      app.kubernetes.io/managed-by: argocd
+      app.kubernetes.io/part-of: cluster-observability
+      platform.dsqr.dev/owner: platform
+      platform.dsqr.dev/tier: platform-secret

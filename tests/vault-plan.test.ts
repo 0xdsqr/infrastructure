@@ -50,6 +50,19 @@ test("Vault accepts an existing audit device with an empty description", () => {
   })))
 })
 
+test("Vault rejects ambiguous certificate purposes before registering resources", () => {
+  const count = resources.length
+  const error = Effect.runSync(Effect.flip(createVaultFoundationEffect({
+    ...foundationArgs(), pkiIssuers: { invalid: {
+      ...vault.pkiIssuers.indigoTelemetryClient,
+      // @ts-expect-error Exercise runtime validation of untyped input.
+      certificatePurpose: "both",
+    } },
+  })))
+  assert.match(error.message, /certificate purpose must be server or client/)
+  assert.equal(resources.length, count)
+})
+
 test("Vault rejects empty audit paths and options before registering resources", () => {
   for (const audit of [
     { ...vault.audit, path: " " },

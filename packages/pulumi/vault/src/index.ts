@@ -124,6 +124,9 @@ export type VaultPkiKubernetesAuthRoleConfig = {
 
 export type VaultPkiIssuerConfig = {
   readonly backend: string
+  // Omission preserves the existing server-only roles. Never issue dual-use
+  // certificates implicitly when adding a client-authentication identity.
+  readonly certificatePurpose?: "server" | "client" | undefined
   // Optional isolated trust domain. The signer is generated inside Vault and
   // is never exported to Pulumi, Git, or a Kubernetes Secret.
   readonly managedCa?: {
@@ -461,6 +464,14 @@ export function validatePkiIssuerInventoryEffect(
 
     for (const [key, issuer] of Object.entries(issuers)) {
       const resource = `vault:pki-issuer:${key}`
+
+      if (issuer.certificatePurpose !== undefined &&
+          issuer.certificatePurpose !== "server" && issuer.certificatePurpose !== "client") {
+        return yield* Effect.fail(new PulumiResourceConfigError({
+          resource,
+          message: `PKI issuer "${key}" certificate purpose must be server or client.`,
+        }))
+      }
 
       if (!issuer.backend || issuer.backend.includes("/") || issuer.backend.includes("*")) {
         return yield* Effect.fail(
@@ -1479,12 +1490,12 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
                 allowSubdomains: false,
                 allowWildcardCertificates: issuer.allowWildcardCertificates,
                 allowedDomainsTemplate: false,
-                clientFlag: false,
+                clientFlag: issuer.certificatePurpose === "client",
                 cnValidations: ["hostname"],
                 codeSigningFlag: false,
                 emailProtectionFlag: false,
                 enforceHostnames: true,
-                extKeyUsages: ["ServerAuth"],
+                extKeyUsages: [issuer.certificatePurpose === "client" ? "ClientAuth" : "ServerAuth"],
                 generateLease: issuer.generateLease,
                 issuerRef: caRoot ? caRoot.issuerId : "default",
                 keyBits: 2_048,
@@ -1495,7 +1506,7 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
                 noStoreMetadata: false,
                 notBeforeDuration: "30s",
                 requireCn: true,
-                serverFlag: true,
+                serverFlag: issuer.certificatePurpose !== "client",
                 ttl: `${issuer.ttlHours * 60 * 60}`,
               },
               caRoot

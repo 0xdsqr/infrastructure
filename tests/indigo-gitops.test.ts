@@ -239,6 +239,7 @@ test("Indigo foundation declares only current platform namespaces", async () => 
   const names = [...namespaces.matchAll(/^  name: (.+)$/gm)].map((match) => match[1])
 
   assert.deepEqual(names, [
+    "observability",
     "argocd",
     "external-secrets",
     "envoy-gateway-system",

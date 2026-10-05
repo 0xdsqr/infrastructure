@@ -65,3 +65,81 @@ the fallback for a lost connection or killed client. Sensitive SSH diagnostics a
 suppressed. If anything fails, inspect the node before retrying—do not reset it.
 After onboarding, run `node-pools indigo --stage verify`. Future nodes require an
 explicit inventory change first; the current inventory is workers 01–06.
+
+## New-homelab core monitoring (Phase 9, in progress)
+
+Reuse Beacon's NixOS-managed Grafana, Prometheus/Mimir, Loki, Tempo, Pyroscope,
+and Alloy. Scope new collection and dashboards to Indigo and its supporting
+core infrastructure; do not change or delete hub-a collection, dashboards, or data.
+Dashboard JSON and backend configuration belong in `nixos-config` under
+`hosts/srv-lx-beacon`; Kubernetes collectors and scrape permissions belong here
+in GitOps. Vault issuance policy belongs in this repository's Vault stack.
+
+Initial dashboard titles are `Infra - Homelab - Overview`,
+`K8s - Indigo - Overview`, and `K8s - Indigo - Argo CD`. Use stable dashboard
+UIDs, explicit inventory/cluster filters, and distinguish missing telemetry from
+healthy zero values. Retain source metric names; normalize identity labels without
+copying arbitrary Kubernetes labels. Expected manual-sync drift must not page like
+a failed reconciliation. Discord is the chosen destination, but notification
+delivery and its end-to-end test remain deferred—not completed.
+
+Rollout order: 9A inventory/standards and secure transport; 9B node/cluster metrics;
+9C core-service coverage; 9D dashboards; 9E alert rules (delivery deferred);
+9F non-DNS coverage and recovery validation; 9G DNS monitoring and its final
+validation (last setup step, explicitly deferred on October 5). Beacon's dedicated TLS issuance role and
+certificate enrollment are deployed; certificate expiry metrics are being scraped.
+The NixOS ingestion listener is prepared on TCP 9443 with required client TLS,
+an explicit Indigo collector identity, write-only metrics/logs/traces routes, and
+forced certificate reload. Local positive/negative TLS and reload tests pass.
+First listener activation exposed a permission-readiness race; the listener was
+started successfully after rendering completed. The ownership/mode readiness fix
+has since been rebuilt and verified on Beacon. Existing services remain running.
+A client-only Indigo telemetry issuance role was applied and verified in Vault
+on October 5: one exact DNS identity and one issuer service account in
+`observability`, using the existing `kubernetes-indigo` authentication boundary.
+Leaf keys are not Pulumi resources. GitOps certificate preparation is implemented;
+live issuance remains unverified: a restricted, default-deny `observability` namespace,
+dedicated issuer identity, independent root CA bundle, and an ExternalSecret that
+reissues a 30-day client certificate every 10 days. No collectors are added yet.
+These configuration applications auto-sync after a push; they may wait for the
+bootstrap AppProject permissions to be updated. Update those permissions, then
+reconcile `cluster-foundation` and `argocd-config` before
+`external-secrets-config`. Verify successful issuance without printing the private
+key. Collector mounts and certificate reload handling, live renewal validation,
+DNS monitoring, and end-to-end canary ingestion remain pending. Also review the
+certificate's unreachable OCSP URL before transport sign-off. Existing ingestion
+stays unchanged.
+
+Include OPNsense firewall/system logs in 9C. Defer DNS visibility (Unbound and
+CoreDNS) to 9G, after the other core monitoring setup. Start with resolver
+availability, errors, latency, cache/response statistics
+where available; full DNS query logging needs an explicit privacy/volume choice.
+On September 30, both OPNsense metric exporters were up, but no Unbound/DNS metric
+names were found in the Telegraf scrape. No OPNsense log entries were present in
+the configured Loki stream over the preceding 24 hours. Alloy reported healthy
+syslog components with empty listener lists; validated configuration reload did
+not recover them. Restarting only Alloy restored TCP 1514 (OPNsense) and 1515
+(Proxmox). The original failure cause and boot-time listener readiness still need
+validation; service health alone is not evidence of log ingestion. These existing
+syslog receivers are not covered by the new HTTPS/mTLS listener. Verify OPNsense's
+logging target, format, source address, and actual log arrival before sign-off.
+The scoped OPNsense logging API now works with connection-local Cloudflare Origin
+CA trust and explicit management-IP routing (the hostname does not resolve in the
+CLI environment). Its Beacon target is enabled with TCP/RFC5424. A header-only
+capture confirmed source `10.10.30.1` while Beacon allowed only `10.10.10.1` on
+TCP 1514. The corrected Nix rule allows only `ens18`, source `10.10.30.1`,
+destination `10.10.30.102`, TCP 1514. The Beacon rebuild and live ingestion were
+verified on September 30: the connection was established and firewall/system
+logs reached Loki with no observed receiver parsing errors. Its second logging destination,
+`10.10.30.30:1514`, remains untouched until its ownership is confirmed.
+
+Unbound's API statistics were available, but enabling Telegraf's Unbound input
+produced repeated `unbound-control ... stats_noreset` exit-status-1 errors and no
+Unbound metrics in Prometheus. The underlying cause remains unconfirmed; this
+does not establish a DNS outage. On October 5, only that metrics input was
+disabled and Telegraf reconfigured while monitoring is deferred; both Telegraf
+and Unbound reported running afterward. DNS settings and query logging were
+unchanged. Resume 9G by obtaining the underlying collector command error through
+an authorized diagnostic path, then validate collection, dashboards, and alerts.
+SSH/account setup for this diagnostic is paused, not a prerequisite for the
+remaining non-DNS monitoring work.

@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - namespaces.yaml
+  - observability-default-deny.networkpolicy.yaml
 
 # Only the disruption budget is GitOps-owned; kubeadm owns CoreDNS itself.
 components:

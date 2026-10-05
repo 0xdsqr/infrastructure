@@ -7,6 +7,7 @@ resources:
   - ../../../argocd/repo-tls/overlays/indigo
   - ../../../cilium/hubble-tls/overlays/indigo
   - ../../../metrics-server/serving-tls/overlays/indigo
+  - ../../../k8s-monitoring/client-tls/overlays/indigo
   - vault-indigo.clustersecretstore.yaml
   - indigo-bootstrap-smoke-test.externalsecret.yaml
   - gateway-origin-issuer.serviceaccount.yaml

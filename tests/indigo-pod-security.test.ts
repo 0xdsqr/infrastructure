@@ -14,7 +14,7 @@ const render = (component: string, chart: string, namespace: string, cluster = "
 test("Indigo admission pins restricted policies while preserving MetalLB's exception", () => {
   const ns = parseAllDocuments(execFileSync("kubectl", ["kustomize", "gitops/components/cluster-foundation/overlays/indigo"], { encoding: "utf8" }))
     .map(d => d.toJSON()).filter(r => r.kind === "Namespace")
-  for (const name of ["argocd", "external-secrets", "envoy-gateway-system", "gateway-system"]) {
+  for (const name of ["argocd", "external-secrets", "envoy-gateway-system", "gateway-system", "observability"]) {
     const labels = ns.find(r => r.metadata.name === name).metadata.labels
     for (const mode of ["enforce", "warn", "audit"]) {
       assert.equal(labels[`pod-security.kubernetes.io/${mode}`], "restricted")

@@ -23,6 +23,8 @@ spec:
       namespace: external-secrets
     - server: https://kubernetes.default.svc
       namespace: kube-system
+    - server: https://kubernetes.default.svc
+      namespace: observability
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
@@ -39,6 +41,9 @@ spec:
     - group: ""
       kind: Namespace
       name: metallb-system
+    - group: ""
+      kind: Namespace
+      name: observability
     - group: rbac.authorization.k8s.io
       kind: ClusterRoleBinding
       name: indigo-platform-admins
