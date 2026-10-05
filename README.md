@@ -337,14 +337,21 @@ OPNsense firewall/system logs. Inspect each existing listener/auth/network polic
 before enabling collection. CoreDNS and Unbound remain deferred to 9G; dashboards
 are 9D, alert rules 9E, and delivery remains deferred.
 
-### 9C networking metrics prerequisites (issuance ready for publication)
+### 9C networking metrics prerequisites (issuance verified)
 
 Checkpoint 2026-10-05: all six Vault resources were created (68 unchanged).
 The monitoring host-firewall rules were activated and verified on all nine
 nodes, with all nodes Ready, no failed services, healthy platform replicas and
 direct readiness checks passing on each control-plane API. Certificate issuance
-is now wired locally but **not yet published or verified live**. MetalLB's
-serving values and the collector remain unchanged.
+was published in `4a36b75a6f08fb3ab2e9725092bf0132be67e754`: both ExternalSecrets
+reported Ready, and both configuration applications were Synced/Healthy with
+successful operations. Public certificate checks verified the exact SANs and
+signatures through the intermediate to the configured root CA; expiry is
+2026-11-04 at approximately 19:10 UTC. No private keys were read for verification.
+MetalLB's controller generation 4 and speaker generation 3 remained unchanged,
+with one controller and six speakers Ready and zero pod restarts. Neither mounts
+the metrics certificates yet. Serving cutover, collector scrapes and live renewal
+verification remain pending.
 
 Read-only audit of Cilium 1.20.1 and MetalLB 0.16.1 found:
 
