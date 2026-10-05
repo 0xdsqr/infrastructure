@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: metallb-controller-metrics-issuer
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+automountServiceAccountToken: false
+---
+# Vault uses the presented issuer JWT for TokenReview. This is not the
+# running MetalLB component identity and receives no Secret-read privilege.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: metallb-controller-metrics-issuer-auth-delegator
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+subjects:
+  - kind: ServiceAccount
+    name: metallb-controller-metrics-issuer
+    namespace: metallb-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+---
+apiVersion: generators.external-secrets.io/v1alpha1
+kind: VaultDynamicSecret
+metadata:
+  name: metallb-controller-metrics-tls
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  path: pki_int/issue/indigo-metallb-controller-metrics
+  method: POST
+  resultType: Data
+  parameters:
+    # Logical TLS identity: the collector connects to discovered IPs with
+    # this explicit server_name. No new DNS Service or public route is needed.
+    common_name: metallb-controller-metrics.metallb-system.svc
+    ttl: 720h
+  provider:
+    server: https://vault.service.home.arpa:8200
+    caProvider:
+      type: ConfigMap
+      name: dsqr-home-root-ca
+      key: ca.crt
+    auth:
+      kubernetes:
+        mountPath: kubernetes-indigo
+        role: indigo-metallb-controller-metrics-issuer
+        serviceAccountRef:
+          name: metallb-controller-metrics-issuer
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: metallb-controller-metrics-tls
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  refreshPolicy: Periodic
+  refreshInterval: 240h
+  target:
+    name: metallb-controller-metrics-tls
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    template:
+      engineVersion: v2
+      type: kubernetes.io/tls
+      metadata:
+        labels:
+          app.kubernetes.io/name: metallb-controller-metrics-tls
+          app.kubernetes.io/managed-by: external-secrets
+          app.kubernetes.io/part-of: metallb
+          platform.dsqr.dev/owner: platform
+          platform.dsqr.dev/tier: platform-secret
+          platform.dsqr.dev/cluster: indigo
+      data:
+        tls.crt: |
+          {{ .certificate }}
+          {{ .issuing_ca }}
+        tls.key: |
+          {{ .private_key }}
+        ca.crt: |
+          {{ .issuing_ca }}
+  dataFrom:
+    - sourceRef:
+        generatorRef:
+          apiVersion: generators.external-secrets.io/v1alpha1
+          kind: VaultDynamicSecret
+          name: metallb-controller-metrics-tls

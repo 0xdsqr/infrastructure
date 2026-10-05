@@ -83,6 +83,8 @@ patches:
             namespace: kube-system
           - server: https://kubernetes.default.svc
             namespace: observability
+          - server: https://kubernetes.default.svc
+            namespace: metallb-system
       - op: replace
         path: /spec/clusterResourceWhitelist
         value:
@@ -107,6 +109,12 @@ patches:
           - group: rbac.authorization.k8s.io
             kind: ClusterRoleBinding
             name: telemetry-client-issuer-auth-delegator
+          - group: rbac.authorization.k8s.io
+            kind: ClusterRoleBinding
+            name: metallb-controller-metrics-issuer-auth-delegator
+          - group: rbac.authorization.k8s.io
+            kind: ClusterRoleBinding
+            name: metallb-speaker-metrics-issuer-auth-delegator
       - op: add
         path: /spec/namespaceResourceWhitelist/-
         value:

@@ -42,6 +42,8 @@ const issuerKeys = [
   "indigoArgocdRepoServer",
   "indigoGatewayOrigin",
   "indigoMetricsServer",
+  "indigoMetallbControllerMetrics",
+  "indigoMetallbSpeakerMetrics",
   "postgresKnoxListener",
   "proxmoxListener",
   "rustfsKhaosListener",
@@ -121,6 +123,8 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoArgocdServer"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoArgocdRepoServer"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoMetricsServer"],
+    [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoMetallbControllerMetrics"],
+    [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoMetallbSpeakerMetrics"],
     [pkiRoleToken, "pki-issuer-role-indigoTelemetryClient"],
     [policyToken, "pki-issuer-policy-indigoTelemetryClient"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoTelemetryClient"],
@@ -306,6 +310,22 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
       "external-secrets-token-self-policy-indigo",
     ],
   })
+
+  for (const key of ["indigoMetallbControllerMetrics", "indigoMetallbSpeakerMetrics"] as const) {
+    lifecycle(`pki-issuer-kubernetes-role-${key}`, {
+      protect: true,
+      dependsOn: [`pki-issuer-role-${key}`, `pki-issuer-policy-${key}`, "external-secrets-token-self-policy-indigo"],
+    })
+    const issuer = vault.pkiIssuers[key]
+    const role = byName(resources, `pki-issuer-kubernetes-role-${key}`).inputs
+    assert.deepEqual(role.boundServiceAccountNames, issuer.kubernetesAuthRole.boundServiceAccountNames)
+    assert.deepEqual(role.boundServiceAccountNamespaces, ["metallb-system"])
+    assert.equal(role.tokenNoDefaultPolicy, true)
+    assert.deepEqual(role.tokenPolicies, [issuer.policyName, "indigo-external-secrets-token-self"])
+    const policy = byName(resources, `pki-issuer-policy-${key}`).inputs.policy
+    assert.match(policy, new RegExp(`path "pki_int/issue/${issuer.roleName}"`))
+    assert.doesNotMatch(policy, /\*/)
+  }
 
   assert.deepEqual(byName(resources, "kv").inputs, {
     description: "Homelab KV v2 secrets managed by Vault.",

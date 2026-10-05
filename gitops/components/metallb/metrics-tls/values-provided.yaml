@@ -1,0 +1,7 @@
+# PREPARED ONLY: not included in active chart values.
+# Issue and verify both certificates BEFORE applying this serving cutover.
+# MetalLB v0.16.1 / controller-runtime v0.22.3 watches full-directory projected
+# certificates natively. Do not use subPath mounts or add a broad Reloader.
+tls:
+  controllerMetricsTLSSecret: metallb-controller-metrics-tls
+  speakerMetricsTLSSecret: metallb-speaker-metrics-tls
