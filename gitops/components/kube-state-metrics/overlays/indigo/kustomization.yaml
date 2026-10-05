@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: observability
+resources:
+  - metrics.networkpolicy.yaml
+  - api.ciliumnetworkpolicy.yaml
+labels:
+  - pairs:
+      platform.dsqr.dev/cluster: indigo
+      platform.dsqr.dev/owner: platform
+

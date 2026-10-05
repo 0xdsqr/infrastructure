@@ -8,6 +8,7 @@ resources:
   - platform-envoy-gateway.appproject.yaml
   - platform-gateway.appproject.yaml
   - platform-reloader.appproject.yaml
+  - platform-telemetry-metrics.appproject.yaml
   - repository-egress.ciliumnetworkpolicy.yaml
 
 components:
@@ -19,6 +20,25 @@ labels:
       platform.dsqr.dev/environment: production
 
 patches:
+  - target:
+      group: argoproj.io
+      kind: AppProject
+      name: platform-kube-state-metrics
+    patch: |-
+      - op: replace
+        path: /spec/destinations
+        value:
+          - server: https://kubernetes.default.svc
+            namespace: observability
+      - op: add
+        path: /spec/namespaceResourceWhitelist/-
+        value: {group: policy, kind: PodDisruptionBudget}
+      - op: add
+        path: /spec/namespaceResourceWhitelist/-
+        value: {group: networking.k8s.io, kind: NetworkPolicy}
+      - op: add
+        path: /spec/namespaceResourceWhitelist/-
+        value: {group: cilium.io, kind: CiliumNetworkPolicy}
   - target:
       group: argoproj.io
       version: v1alpha1

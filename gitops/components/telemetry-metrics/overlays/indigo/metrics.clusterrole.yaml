@@ -1,0 +1,22 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: indigo-metrics
+rules:
+  # Direct kubelet scrapes, not the more privileged nodes/proxy API.
+  - apiGroups: [""]
+    resources: [nodes/metrics]
+    resourceNames:
+      - srv-lx-k8s-indigo-control-01
+      - srv-lx-k8s-indigo-control-02
+      - srv-lx-k8s-indigo-control-03
+      - srv-lx-k8s-indigo-worker-01
+      - srv-lx-k8s-indigo-worker-02
+      - srv-lx-k8s-indigo-worker-03
+      - srv-lx-k8s-indigo-worker-04
+      - srv-lx-k8s-indigo-worker-05
+      - srv-lx-k8s-indigo-worker-06
+    verbs: [get]
+  - nonResourceURLs: [/metrics]
+    verbs: [get]
+

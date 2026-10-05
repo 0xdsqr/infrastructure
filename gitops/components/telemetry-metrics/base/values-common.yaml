@@ -1,0 +1,85 @@
+# Standalone Alloy: no operator, host mounts, logs, profiles, or trace receivers.
+# Kept separate from k8s-monitoring so hub-a's pipeline is untouched.
+fullnameOverride: indigo-metrics
+crds:
+  create: false
+image:
+  tag: v1.20.0
+global:
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 473
+    runAsGroup: 473
+    fsGroup: 473
+    seccompProfile:
+      type: RuntimeDefault
+alloy:
+  enableReporting: false
+  stabilityLevel: generally-available
+  configMap:
+    create: false
+    name: indigo-metrics
+    key: config.alloy
+  clustering:
+    enabled: true
+    name: indigo-metrics
+  storagePath: /var/lib/alloy
+  securityContext:
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: [ALL]
+    seccompProfile:
+      type: RuntimeDefault
+  resources:
+    requests: {cpu: 100m, memory: 256Mi, ephemeral-storage: 256Mi}
+    limits: {cpu: "1", memory: 1Gi, ephemeral-storage: 3Gi}
+  mounts:
+    varlog: false
+    dockercontainers: false
+    extra:
+      - name: data
+        mountPath: /var/lib/alloy
+      - name: telemetry-tls
+        mountPath: /etc/telemetry/tls
+        readOnly: true
+      - name: telemetry-ca
+        mountPath: /etc/telemetry/ca
+        readOnly: true
+rbac:
+  create: false
+serviceAccount:
+  create: true
+  name: indigo-metrics
+  automountServiceAccountToken: true
+configReloader:
+  enabled: true
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {cpu: 100m, memory: 64Mi}
+controller:
+  type: deployment
+  replicas: 2
+  terminationGracePeriodSeconds: 90
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  volumes:
+    extra:
+      # No durable storage class is assumed. Queued data can be lost on pod loss.
+      - name: data
+        emptyDir: {sizeLimit: 2Gi}
+      - name: telemetry-tls
+        secret:
+          secretName: telemetry-client-tls
+          defaultMode: 0440
+      - name: telemetry-ca
+        configMap:
+          name: dsqr-home-root-ca
+networkPolicy:
+  enabled: false
+

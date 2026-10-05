@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: observability
+resources:
+  - metrics.clusterrole.yaml
+  - metrics.clusterrolebinding.yaml
+  - metrics.networkpolicy.yaml
+  - metrics.ciliumnetworkpolicy.yaml
+configMapGenerator:
+  - name: indigo-metrics
+    files: [config.alloy]
+generatorOptions:
+  disableNameSuffixHash: true
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: cluster-observability
+      platform.dsqr.dev/cluster: indigo
+      platform.dsqr.dev/owner: platform
+

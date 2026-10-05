@@ -41,6 +41,8 @@ test("Indigo requires controller sync approval while configuration heals automat
     "metallb",
     "metrics-server",
     "reloader",
+    "indigo-metrics",
+    "kube-state-metrics",
   ])
   for (const application of applications) {
     const lifecycle = application.metadata.labels["platform.dsqr.dev/lifecycle"]

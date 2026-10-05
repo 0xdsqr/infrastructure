@@ -100,17 +100,48 @@ on October 5: one exact DNS identity and one issuer service account in
 Leaf keys are not Pulumi resources. GitOps certificate preparation was deployed
 and verified on October 5: a restricted, default-deny `observability` namespace,
 dedicated issuer identity, independent root CA bundle, and an ExternalSecret that
-reissues a 30-day client certificate every 10 days. No collectors are added yet.
+reissues a 30-day client certificate every 10 days. No collectors are deployed yet.
 The bootstrap AppProject permissions were updated using their existing field
 manager, and the configuration applications recovered through their existing
 auto-sync retries. All 16 Argo applications were Synced and Healthy. The
 ExternalSecret was Ready; its public certificate matched the exact Indigo DNS
 identity, carried only ClientAuth EKU, and verified against the independent root
 CA. It expires November 4, 2026. No private key was displayed, and no collector
-pods were deployed. Collector mounts and certificate reload handling, live renewal validation,
-DNS monitoring, and end-to-end canary ingestion remain pending. Also review the
+pods were deployed. Live renewal validation, DNS monitoring, and end-to-end
+canary ingestion remain pending. Also review the
 certificate's unreachable OCSP URL before transport sign-off. Existing ingestion
 stays unchanged.
+
+The first 9B collector slice is defined in Git and awaits manual deployment:
+`indigo-metrics` uses the standalone Alloy chart 1.13.0 (Alloy v1.20.0), and
+`kube-state-metrics` uses chart 8.6.0 (v2.20.0). Both are manually synced
+controller Applications with two restricted replicas, platform-pool placement,
+hostname spreading, and one-replica disruption protection. No Alloy operator or
+new CRDs are needed. The legacy k8s-monitoring chart and hub-a are unchanged.
+Scope is the nine explicit kubelet/cAdvisor targets, all three API servers,
+Kubernetes object state, and collector health. NixOS Alloy retains host metrics;
+Argo and other service-specific scrapes, new logs/traces/profiles, and DNS remain
+later steps. The two Alloy peers distribute shared scrape targets. Two full
+kube-state-metrics replicas sit behind one logical scrape Service to avoid
+duplicate object-state series; that internal HTTP endpoint is reachable only
+from the collector pods under the namespace's network policies.
+
+Kubelet/API certificates are verified against the Kubernetes CA, and remote write
+uses the dedicated Beacon mTLS endpoint. Collectors have only named-node
+`nodes/metrics` GET and `/metrics` GET permissions, not `nodes/proxy` or Secret
+access. Kube-state-metrics has selected read-only collectors without Secrets,
+ConfigMaps, arbitrary labels, or CRDs. Full-volume certificate mounts use Alloy's
+native per-request TLS file reload (verified against its pinned
+[Prometheus transport implementation](https://github.com/prometheus/common/blob/v0.71.0/config/http_config.go)).
+A local fixture test verified untrusted-server rejection and client-certificate
+rotation without a process restart or remote-write queue rebuild. Live Secret
+projection, network reachability, and samples arriving at Beacon still require
+validation after manual sync. The WAL uses a bounded 2 GiB `emptyDir`, not durable
+storage: pod replacement can lose queued samples, and long outages exceed its
+one-hour configured retention. This is collector failover, not zero-loss storage.
+Rendered-chart tests, native Alloy validation, and server-side dry-run passed.
+To repeat optional tests, supply unpacked pinned charts through `ALLOY_TEST_CHART`
+and `KSM_TEST_CHART`, and the pinned executable through `ALLOY_TEST_BINARY`.
 
 Include OPNsense firewall/system logs in 9C. Defer DNS visibility (Unbound and
 CoreDNS) to 9G, after the other core monitoring setup. Start with resolver

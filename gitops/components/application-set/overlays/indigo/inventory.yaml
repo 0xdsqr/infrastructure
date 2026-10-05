@@ -64,6 +64,54 @@ spec:
                     - ServerSideApply=true
                     - RespectIgnoreDifferences=true
                   retryProfile: standard
+                - name: indigo-metrics
+                  namespace: observability
+                  project: platform-telemetry-metrics
+                  partOf: cluster-observability
+                  tier: platform-addon
+                  lifecycle: controller
+                  version: "1.20.0"
+                  wave: "4"
+                  component: telemetry-metrics
+                  includeManifests: true
+                  remoteSource: {}
+                  charts:
+                    - repoURL: https://grafana.github.io/helm-charts
+                      chart: alloy
+                      revision: 1.13.0
+                      releaseName: indigo-metrics
+                      skipCrds: true
+                      parameters: []
+                      useValues: true
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                  retryProfile: standard
+                - name: kube-state-metrics
+                  namespace: observability
+                  project: platform-kube-state-metrics
+                  partOf: cluster-observability
+                  tier: platform-addon
+                  lifecycle: controller
+                  version: "2.20.0"
+                  wave: "3"
+                  component: kube-state-metrics
+                  includeManifests: true
+                  remoteSource: {}
+                  charts:
+                    - repoURL: https://prometheus-community.github.io/helm-charts
+                      chart: kube-state-metrics
+                      revision: 8.6.0
+                      releaseName: kube-state-metrics
+                      skipCrds: true
+                      parameters: []
+                      useValues: true
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                  retryProfile: standard
                 - name: reloader
                   namespace: argocd
                   project: platform-reloader

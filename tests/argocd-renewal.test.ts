@@ -34,8 +34,12 @@ test("renewal is one generated manually approved Application with narrow Argo dr
     assert.equal(rule.namespace, "argocd")
     assert.deepEqual(rule.jsonPointers, [marker])
   }
+  const companionPaths = new Map([
+    ["indigo-metrics", "gitops/components/telemetry-metrics/overlays/indigo"],
+    ["kube-state-metrics", "gitops/components/kube-state-metrics/overlays/indigo"],
+  ])
   for (const app of apps.filter(app => app !== reloader)) {
-    assert.equal(app.spec.sources?.find(source => source.ref === "values")?.path, undefined)
+    assert.equal(app.spec.sources?.find(source => source.ref === "values")?.path, companionPaths.get(app.metadata.name))
   }
 })
 

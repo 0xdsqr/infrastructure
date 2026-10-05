@@ -1,0 +1,24 @@
+alloy:
+  # Keep URL hostname, SNI, and verification aligned while pinning the LAN route.
+  hostAliases:
+    - ip: 10.10.30.102
+      hostnames: [beacon-telemetry.service.home.arpa]
+controller:
+  nodeSelector:
+    platform.dsqr.dev/node-pool: platform
+  tolerations:
+    - key: platform.dsqr.dev/dedicated
+      operator: Equal
+      value: platform
+      effect: NoSchedule
+  topologySpreadConstraints:
+    - maxSkew: 1
+      minDomains: 2
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      nodeTaintsPolicy: Honor
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: alloy
+          app.kubernetes.io/instance: indigo-metrics
+

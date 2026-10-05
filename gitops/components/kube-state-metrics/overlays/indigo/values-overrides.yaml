@@ -1,0 +1,62 @@
+fullnameOverride: kube-state-metrics
+replicas: 2
+# Full replicas behind one logical scrape Service; no duplicate endpoint scrapes.
+autosharding:
+  enabled: false
+podDisruptionBudget:
+  minAvailable: 1
+nodeSelector:
+  platform.dsqr.dev/node-pool: platform
+tolerations:
+  - key: platform.dsqr.dev/dedicated
+    operator: Equal
+    value: platform
+    effect: NoSchedule
+topologySpreadConstraints:
+  - maxSkew: 1
+    minDomains: 2
+    topologyKey: kubernetes.io/hostname
+    whenUnsatisfiable: DoNotSchedule
+    nodeTaintsPolicy: Honor
+    labelSelector:
+      matchLabels:
+        app.kubernetes.io/name: kube-state-metrics
+        app.kubernetes.io/instance: kube-state-metrics
+resources:
+  requests: {cpu: 50m, memory: 128Mi}
+  limits: {cpu: 500m, memory: 512Mi}
+securityContext:
+  enabled: true
+  runAsNonRoot: true
+  runAsUser: 65534
+  runAsGroup: 65534
+  seccompProfile: {type: RuntimeDefault}
+containerSecurityContext:
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities: {drop: [ALL]}
+# Read-only object state. No Secrets, ConfigMaps, RBAC, or arbitrary CRDs.
+collectors:
+  - cronjobs
+  - daemonsets
+  - deployments
+  - horizontalpodautoscalers
+  - jobs
+  - namespaces
+  - nodes
+  - persistentvolumeclaims
+  - persistentvolumes
+  - poddisruptionbudgets
+  - pods
+  - replicasets
+  - resourcequotas
+  - services
+  - statefulsets
+  - storageclasses
+  - volumeattachments
+metricLabelsAllowlist: []
+metricAnnotationsAllowList: []
+prometheusScrape: false
+selfMonitor:
+  enabled: false
+

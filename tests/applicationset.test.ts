@@ -21,7 +21,7 @@ test("Indigo has one protected native owner for all platform Applications", () =
     "Prune=confirm,Delete=confirm",
   )
   const apps = previewApplicationSet(owner)
-  assert.equal(apps.length, 15)
+  assert.equal(apps.length, 17)
   assert.ok(apps.some((app) => (app.metadata as { name: string }).name === "argocd"))
   for (const app of apps) {
     const metadata = app.metadata as { namespace: string; finalizers?: string[] }

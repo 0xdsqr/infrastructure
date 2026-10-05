@@ -1,0 +1,38 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: indigo-metrics
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: indigo-metrics
+  policyTypes: [Ingress, Egress]
+  ingress:
+    # Alloy peer membership and scrape assignment; no public UI or receiver.
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: indigo-metrics
+      ports: [{protocol: TCP, port: 12345}]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels: {k8s-app: kube-dns}
+      ports: [{protocol: UDP, port: 53}, {protocol: TCP, port: 53}]
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: indigo-metrics
+      ports: [{protocol: TCP, port: 12345}]
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: kube-state-metrics
+      ports: [{protocol: TCP, port: 8080}]
+    - to:
+        - ipBlock: {cidr: 10.10.30.102/32}
+      ports: [{protocol: TCP, port: 9443}]
+
