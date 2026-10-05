@@ -97,15 +97,17 @@ has since been rebuilt and verified on Beacon. Existing services remain running.
 A client-only Indigo telemetry issuance role was applied and verified in Vault
 on October 5: one exact DNS identity and one issuer service account in
 `observability`, using the existing `kubernetes-indigo` authentication boundary.
-Leaf keys are not Pulumi resources. GitOps certificate preparation is implemented;
-live issuance remains unverified: a restricted, default-deny `observability` namespace,
+Leaf keys are not Pulumi resources. GitOps certificate preparation was deployed
+and verified on October 5: a restricted, default-deny `observability` namespace,
 dedicated issuer identity, independent root CA bundle, and an ExternalSecret that
 reissues a 30-day client certificate every 10 days. No collectors are added yet.
-These configuration applications auto-sync after a push; they may wait for the
-bootstrap AppProject permissions to be updated. Update those permissions, then
-reconcile `cluster-foundation` and `argocd-config` before
-`external-secrets-config`. Verify successful issuance without printing the private
-key. Collector mounts and certificate reload handling, live renewal validation,
+The bootstrap AppProject permissions were updated using their existing field
+manager, and the configuration applications recovered through their existing
+auto-sync retries. All 16 Argo applications were Synced and Healthy. The
+ExternalSecret was Ready; its public certificate matched the exact Indigo DNS
+identity, carried only ClientAuth EKU, and verified against the independent root
+CA. It expires November 4, 2026. No private key was displayed, and no collector
+pods were deployed. Collector mounts and certificate reload handling, live renewal validation,
 DNS monitoring, and end-to-end canary ingestion remain pending. Also review the
 certificate's unreachable OCSP URL before transport sign-off. Existing ingestion
 stays unchanged.
