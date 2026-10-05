@@ -85,5 +85,14 @@ spec:
               gateway.envoyproxy.io/owning-gateway-namespace: gateway-system
       ports: [{protocol: TCP, port: 19001}]
     - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: metallb-system}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: metallb
+              app.kubernetes.io/instance: metallb
+              app.kubernetes.io/component: controller
+      ports: [{protocol: TCP, port: 9120}]
+    - to:
         - ipBlock: {cidr: 10.10.30.102/32}
       ports: [{protocol: TCP, port: 9443}]

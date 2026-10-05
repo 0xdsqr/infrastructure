@@ -1,0 +1,37 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  # Preserve the chart resource identity AND its existing Argo Application owner.
+  name: default-deny
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: controller
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: metallb
+      app.kubernetes.io/instance: metallb
+      app.kubernetes.io/component: controller
+  policyTypes: [Egress, Ingress]
+  # Preserve API access (including TokenReview and SubjectAccessReview).
+  egress:
+    - ports: [{protocol: TCP, port: 6443}]
+  ingress:
+    # Preserve the existing admission-webhook path; do not couple admission
+    # availability to this metrics-only change.
+    - ports: [{protocol: TCP, port: webhook-server}]
+    - from:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: observability}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: alloy
+              app.kubernetes.io/instance: indigo-metrics
+      ports: [{protocol: TCP, port: metricshttps}]
+# Host-network speakers are protected by the NixOS host firewall plus verified
+# TLS and delegated API authorization, not by Kubernetes pod NetworkPolicy.

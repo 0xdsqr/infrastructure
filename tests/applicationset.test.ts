@@ -52,6 +52,22 @@ test("native inventory cannot silently enable destructive deletion policies", ()
   assert.throws(() => previewApplicationSet(owner), /preserve/)
 })
 
+test("chart companion subdirectories cannot escape their component or silently do nothing", () => {
+  for (const value of ["", "..", "../metallb", "/tmp", "a/b", "access.yaml", true]) {
+    const owner = applicationSet()
+    const component = owner.spec.generators[0].matrix.generators[1].list.elements.find((c: any) => c.name === "metallb")
+    component.manifestSubdirectory = value
+    assert.throws(() => previewApplicationSet(owner), /manifestSubdirectory/)
+  }
+  for (const mutation of ["disabled", "no-chart"]) {
+    const owner = applicationSet()
+    const component = owner.spec.generators[0].matrix.generators[1].list.elements.find((c: any) => c.name === "metallb")
+    if (mutation === "disabled") component.includeManifests = false
+    else component.charts = []
+    assert.throws(() => previewApplicationSet(owner), /manifestSubdirectory/)
+  }
+})
+
 test("native sync approval follows lifecycle, not hardcoded Application names", () => {
   const owner = applicationSet()
   const inventory = owner.spec.generators[0].matrix.generators[1].list.elements

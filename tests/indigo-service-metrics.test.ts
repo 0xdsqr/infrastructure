@@ -22,7 +22,7 @@ const collector = {
 }
 
 test("service discovery is namespace-scoped and selects only the intended components and metrics ports", () => {
-  assert.equal((config.match(/discovery.kubernetes "/g) ?? []).length, 4)
+  assert.equal((config.match(/discovery.kubernetes "/g) ?? []).length, 5)
   for (const [name, ns, accepted] of components) {
     const discovery = config.split(`discovery.kubernetes "${name}" {`)[1].split("discovery.relabel")[0]
     assert.ok(discovery.includes(`namespaces { names = ["${ns}"] }`))

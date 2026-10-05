@@ -378,6 +378,131 @@ prometheus.scrape "envoy_proxy" {
   forward_to = [prometheus.remote_write.beacon.receiver]
 }
 
+// One namespace-scoped watch; exact component/port filters below. MetalLB
+// delegates authentication/authorization to the API server: reuse the projected,
+// rotating collector token and its existing GET /metrics grant. Never send it
+// to an unverified listener or follow a redirect to another endpoint.
+discovery.kubernetes "metallb" {
+  role = "pod"
+  namespaces { names = ["metallb-system"] }
+  selectors {
+    role = "pod"
+    label = "app.kubernetes.io/name=metallb,app.kubernetes.io/instance=metallb,app.kubernetes.io/component in (controller,speaker)"
+  }
+}
+discovery.relabel "metallb_controller" {
+  targets = discovery.kubernetes.metallb.targets
+  rule {
+    source_labels = ["__meta_kubernetes_pod_phase"]
+    regex = "Running"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_init"]
+    regex = "false"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_component", "__meta_kubernetes_pod_container_name", "__meta_kubernetes_pod_container_port_name", "__meta_kubernetes_pod_container_port_number"]
+    regex = "controller;controller;metricshttps;9120"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label = "namespace"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "pod"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_node_name"]
+    target_label = "node"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "instance"
+  }
+}
+prometheus.scrape "metallb_controller" {
+  targets = discovery.relabel.metallb_controller.output
+  job_name = "metallb-controller"
+  scheme = "https"
+  metrics_path = "/metrics"
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  sample_limit = 10000
+  follow_redirects = false
+  bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+  tls_config {
+    ca_file = "/etc/telemetry/ca/ca.crt"
+    server_name = "metallb-controller-metrics.metallb-system.svc"
+    insecure_skip_verify = false
+    min_version = "TLS12"
+  }
+  clustering { enabled = true }
+  forward_to = [prometheus.remote_write.beacon.receiver]
+}
+discovery.relabel "metallb_speaker" {
+  targets = discovery.kubernetes.metallb.targets
+  rule {
+    source_labels = ["__meta_kubernetes_pod_phase"]
+    regex = "Running"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_init"]
+    regex = "false"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_component", "__meta_kubernetes_pod_container_name", "__meta_kubernetes_pod_container_port_name", "__meta_kubernetes_pod_container_port_number"]
+    regex = "speaker;speaker;metricshttps;9120"
+    action = "keep"
+  }
+  // Explicit six-worker inventory. Growing the pool requires a reviewed update.
+  rule {
+    source_labels = ["__meta_kubernetes_pod_node_name"]
+    regex = "srv-lx-k8s-indigo-worker-0[1-6]"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label = "namespace"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "pod"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_node_name"]
+    target_label = "node"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_node_name"]
+    target_label = "instance"
+  }
+}
+prometheus.scrape "metallb_speaker" {
+  targets = discovery.relabel.metallb_speaker.output
+  job_name = "metallb-speaker"
+  scheme = "https"
+  metrics_path = "/metrics"
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  sample_limit = 10000
+  follow_redirects = false
+  bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+  tls_config {
+    ca_file = "/etc/telemetry/ca/ca.crt"
+    server_name = "metallb-speaker-metrics.metallb-system.svc"
+    insecure_skip_verify = false
+    min_version = "TLS12"
+  }
+  clustering { enabled = true }
+  forward_to = [prometheus.remote_write.beacon.receiver]
+}
+
 prometheus.exporter.self "alloy" {}
 prometheus.scrape "self" {
   targets = prometheus.exporter.self.alloy.targets

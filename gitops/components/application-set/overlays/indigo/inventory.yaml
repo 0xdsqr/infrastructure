@@ -368,6 +368,8 @@ spec:
                   version: 0.16.1
                   wave: "2"
                   component: metallb
+                  includeManifests: true
+                  manifestSubdirectory: controller-access
                   remoteSource: {}
                   charts:
                     - repoURL: https://metallb.github.io/metallb

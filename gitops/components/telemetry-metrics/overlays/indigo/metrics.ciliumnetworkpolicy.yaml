@@ -16,4 +16,9 @@ spec:
     - toEntities: [host, remote-node, kube-apiserver]
       toPorts:
         - ports: [{port: "10250", protocol: TCP}]
-
+    # Speakers use worker host identities. This grants node-identity egress on
+    # one port, not arbitrary Internet access or collector-only host ingress.
+    # NixOS limits source pools; TLS + delegated RBAC authenticate the caller.
+    - toEntities: [host, remote-node]
+      toPorts:
+        - ports: [{port: "9120", protocol: TCP}]

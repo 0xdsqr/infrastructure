@@ -284,7 +284,14 @@ test("Indigo MetalLB reserves the Gateway VIP and advertises only from workers",
   )
   assert.match(values, /loadBalancerClass: metallb\.io\/metallb/)
   assert.match(values, /tolerateMaster: false/)
-  assert.match(values, /defaultDeny: true/)
+  // The same Argo application now supplies the default deny as a companion,
+  // replacing the chart's unscoped metrics ingress without changing IP pools.
+  assert.match(values, /enabled: false/)
+  const policies = parseAllDocuments(execFileSync("kubectl", ["kustomize",
+    "gitops/components/metallb/controller-access/overlays/indigo"], { encoding: "utf8" }))
+    .map(d => d.toJSON())
+  assert.deepEqual(policies.find(p => p.kind === "NetworkPolicy" && p.metadata.name === "default-deny").spec,
+    { podSelector: {}, policyTypes: ["Ingress", "Egress"] })
 })
 
 test("Indigo shared Envoy Gateway is HA, HTTPS-only, and restricted by namespace label", async () => {

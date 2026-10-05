@@ -73,7 +73,7 @@ spec:
           ref: values
           {{- if index . "includeManifests" }}
           # Optional chart companion resources share this Application's owner.
-          path: 'gitops/components/{{ .component }}/overlays/{{ .cluster }}'
+          path: 'gitops/components/{{ .component }}/{{ if index . "manifestSubdirectory" }}{{ .manifestSubdirectory }}/{{ end }}overlays/{{ .cluster }}'
           {{- end }}
       {{- else }}
       source:

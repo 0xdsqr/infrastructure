@@ -43,7 +43,7 @@ test("only exact metric ports are discovered; every replica keeps its own identi
   assert.match(relabel, /source_labels = \["__meta_kubernetes_pod_container_init"\]\s+regex = "false"/)
   assert.doesNotMatch(relabel, /pod_ready|action = "labelmap"/)
   assert.match(relabel, /source_labels = \["__meta_kubernetes_pod_name"\]\s+target_label = "instance"/)
-  const scrape = config.split('prometheus.scrape "argocd" {')[1].split('prometheus.exporter.self')[0]
+  const scrape = config.split('prometheus.scrape "argocd" {')[1].split('\n}\n')[0]
   assert.match(scrape, /clustering \{ enabled = true \}/)
   assert.match(scrape, /sample_limit = 10000/)
   assert.match(scrape, /scrape_interval = "30s"/)
