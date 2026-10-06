@@ -30,18 +30,38 @@ enableSourceIPVerification: true
 # DaemonSet for Cilium L7 network policy and observability.
 l7Proxy: true
 
+# Private host-network listeners; the shared NixOS firewall restricts sources.
+# No metrics Service, ServiceMonitor, Hubble flow metrics or API credentials.
+prometheus:
+  enabled: true
+  port: 9962
+  metricsService: false
+  serviceMonitor:
+    enabled: false
+
 envoy:
   enabled: true
   # Preserve the tested Cilium L7 source-address behavior.
   useOriginalSourceAddress: false
-  # The Envoy DaemonSet must restart when its shared Cilium configuration
-  # changes so this compatibility setting takes effect everywhere.
+  # Restart Envoy when its own bootstrap ConfigMap changes. Agent-only metrics
+  # settings change cilium-config, not the Envoy configuration checksum.
   rollOutPods: true
+  prometheus:
+    enabled: true
+    port: "9964"
+    serviceMonitor:
+      enabled: false
 
 gatewayAPI:
   enabled: false
 
 operator:
+  prometheus:
+    enabled: true
+    port: 9963
+    metricsService: false
+    serviceMonitor:
+      enabled: false
   nodeSelector:
     platform.dsqr.dev/node-pool: platform
   tolerations:

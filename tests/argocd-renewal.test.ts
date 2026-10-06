@@ -35,6 +35,7 @@ test("renewal is one generated manually approved Application with narrow Argo dr
     assert.deepEqual(rule.jsonPointers, [marker])
   }
   const companionPaths = new Map([
+    ["cilium", "gitops/components/cilium/overlays/indigo"],
     ["indigo-metrics", "gitops/components/telemetry-metrics/overlays/indigo"],
     ["kube-state-metrics", "gitops/components/kube-state-metrics/overlays/indigo"],
   ])

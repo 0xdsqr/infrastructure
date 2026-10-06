@@ -503,6 +503,115 @@ prometheus.scrape "metallb_speaker" {
   forward_to = [prometheus.remote_write.beacon.receiver]
 }
 
+// Host-network DaemonSets: reuse the explicit nine-node inventory rather than
+// scraping annotations or adding cluster-wide discovery. Missing agents remain
+// failed targets. Instance/node stay stable across pod recreation.
+discovery.relabel "cilium_agent" {
+  targets = discovery.relabel.kubelets.output
+  rule {
+    source_labels = ["__address__"]
+    regex = "(.+):10250"
+    replacement = "$1:9962"
+    target_label = "__address__"
+  }
+}
+prometheus.scrape "cilium_agent" {
+  targets = discovery.relabel.cilium_agent.output
+  job_name = "cilium-agent"
+  scheme = "http"
+  metrics_path = "/metrics"
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  sample_limit = 10000
+  follow_redirects = false
+  clustering { enabled = true }
+  forward_to = [prometheus.remote_write.beacon.receiver]
+}
+discovery.relabel "cilium_envoy" {
+  targets = discovery.relabel.kubelets.output
+  rule {
+    source_labels = ["__address__"]
+    regex = "(.+):10250"
+    replacement = "$1:9964"
+    target_label = "__address__"
+  }
+}
+prometheus.scrape "cilium_envoy" {
+  targets = discovery.relabel.cilium_envoy.output
+  job_name = "cilium-envoy"
+  scheme = "http"
+  metrics_path = "/metrics"
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  sample_limit = 10000
+  follow_redirects = false
+  clustering { enabled = true }
+  forward_to = [prometheus.remote_write.beacon.receiver]
+}
+
+// Operators move between platform nodes; watch only kube-system, then retain
+// the exact release/container/port and platform pool. Do not hide unready pods.
+discovery.kubernetes "cilium_operator" {
+  role = "pod"
+  namespaces { names = ["kube-system"] }
+  selectors {
+    role = "pod"
+    label = "app.kubernetes.io/name=cilium-operator,app.kubernetes.io/part-of=cilium,io.cilium/app=operator,name=cilium-operator"
+  }
+}
+discovery.relabel "cilium_operator" {
+  targets = discovery.kubernetes.cilium_operator.targets
+  rule {
+    source_labels = ["__meta_kubernetes_pod_phase"]
+    regex = "Running"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_init"]
+    regex = "false"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_name", "__meta_kubernetes_pod_container_port_name", "__meta_kubernetes_pod_container_port_number"]
+    regex = "cilium-operator;prometheus;9963"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_node_name"]
+    regex = "srv-lx-k8s-indigo-worker-0[1-3]"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label = "namespace"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "pod"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_node_name"]
+    target_label = "node"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "instance"
+  }
+}
+prometheus.scrape "cilium_operator" {
+  targets = discovery.relabel.cilium_operator.output
+  job_name = "cilium-operator"
+  scheme = "http"
+  metrics_path = "/metrics"
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  sample_limit = 10000
+  follow_redirects = false
+  // Private HTTP: never attach the projected API token or client credentials.
+  clustering { enabled = true }
+  forward_to = [prometheus.remote_write.beacon.receiver]
+}
+
 prometheus.exporter.self "alloy" {}
 prometheus.scrape "self" {
   targets = prometheus.exporter.self.alloy.targets

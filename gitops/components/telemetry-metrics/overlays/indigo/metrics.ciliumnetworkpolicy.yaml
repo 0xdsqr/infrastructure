@@ -16,6 +16,15 @@ spec:
     - toEntities: [host, remote-node, kube-apiserver]
       toPorts:
         - ports: [{port: "10250", protocol: TCP}]
+    # Cilium metrics use host networking, including control-plane identities.
+    # Source-pool restrictions live in NixOS; this is not collector-only ingress
+    # or exact destination-node enforcement. These HTTP jobs send no API token.
+    - toEntities: [host, remote-node, kube-apiserver]
+      toPorts:
+        - ports:
+            - {port: "9962", protocol: TCP}
+            - {port: "9963", protocol: TCP}
+            - {port: "9964", protocol: TCP}
     # Speakers use worker host identities. This grants node-identity egress on
     # one port, not arbitrary Internet access or collector-only host ingress.
     # NixOS limits source pools; TLS + delegated RBAC authenticate the caller.
