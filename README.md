@@ -331,7 +331,7 @@ throughout those namespaces are readable. There is no Secret read, exec/proxy,
 write permission or cluster-wide pod discovery. Roll back the collector first,
 then remove only this slice's grants and revert its ingress-selector changes.
 
-Remaining 9C slices after the verified MetalLB checkpoint below: Cilium/operator,
+Remaining 9C slices after the verified MetalLB and Cilium checkpoints below:
 CSR approver, metrics-server, and supporting VM/service coverage and
 OPNsense firewall/system logs. Inspect each existing listener/auth/network policy
 before enabling collection. CoreDNS and Unbound remain deferred to 9G; dashboards
@@ -530,7 +530,21 @@ leave issued serving certificates intact. Reverting MetalLB access separately
 restores the former broader policy and removes discovery only with an explicitly
 reviewed cleanup (pruning remains disabled); it is not required to stop scraping.
 
-#### Cilium agent/operator/Envoy collection (prepared, not applied)
+#### Cilium agent/operator/Envoy collection (verified)
+
+Live checkpoint, 2026-10-06 01:04 UTC: Cilium and `indigo-metrics` were
+Synced/Healthy/Succeeded at `ee11f4ae4c615713b5e9d17e366a383e76b57dde`.
+All nine agents and both operators were Ready; Cilium Envoy did not roll.
+After cached rollout-time probe failures refreshed, all nine peers were reachable.
+Direct host/endpoint health tests and a CoreDNS query for the Kubernetes service
+passed. Alloy reloaded in place without pod restarts. Both Beacon backends showed
+9 agent, 9 Cilium Envoy and 2 operator targets up, with approximately 30,775 samples
+per combined scrape cycle and sample ages below 31 seconds across Indigo jobs.
+Existing targets stayed healthy; current remote-write failure/retry rates were
+zero. Mimir held 254,644 memory series against its 300,000 cap (about 85%).
+Historical discarded-sample counters were nonzero: `new-value-for-timestamp`
+rose from 410 to 426 during reload, then stayed stable; `rate_limited` stayed at
+574,000. This is a short rollout validation, not a claim of long-term zero loss.
 
 - Keep chart `1.20.1`. Enable the agent's private HTTP 9962 listener; explicitly
   preserve existing operator HTTP 9963 and Cilium Envoy HTTP 9964 settings. No
@@ -582,8 +596,56 @@ If the agent listener itself needs reverting, sync Cilium to its prior chart/
 values revision; this rolls agents/operators again, so use the same health gates.
 Prune-disabled rollback leaves the discovery Role/RoleBinding present: remove
 them only in a separately reviewed cleanup. Never disable TLS/authentication on
-other metrics listeners as a fallback. No part of this prepared slice is marked
-live-verified yet. DNS monitoring remains deferred to 9G.
+other metrics listeners as a fallback. The checkpoint above closes this Cilium
+slice, not all of 9C. DNS monitoring remains deferred to 9G.
+
+#### CSR approver and metrics-server collection (prepared, not applied)
+
+This is an `indigo-metrics`-only change: no workload template changes, chart
+upgrades, new Service, RBAC grants, certificate issuance, NixOS rebuild, APIService
+changes or live syncs. Keep CSR approver `1.2.14`, metrics-server chart `3.13.1`
+(app `0.8.1`) and Alloy chart `1.13.0` pinned. Reuse the Cilium-owned
+`kube-system/indigo-metrics-discovery` pod list/watch grant from the previous slice.
+
+Read-only preflight verified both metrics-server endpoints against that CA and
+hostname; anonymous `/metrics` requests returned 403. Authorization checks for
+the collector returned yes for `GET /metrics` and no for listing resource-metrics
+pods. The two CSR approver replicas returned 285 and 239 samples respectively.
+Authenticated metrics-server collection and its sample count still require live
+collector validation after the approved sync.
+
+- Discover two replicas of each service through a namespace-scoped pod watch.
+  Exact release, component, container and port filters prevent scraping health
+  ports, sidecars or unrelated pods. Keep unready Running pods visible, retaining
+  per-pod instance identity instead of hiding replicas behind a Service target.
+- `kubelet-csr-approver`: scrape existing HTTP `/metrics` on 8080 without any
+  credentials. Do not change approval rules, leader election or the 8081 health
+  listener. Cap at 3,000 samples per target.
+- `metrics-server`: scrape HTTPS `/metrics` on 10250 using the existing public
+  home CA, exact `metrics-server.kube-system.svc` identity, and rotating projected
+  ServiceAccount token. Reuse existing `GET /metrics` authorization; do not grant
+  resource-metrics API access, disable kubelet TLS verification or skip server
+  verification. Cap at 5,000 samples per target; disable redirects.
+- Both jobs use 30-second intervals, 10-second timeouts and two-peer sharding.
+  Add collector egress only to each exact pod selector and its metrics port.
+  The audit found no existing kube-system NetworkPolicy/CiliumNetworkPolicy or
+  cluster-wide Cilium policy isolating these listeners. This slice preserves
+  that ingress behavior: CSR metrics are unauthenticated HTTP and are **not**
+  collector-exclusive. Namespace/system-service ingress hardening remains a
+  separate review so this collection step cannot unexpectedly block probes,
+  CSR approval or the aggregated resource-metrics API.
+
+After review/publishing, check current Mimir headroom again, then manually sync
+**only `indigo-metrics`**, chart `1.13.0` plus the published Git revision, prune
+disabled. These four targets are capped at 16,000 samples per combined steady-state
+scrape, not 16,000 total historical series; churn/surge replicas can add more.
+Do not raise limits automatically if a scrape fails its cap.
+
+Verify both peers reload, 2/2 targets for each new job in both backends, existing
+jobs remain up, samples remain fresh, and scrape/queue/discard counters stabilize.
+Check metrics-server APIService availability and CSR approver readiness are
+unchanged. Roll back collection by syncing `indigo-metrics` to `ee11f4a`; no
+service rollback, certificate deletion or permission cleanup is necessary.
 
 Include OPNsense firewall/system logs in 9C. Defer DNS visibility (Unbound and
 CoreDNS) to 9G, after the other core monitoring setup. Start with resolver

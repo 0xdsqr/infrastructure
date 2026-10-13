@@ -93,6 +93,24 @@ spec:
               app.kubernetes.io/instance: metallb
               app.kubernetes.io/component: controller
       ports: [{protocol: TCP, port: 9120}]
+    # Metrics-server shares its HTTPS listener with the resource-metrics API;
+    # TLS + delegated RBAC restrict this identity to /metrics, not the API.
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: metrics-server
+              app.kubernetes.io/instance: metrics-server
+      ports: [{protocol: TCP, port: 10250}]
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: kubelet-csr-approver
+              app.kubernetes.io/instance: kubelet-csr-approver
+      ports: [{protocol: TCP, port: 8080}]
     - to:
         - ipBlock: {cidr: 10.10.30.102/32}
       ports: [{protocol: TCP, port: 9443}]

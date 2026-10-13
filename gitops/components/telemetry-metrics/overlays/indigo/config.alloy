@@ -612,6 +612,119 @@ prometheus.scrape "cilium_operator" {
   forward_to = [prometheus.remote_write.beacon.receiver]
 }
 
+// Reuse the existing kube-system pod list/watch grant. Select both release and
+// component again below; neither annotations nor arbitrary pod ports are trusted.
+discovery.kubernetes "system_services" {
+  role = "pod"
+  namespaces { names = ["kube-system"] }
+  selectors {
+    role = "pod"
+    label = "app.kubernetes.io/name in (kubelet-csr-approver,metrics-server),app.kubernetes.io/instance in (kubelet-csr-approver,metrics-server)"
+  }
+}
+discovery.relabel "csr_approver" {
+  targets = discovery.kubernetes.system_services.targets
+  rule {
+    source_labels = ["__meta_kubernetes_pod_phase"]
+    regex = "Running"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_init"]
+    regex = "false"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name", "__meta_kubernetes_pod_label_app_kubernetes_io_instance", "__meta_kubernetes_pod_container_name", "__meta_kubernetes_pod_container_port_name", "__meta_kubernetes_pod_container_port_number"]
+    regex = "kubelet-csr-approver;kubelet-csr-approver;kubelet-csr-approver;metrics;8080"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label = "namespace"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "pod"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_node_name"]
+    target_label = "node"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "instance"
+  }
+}
+prometheus.scrape "csr_approver" {
+  targets = discovery.relabel.csr_approver.output
+  job_name = "kubelet-csr-approver"
+  // Existing private HTTP listener: never attach the API token or TLS keys.
+  scheme = "http"
+  metrics_path = "/metrics"
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  sample_limit = 3000
+  follow_redirects = false
+  clustering { enabled = true }
+  forward_to = [prometheus.remote_write.beacon.receiver]
+}
+discovery.relabel "metrics_server" {
+  targets = discovery.kubernetes.system_services.targets
+  rule {
+    source_labels = ["__meta_kubernetes_pod_phase"]
+    regex = "Running"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_init"]
+    regex = "false"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name", "__meta_kubernetes_pod_label_app_kubernetes_io_instance", "__meta_kubernetes_pod_container_name", "__meta_kubernetes_pod_container_port_name", "__meta_kubernetes_pod_container_port_number"]
+    regex = "metrics-server;metrics-server;metrics-server;https;10250"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label = "namespace"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "pod"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_node_name"]
+    target_label = "node"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "instance"
+  }
+}
+prometheus.scrape "metrics_server" {
+  targets = discovery.relabel.metrics_server.output
+  job_name = "metrics-server"
+  scheme = "https"
+  metrics_path = "/metrics"
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  sample_limit = 5000
+  follow_redirects = false
+  // Delegated authentication uses the existing GET /metrics grant. Verify the
+  // Vault-issued serving certificate before sending the rotating projected token.
+  bearer_token_file = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+  tls_config {
+    ca_file = "/etc/telemetry/ca/ca.crt"
+    server_name = "metrics-server.kube-system.svc"
+    insecure_skip_verify = false
+    min_version = "TLS12"
+  }
+  clustering { enabled = true }
+  forward_to = [prometheus.remote_write.beacon.receiver]
+}
+
 prometheus.exporter.self "alloy" {}
 prometheus.scrape "self" {
   targets = prometheus.exporter.self.alloy.targets
