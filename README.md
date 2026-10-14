@@ -968,12 +968,14 @@ response-code, latency, and cache-hit series present. Both resolver pods remain
 Ready with zero restarts and their existing 14-day age; this did not restart DNS.
 The Indigo total is now 87 healthy scrape targets in each backend, with none down.
 
-Five CoreDNS panels are prepared in the existing Nix-provisioned
+Five CoreDNS panels are deployed in the existing Nix-provisioned
 `K8s - Indigo - Overview` dashboard: scrape health, per-pod request rate,
 response-code rate, per-pod p95 query duration, and cache hit ratio. All queries
 were checked against live Prometheus data. The existing 13 panels, UID and tags
-are preserved; missing data is not zero-filled. Beacon rebuild and rendered-UI
-verification are still required before marking these panels deployed. No new
+are preserved; missing data is not zero-filled. After the Beacon rebuild, the
+Grafana API confirmed the provisioned dashboard has all 18 panels, including the
+five CoreDNS additions, and both backends still report two healthy DNS targets.
+Visual inspection in the browser remains a user check. No new
 alerts or full DNS query logging are included. Metric semantics follow the
 [CoreDNS metrics](https://coredns.io/plugins/metrics/) and
 [cache](https://coredns.io/plugins/cache/) documentation.
@@ -989,10 +991,25 @@ or weaken the checks to hide the failures.
 
 OPNsense's existing API account can read Unbound status/statistics and Telegraf
 status: both services report running, and the statistics API reports `ok`.
-This does not diagnose the earlier Telegraf `stats_noreset` failure. No OPNsense
-settings, SSH configuration, or privileges were changed. Obtain the underlying
-command error through authorized console/SSH access before fixing the collector.
-Phase 9 remains open; DNS dashboards/validation and recovery closure are pending.
+The user re-enabled the Unbound input and reproduced the `stats_noreset` error.
+The OPNsense plugin's documented `Run as Root` option is required for its built-in
+Unbound input. After the user enabled that option, 143 Unbound series appeared in
+both Prometheus and Mimir, including query counts, cache hits and recursion time.
+Both OPNsense scrape targets remain up. This supports a process-permission cause;
+the exact failed file/socket access was not established. No SSH was enabled and
+no DNS query logging or resolver configuration was changed. The security tradeoff
+is explicit: the whole Telegraf agent now runs as root, not just this input.
+Documented plugin help: [Run as Root](https://github.com/opnsense/plugins/blob/master/net-mgmt/telegraf/src/opnsense/mvc/app/controllers/OPNsense/Telegraf/forms/general.xml).
+
+Four Unbound panels are prepared in `Infra - DSQR Labs - Overview`: statistics
+timestamp age, query rate, cache hit ratio and reported mean recursion time.
+Queries were checked against live data; missing data is not zero-filled. The
+reported recursion mean excludes cache hits and is not a five-minute mean or
+p95; see [Unbound statistics semantics](https://unbound.docs.nlnetlabs.nl/en/latest/manpages/unbound-control.html).
+Beacon rebuild and loaded-dashboard verification are pending for these four
+panels. No additional alerts were added. Phase 9 remains open for dashboard
+validation and final coverage, capacity and recovery checks. A narrower-privilege
+collector design is a separate hardening follow-up, not an accomplished fix.
 
 OPNsense firewall/system logs and Proxmox syslog were reverified arriving in
 Loki on October 13 using aggregate counts, without exposing log payloads.
