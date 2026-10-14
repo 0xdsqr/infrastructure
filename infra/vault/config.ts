@@ -11,6 +11,7 @@ import type {
   VaultSecretPathInventory,
 } from "@dsqr/pulumi-vault"
 import { indigoKubernetesCaCert } from "./certificates.ts"
+import { indigoHostTelemetryIssuers } from "./indigo-host-telemetry.ts"
 
 const resourceNames = {
   provider: "vault",
@@ -323,6 +324,7 @@ const raftSnapshotAppRole = {
 } satisfies VaultRaftSnapshotAppRoleConfig
 
 const pkiIssuers = {
+  ...indigoHostTelemetryIssuers,
   indigoTelemetryClient: {
     backend: "pki_int",
     certificatePurpose: "client",

@@ -7,7 +7,7 @@
   <a href="https://github.com/0xdsqr/infrastructure/commits/master"><img src="https://img.shields.io/github/last-commit/0xdsqr/infrastructure?style=for-the-badge" alt="last commit"></a>
 </p>
 
-Declarative homelab infrastructure, cluster GitOps, and operational tooling.
+Declarative DSQR Labs infrastructure, cluster GitOps, and operational tooling.
 
 </div>
 
@@ -66,22 +66,42 @@ suppressed. If anything fails, inspect the node before retrying—do not reset i
 After onboarding, run `node-pools indigo --stage verify`. Future nodes require an
 explicit inventory change first; the current inventory is workers 01–06.
 
-## New-homelab core monitoring (Phase 9, in progress)
+## DSQR Labs core monitoring (Phase 9, in progress)
 
 Reuse Beacon's NixOS-managed Grafana, Prometheus/Mimir, Loki, Tempo, Pyroscope,
 and Alloy. Scope new collection and dashboards to Indigo and its supporting
-core infrastructure; do not change or delete hub-a collection, dashboards, or data.
+core infrastructure; do not change or delete hub-a collection or data. The user
+explicitly retired its old Grafana dashboard during the October 13 UI cleanup.
 Dashboard JSON and backend configuration belong in `nixos-config` under
 `hosts/srv-lx-beacon`; Kubernetes collectors and scrape permissions belong here
 in GitOps. Vault issuance policy belongs in this repository's Vault stack.
 
-Initial dashboard titles are `Infra - Homelab - Overview`,
+Initial dashboard titles are `Infra - DSQR Labs - Overview`,
 `K8s - Indigo - Overview`, and `K8s - Indigo - Argo CD`. Use stable dashboard
 UIDs, explicit inventory/cluster filters, and distinguish missing telemetry from
 healthy zero values. Retain source metric names; normalize identity labels without
 copying arbitrary Kubernetes labels. Expected manual-sync drift must not page like
 a failed reconciliation. Discord is the chosen destination, but notification
 delivery and its end-to-end test remain deferred—not completed.
+
+Deferred action item:
+
+- [ ] **Phase 19 — Nix validation/checks cleanup:** after the existing phases
+  10–18, rebuild focused validation through `nixos-config/checks/` and flake
+  `checks.<system>` outputs. Prioritize evaluated configuration invariants,
+  native validators, and isolated integration checks for security-critical
+  behavior. The top-level NixOS `tests/` suite was retired at the user's request
+  on October 14; this does not remove this infrastructure repository's tests or
+  imply equivalent replacement coverage exists. The existing Nix checks CI
+  and its kubelet decoder check remain, with the fixture moved under `checks/`.
+- [ ] Migrate remaining in-scope `homelab` names to `dsqr-labs` / `DSQR Labs`
+  after the current monitoring setup. Inventory consumers first, then coordinate
+  Vault policy/token bindings and KV paths, the `vault-homelab` Pulumi project/state,
+  and NixOS telemetry labels with dashboard/alert queries. Preview each migration,
+  preserve access and state/history, and verify certificate renewal, secret reads,
+  and telemetry queries before retiring old names. Do not globally replace these
+  identifiers or rename out-of-scope hub-a resources. New policies and display
+  titles already use the new convention; the deployed-name migration is pending.
 
 Rollout order: 9A inventory/standards and secure transport; 9B node/cluster metrics;
 9C core-service coverage; 9D dashboards; 9E alert rules (delivery deferred);
@@ -646,6 +666,326 @@ jobs remain up, samples remain fresh, and scrape/queue/discard counters stabiliz
 Check metrics-server APIService availability and CSR approver readiness are
 unchanged. Roll back collection by syncing `indigo-metrics` to `ee11f4a`; no
 service rollback, certificate deletion or permission cleanup is necessary.
+
+#### Indigo NixOS host telemetry (all nine hosts deployed and verified)
+
+October 13 final rollout status: all three controls and six workers now use the
+dedicated HTTPS/mTLS host telemetry pipeline. All nine nodes remained Ready;
+both metric backends reported 85/85 Indigo scrape targets up, fresh host samples,
+all five selected core units per host active, and recent host journals in Loki.
+The control-plane static pods were not restarted by these telemetry rebuilds.
+Worker-04's forced certificate rotation passed; natural expiry and reboot-time
+behavior are not claimed as tested. The chronology below records the staged
+rollout, not outstanding rebuild instructions.
+
+The October 13 audit found Kubernetes metrics arriving, but no Indigo host
+`node_uname_info` series or host journals. The shared NixOS profile is already
+imported; worker-04's healthy Alloy still targets Beacon's old HTTP ports 9090
+and 3100, which time out from that node. Verified HTTPS to Vault succeeds, and
+Beacon's named 9443 endpoint requires a client certificate as intended.
+
+This step adds **27 Vault resources only**: one client-only PKI role, one policy,
+and one AppRole for each of the three controls and six workers. Names follow
+the existing Indigo naming convention: policies such as
+`dsqr-labs-pki-indigo-worker-04-telemetry-client`, certificate roles such as
+`indigo-worker-04-telemetry-client`, and login roles such as
+`indigo-worker-04-telemetry-renewer`. VM hostnames, certificate DNS identities,
+and Pulumi logical resource keys remain unchanged. Each role can
+issue only that host's exact telemetry DNS identity, with both login credentials
+and tokens bound to its LAN /32. Tokens last 15 minutes; certificates last at
+most 30 days. Reusable, non-expiring SecretIDs follow the existing host-agent pattern and
+must be enrolled out of band into separate host-plus-admin agenix files. No
+SecretID or private key is created or persisted in Pulumi state by this step.
+Existing cluster-collector and old hub-a identities are unchanged.
+
+The October 13 Vault apply succeeded: **27 created, 74 unchanged**, with no
+replacements or deletions. This stage alone does **not** restore host telemetry
+or authorize the new identities at Beacon. Do not rebuild the nine nodes yet.
+
+Worker-04 is the first canary. Its public AppRole ID is
+`684df776-a77a-21b2-e765-9703d6814a7c`. The NixOS recipient registry now reserves
+`hosts/srv-lx-k8s-indigo-worker-04/telemetry-pki.secret-id.age` for worker-04 and
+the admin key only. Enrollment must verify the applied role ID, exact policy,
+source /32 constraints and token lifetime before issuing a SecretID, pipe it
+directly into age, and refuse to overwrite an existing credential. Enrollment
+does not activate any services. The SecretID is revocable, not automatically
+rotated; certificate renewal is a separate Vault Agent responsibility.
+
+Worker-04 credential enrollment succeeded. Its host-scoped ciphertext is now
+present in the NixOS repository. The shared Alloy modules now have optional
+verified client TLS, a host-cluster label, a configurable systemd-unit selector,
+and a queued-metric age limit. Worker-04 enabled these options first. Its
+Vault Agent renders the dedicated client certificate before Alloy starts;
+the key is root-owned, group-readable only by the static `telemetry-client`
+group added to Alloy. Alloy retains its unprivileged DynamicUser and its
+existing component names/state directory. Renewal uses an opt-in `try-restart`
+of Alloy to guarantee fresh key material; existing certificate consumers keep
+their current reload behavior.
+
+The canary sends metrics/journals to Beacon's named HTTPS 9443 endpoint and
+adds `cluster="indigo"`; the existing `env="homelab"` label is intentionally
+unchanged until the separately planned naming migration. Node-local hostname
+mapping pins `beacon-telemetry.service.home.arpa` to `10.10.30.102`, because the
+canary's DNS lookup currently does not resolve that name. TLS still verifies
+the hostname and trusted CA; no insecure verification or new firewall port.
+Host service coverage includes Alloy, containerd, kubelet, Tailscale and Vault
+Agent. Metrics older than 15 minutes are dropped from replay; journald's initial
+lookback is 15 minutes. Existing journal positions and the bounded one-hour
+Loki WAL retention are preserved; changing lookback does not erase queued logs.
+
+Beacon's prepared rule adds only worker-04's exact certificate identity for
+POST metrics/log ingestion. The existing cluster collector keeps its existing
+permissions; other host identities and host trace/query requests are denied.
+Validation passed: worker-04/Beacon NixOS assertions, installed Alloy 1.17.1
+configuration validation, targeted regression tests and real Caddy mTLS/path
+integration tests. Mimir's pre-canary baseline was 254,862 memory series against
+the existing 300,000 limit.
+
+Beacon's October 13 rebuild is live as generation
+`/nix/store/qlsqv5ljmp50zgvcaiapsgkq7gvn77gp-nixos-system-srv-lx-beacon-26.11.20260804.e72e4f2`.
+Read-only verification confirmed Caddy loaded both the existing cluster identity
+and the new exact worker-04 identity. Caddy, Alloy, Prometheus, Loki, Mimir,
+Grafana and the listener certificate agent are active; Alloy reports ready.
+Existing Indigo collection still has 76 up targets, with the oldest `up` sample
+about 31 seconds old.
+
+Worker-04's rebuild is live as generation
+`/nix/store/9x2zracv7z88v3pxvfcaf95kyzmla1px-nixos-system-srv-lx-k8s-indigo-worker-04-26.11.20260804.e72e4f2`.
+Vault Agent and Alloy are active with no automatic restarts. The client-only
+certificate has the exact worker-04 DNS SAN, expires November 12, and is
+root-owned with a `0640` private key in the dedicated group. Alloy is ready;
+the node and its three existing DaemonSet pods remain Ready/Running. Kubelet
+and containerd activation times are unchanged by this telemetry rollout.
+
+Both Prometheus and Mimir have 783 worker-04 host series, with `node_uname_info`
+about 13 seconds old at verification. All five selected systemd services report
+active, and the certificate validity metric is 1. Indigo's total up-target
+count is now 77 (76 existing plus the host exporter). Fresh cluster-labelled
+journals are arriving in Loki (120 entries in the sampled minute). Mimir had
+255,717 memory series and zero observed five-minute sample-discard rate.
+
+Startup replay encountered four HTTP 400 responses for timestamps too old:
+Alloy recorded 25,874 dropped log entries. That counter stayed unchanged on
+the follow-up check while sent entries increased from 18,108 to 18,169. These
+were rejected historical buffered entries, not a TLS/permission failure; do
+not claim complete historical log recovery or erase local journal state.
+Metrics failed/retried counters were zero.
+
+The October 13 worker-04 forced-reissue drill passed. The old certificate/cache
+was retained in root-only directory
+`/var/lib/vault-certificates/host-telemetry-rotation.lfsu9y`; the active leaf/key
+were left in place while the agent cache was moved aside and its service
+restarted. The new serial is `3AE9B9FEEC1A77C4950B26A65EA50E4B2990E829`
+(previously `5F7F7A058359A55F530785E2AC62C710F94B9282`). The configured restart
+hook ran, Alloy's PID changed, and Beacon accepted the new client certificate.
+Kubelet/containerd PIDs did not change. Both telemetry services are active;
+post-restart counters show zero metric failures/retries and zero dropped logs.
+Fresh host metrics were about 9 seconds old in both backends, with 268 journals
+in the sampled minute. Counters reset on restart; this does not erase the
+historical startup drops noted above.
+
+This validates forced issuance, rendering, restart and recovered ingestion,
+not an observed natural expiry-triggered rotation. The configured 0.75
+certificate lifetime threshold remains in place. Retain the private rollback
+directory only through canary acceptance, then remove that specific test copy
+during cleanup. No other host has been enrolled or enabled by this canary step.
+
+Workers 05–06 enrollment succeeded on October 13. Separate host-plus-admin
+age ciphertexts are present; no services changed during enrollment. Their
+prepared host configurations reuse worker-04's validated settings with unique
+AppRole IDs, PKI paths and DNS identities. Beacon's prepared allowlist now
+includes exactly workers 04–06 for POST metrics/log ingestion; host traces,
+queries and other identities remain denied. Twenty enrollment-helper safety
+tests, fourteen configuration regression tests, the real Caddy mTLS integration
+test, rendered Alloy validation for both workers, and NixOS assertions for
+Beacon/05/06 passed. Beacon and workers 05–06 were subsequently rebuilt and
+verified live on October 13. Their active generations are respectively
+`6djjiahsb9jra7pl95pvkxqazp2v6lgw`, `30b4vpbbchbsqgzmqq0n2n0jhq3wj7cd`,
+and `zrrwldxbghk6vsrnvk2mcyhqx63kpk6y`. All nine Kubernetes nodes remain Ready;
+05/06's existing DaemonSet containers have zero restarts, and their kubelet and
+containerd activation times remain September 29. Both client certificates have
+the exact host SAN and client-only EKU; private keys are root-owned, group
+`telemetry-client`, mode `0640`. Alloy and Vault Agent are active.
+
+Both backends now report 79 Indigo up targets. Workers 04/05/06 have
+783/784/783 host series, with samples around 10–11 seconds old at verification,
+and fresh host journals in Loki. Worker-06 reports zero failed/retried metric
+samples and zero dropped logs. Mimir has 257,311 memory series of its 300,000
+budget. This validates current ingestion, not natural certificate renewal.
+
+Timestamp-discard investigation: sampled Mimir errors at 16:42, 16:46 and
+16:56 UTC identify `http_server_duration_milliseconds_*`, `job="twt-web"`,
+`cluster="hub-a"`: the old cluster, not Indigo's new host exporters. The first
+errors precede worker-05 activation. They contain different values for the same
+series/timestamp. The shared counter stabilized at 81 during the follow-up,
+but that does not establish a permanent fix. Deferred action: investigate old
+hub-a metric identity collisions separately; do not modify its pipeline or
+weaken Mimir validation as part of Indigo enrollment. The precise upstream
+producer/relabel cause has not been established.
+
+Next batch: workers 01–03, then controls 01–03. All six enrollments succeeded;
+their separate host-plus-admin age ciphertexts are present. The host telemetry
+configurations now reuse the validated canary settings with unique AppRoles,
+PKI issue paths and certificate identities. Beacon's prepared exact allowlist
+includes all nine Indigo hosts, with no wildcard or broader permissions.
+All 60 helper safety tests and six GET-only role/recipient preflights passed
+before enrollment. After preparation, 15 regression tests, the real Caddy mTLS
+test (all nine hosts plus unauthorized identity/path checks), rendered Alloy
+validation for all six new hosts, and Beacon/all-six-host NixOS evaluations
+with no failed assertions passed. No live services were changed
+by this preparation. These six configurations were subsequently deployed one at
+a time after Beacon; all passed the final checks above. No further enrollment
+or host rebuild is needed for this rollout.
+This remains host OS metrics and system journals only; add application metrics,
+logs, dashboards and alerts as services migrate. Do not migrate or patch hub-a
+as part of this work.
+Verify Vault Agent certificate ownership/readiness, Alloy
+health, fresh host metrics and aggregate journal counts, core-unit coverage,
+and certificate/restart behavior. Compare Mimir capacity/discards before any
+further enrollment. Keep a known-good NixOS generation for rollback; do not
+delete agent keys, collector state or journal positions as a troubleshooting step.
+
+Keep the existing cluster certificate separate; do not copy its key onto hosts,
+open legacy HTTP ingestion, disable certificate verification, or give host
+agents an administrator kubeconfig. Start with worker-04, validate renewal and
+fresh host metrics/journals, then roll out one host at a time. Measure canary
+series volume and Mimir headroom before expanding; do not raise limits to hide
+capacity problems. Preserve journald positions and bound any backlog replay.
+Host service-unit coverage and stable Indigo labels were verified for all nine.
+This is not a claim that application-level collection is complete.
+
+#### Phase 9D dashboard baseline (deployed and verified)
+
+Three file-provisioned JSON dashboards live in the NixOS repository under
+`hosts/srv-lx-beacon/grafana-dashboards/dsqr-labs/`:
+
+- `Infra - DSQR Labs - Overview` (`dsqr-infra-overview`): explicit 19-host
+  inventory, freshness, CPU, Linux memory/root disk, configured NixOS unit state,
+  and managed-certificate expiry. OPNsense is excluded from Linux memory/disk
+  panels; DNS internals remain deferred.
+- `K8s - Indigo - Overview` (`indigo-overview`): node readiness, scheduling,
+  pod/deployment inventory, scrape health, capacity, restarts and Loki journal
+  volume. Host journals are not pod-log collection.
+- `K8s - Indigo - Argo CD` (`indigo-argocd`): deduplicated application health and
+  sync inventory, sync-operation counters, controller/Git latency and scrape
+  health. OutOfSync is amber drift, not an automatic failed-sync alarm.
+
+Beacon deployment and all three provisioned UIDs were verified on October 13;
+the user confirmed the dashboard contents look fine. At the user's request,
+the legacy hub-a and Temporal JSON definitions are now removed from provisioning
+(recoverable from Git), and the new dashboards retain only durable `dsqr-labs`
+and `indigo` tags, not project-phase tags. The cleanup rebuild was verified live:
+only the three current dashboards remain, with no phase tags. The empty homelab,
+opnsense and temporal folders were deleted after confirming they contained no
+dashboards or Grafana-managed alert rules. Empty folders can be recreated; old
+dashboard JSON remains recoverable from Git. No services or telemetry data were
+deleted.
+The existing provider is unchanged. New panels use fixed
+provisioned Prometheus/Loki UIDs, stable dashboard UIDs and explicit Indigo or
+host-inventory filters; missing telemetry is not filled with unconditional zero.
+Update the host inventory as hosts are added. These panels are not alert rules.
+All 31 panel expressions returned live data during preparation; six regression
+tests cover scope, provisioning, replica deduplication and non-overlapping grids.
+No further dashboard rebuild is needed. Next is the four-rule 9E baseline below,
+followed by 9F coverage/recovery checks and 9G DNS monitoring last.
+Service-specific panels follow workload migration.
+
+#### Phase 9E basic alerts (deployed and verified)
+
+The user explicitly limited this initial pass to four basic alerts. Beacon's
+existing Prometheus evaluates `core-alerts.rules.json`; no new alert evaluator,
+Alertmanager route, Grafana-managed rule, Discord contact point or credentials
+are introduced. All four use `scope=dsqr-labs` and `severity=warning`, with links
+to the matching dashboards:
+
+- `DSQRLabsHostTelemetryMissing`: each of the 19 explicit inventory hosts has
+  no `node_uname_info` samples for five minutes, sustained for five more minutes.
+  Total absence is detected, not silently converted to healthy zero.
+- `IndigoNodeNotReady`: an observed Indigo node remains not Ready for five
+  minutes. Replica gauges are deduplicated. Missing node-status metrics are not
+  detected by this rule.
+- `IndigoArgoApplicationUnhealthy`: Degraded or Missing health for ten minutes,
+  deduplicated by application. Healthy manual-sync OutOfSync is not an alert.
+- `DSQRLabsRootDiskSpaceLow`: under 10% available space on a writable Linux
+  root filesystem for fifteen minutes; explicit current-host inventory only.
+  OPNsense and non-root volumes are excluded from this initial disk rule.
+
+All four expressions parsed successfully against live Prometheus and matched
+zero current problems during preparation. Pinned `promtool` validates four rules
+and nine synthetic scenarios covering waiting periods, recovery, full telemetry
+absence, replica duplication and exclusions. Three source tests guard the limit,
+inventory and routing scope at implementation time. The ad hoc test files were
+retired on October 14; replacement reproducible checks are tracked in Phase 19.
+The native alert-rule syntax check remains available:
+
+```sh
+cd ~/nixos-config
+nix shell --inputs-from . nixpkgs#prometheus.cli -c promtool check rules hosts/srv-lx-beacon/core-alerts.rules.json
+```
+
+After a Beacon rebuild, verify four healthy rule evaluations in Prometheus
+`/rules` and inspect `/alerts`. These are Prometheus-managed, not Grafana-managed
+alerts. Discord delivery remains deferred and untested. This small baseline does
+not cover missing Kubernetes/Argo collectors, certificate expiry, ingestion
+failures, all filesystems, or a complete Beacon outage; add those deliberately
+later rather than declaring comprehensive coverage. A dead evaluator cannot
+report its own outage without an external check. Do not modify old hub-a
+collection or raise monitoring limits as part of this step.
+
+October 14 verification: all four rules in `dsqr-labs-basic` report evaluation
+health `ok`, state `inactive`, and no evaluation error. This closes the agreed
+four-rule baseline, not notification delivery or comprehensive alert coverage.
+
+#### Phase 9F/9G October 14 checkpoint
+
+Both Prometheus and Mimir returned 85 healthy Indigo scrape targets, with no
+down targets in Prometheus. All nine Indigo hosts had recent journals in Loki;
+OPNsense and Proxmox syslog streams also had entries in the sampled 15 minutes.
+Beacon's latest restic job finished successfully at 03:45 CDT. Job success alone
+does not establish a successful restore or close the recovery-validation gate.
+
+Mimir reported approximately 263,243 in-memory series against the existing
+300,000 limit (~88%). Beacon had approximately 4.7 GiB available memory and
+70 GiB available root-disk space. Current five-minute discard and remote-write
+failure rates were zero; highest-sent lag was approximately 9 seconds for
+Prometheus-to-Mimir and 19–31 seconds for the two Indigo collectors. Earlier
+timestamp-conflict discards occurred in the preceding hour; their source was
+not established by this check. Do not claim those historical gaps are repaired,
+change hub-a collection, or increase limits to conceal them. Recheck capacity
+before adding application telemetry.
+
+CoreDNS has two ready replicas and exposes its Prometheus listener on TCP 9153.
+The CoreDNS change scrapes each running resolver replica using the
+existing pod-only kube-system discovery grant and adds only TCP 9153 to the
+collector's existing DNS-pod egress allowance. It does not alter CoreDNS, its
+DNS/query-log settings, permissions, or ingress policies. Native validation with
+the running Alloy binary and Kubernetes server-side dry-run passed; 30 focused
+regression tests passed, with eight optional chart/fixture tests skipped.
+Published as `1103d199fe0176779f91423ee71de7dc51f99506` and manually synced on
+October 14 without pruning. Argo reports `Succeeded`, `Healthy`, and `Synced`.
+Both CoreDNS targets report `up=1` in Prometheus and Mimir, with request,
+response-code, latency, and cache-hit series present. Both resolver pods remain
+Ready with zero restarts and their existing 14-day age; this did not restart DNS.
+The Indigo total is now 87 healthy scrape targets in each backend, with none down.
+
+Publication checks: infrastructure lint and workspace/infra typechecking passed.
+The focused DNS, collector, host-enrollment and Vault-state checks passed (14
+passed, three optional chart renders skipped). The full infrastructure suite is
+not green: 234 passed, 37 skipped, four failed. Follow up separately on two stale
+Argo generated-resource expectations, the native ApplicationSet adapter's Effect
+boundary check, and the Tailscale host-inventory expectation. Those files were
+unchanged by this pending host-enrollment/documentation publication; do not remove
+or weaken the checks to hide the failures.
+
+OPNsense's existing API account can read Unbound status/statistics and Telegraf
+status: both services report running, and the statistics API reports `ok`.
+This does not diagnose the earlier Telegraf `stats_noreset` failure. No OPNsense
+settings, SSH configuration, or privileges were changed. Obtain the underlying
+command error through authorized console/SSH access before fixing the collector.
+Phase 9 remains open; DNS dashboards/validation and recovery closure are pending.
+
+OPNsense firewall/system logs and Proxmox syslog were reverified arriving in
+Loki on October 13 using aggregate counts, without exposing log payloads.
 
 Include OPNsense firewall/system logs in 9C. Defer DNS visibility (Unbound and
 CoreDNS) to 9G, after the other core monitoring setup. Start with resolver

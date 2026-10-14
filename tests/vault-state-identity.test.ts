@@ -7,6 +7,7 @@ import { createVaultFoundationEffect } from "@dsqr/pulumi-vault"
 import { runPulumiProgram } from "@dsqr/pulumi-shared"
 
 import { vault } from "../infra/vault/config.ts"
+import { indigoHostTelemetryIssuers } from "../infra/vault/indigo-host-telemetry.ts"
 import { byName, runPulumiMockProgram } from "./pulumi-state-helpers.ts"
 
 const providerToken = "pulumi:providers:vault"
@@ -89,6 +90,11 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     (resource) => resource.type === providerToken || resource.type.startsWith("vault:"),
   )
   const expectedResources = [
+    ...Object.keys(indigoHostTelemetryIssuers).flatMap((key) => [
+      [pkiRoleToken, `pki-issuer-role-${key}`] as const,
+      [policyToken, `pki-issuer-policy-${key}`] as const,
+      [appRoleToken, `pki-issuer-approle-${key}`] as const,
+    ]),
     [auditToken, "audit"],
     [kubernetesRoleToken, "external-secrets-kubernetes-role-hub-a"],
     [kubernetesRoleToken, "external-secrets-kubernetes-role-indigo"],
@@ -144,6 +150,31 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     expectedResources,
   )
   assert.deepEqual(deployment.calls, [])
+
+  for (const [key, issuer] of Object.entries(indigoHostTelemetryIssuers)) {
+    const role = byName(resources, `pki-issuer-role-${key}`).inputs
+    assert.deepEqual(role.allowedDomains, issuer.allowedDomains)
+    assert.equal(role.clientFlag, true)
+    assert.equal(role.serverFlag, false)
+    assert.deepEqual(role.extKeyUsages, ["ClientAuth"])
+    for (const flag of ["allowAnyName", "allowGlobDomains", "allowSubdomains", "allowWildcardCertificates", "allowIpSans", "allowLocalhost"]) {
+      assert.equal(role[flag], false, `${key}/${flag}`)
+    }
+    const auth = byName(resources, `pki-issuer-approle-${key}`).inputs
+    assert.equal(auth.bindSecretId, true)
+    assert.equal(auth.tokenNoDefaultPolicy, true)
+    assert.equal(auth.tokenType, "batch")
+    assert.equal(auth.tokenTtl, 900)
+    assert.equal(auth.tokenExplicitMaxTtl, 900)
+    assert.deepEqual(auth.secretIdBoundCidrs, issuer.appRole.secretIdBoundCidrs)
+    assert.deepEqual(auth.tokenBoundCidrs, issuer.appRole.tokenBoundCidrs)
+    assert.deepEqual(auth.tokenPolicies, [issuer.policyName])
+    assert.equal(byName(resources, `pki-issuer-policy-${key}`).inputs.policy,
+      `path "pki_int/issue/${issuer.roleName}" {\n  capabilities = ["create", "update"]\n}`)
+    for (const kind of ["role", "policy", "approle"]) {
+      assert.equal(byName(deployment.captured, `pki-issuer-${kind}-${key}`).opts.protect, true)
+    }
+  }
 
   const provider = byName(deployment.captured, "vault")
   const providerState = byName(resources, "vault")
