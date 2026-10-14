@@ -725,6 +725,64 @@ prometheus.scrape "metrics_server" {
   forward_to = [prometheus.remote_write.beacon.receiver]
 }
 
+// CoreDNS already exposes :9153. Reuse pod-only kube-system discovery access;
+// scrape each replica without altering the resolver or logging DNS queries.
+discovery.kubernetes "coredns" {
+  role = "pod"
+  namespaces { names = ["kube-system"] }
+  selectors {
+    role = "pod"
+    label = "k8s-app=kube-dns"
+  }
+}
+discovery.relabel "coredns" {
+  targets = discovery.kubernetes.coredns.targets
+  rule {
+    source_labels = ["__meta_kubernetes_pod_phase"]
+    regex = "Running"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_container_init"]
+    regex = "false"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_label_k8s_app", "__meta_kubernetes_pod_container_name", "__meta_kubernetes_pod_container_port_name", "__meta_kubernetes_pod_container_port_number"]
+    regex = "kube-dns;coredns;metrics;9153"
+    action = "keep"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_namespace"]
+    target_label = "namespace"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "pod"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_node_name"]
+    target_label = "node"
+  }
+  rule {
+    source_labels = ["__meta_kubernetes_pod_name"]
+    target_label = "instance"
+  }
+}
+prometheus.scrape "coredns" {
+  targets = discovery.relabel.coredns.output
+  job_name = "coredns"
+  // Private HTTP metrics: never attach the API token or client TLS keys.
+  scheme = "http"
+  metrics_path = "/metrics"
+  scrape_interval = "30s"
+  scrape_timeout = "10s"
+  sample_limit = 5000
+  follow_redirects = false
+  clustering { enabled = true }
+  forward_to = [prometheus.remote_write.beacon.receiver]
+}
+
 prometheus.exporter.self "alloy" {}
 prometheus.scrape "self" {
   targets = prometheus.exporter.self.alloy.targets

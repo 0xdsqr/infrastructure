@@ -59,7 +59,7 @@ test("metrics pipeline verifies all TLS peers, reloads mounted credentials, and 
   assert.doesNotMatch(config, /insecure_skip_verify\s*=\s*true|nodes\/proxy|loki\.|otelcol\.|pyroscope\./)
   assert.match(config, /https:\/\/beacon-telemetry\.service\.home\.arpa:9443\/api\/v1\/write/)
   assert.equal((config.match(/insecure_skip_verify = false/g) ?? []).length, 7)
-  assert.equal((config.match(/clustering \{ enabled = true \}/g) ?? []).length, 15)
+  assert.equal((config.match(/clustering \{ enabled = true \}/g) ?? []).length, 16)
   assert.equal((config.match(/:10250", node =/g) ?? []).length, 9)
   assert.equal((config.match(/:6443", instance =/g) ?? []).length, 3)
   assert.match(config, /external_labels = \{cluster = "indigo", env = "production"\}/)
