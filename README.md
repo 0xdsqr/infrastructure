@@ -968,6 +968,16 @@ response-code, latency, and cache-hit series present. Both resolver pods remain
 Ready with zero restarts and their existing 14-day age; this did not restart DNS.
 The Indigo total is now 87 healthy scrape targets in each backend, with none down.
 
+Five CoreDNS panels are prepared in the existing Nix-provisioned
+`K8s - Indigo - Overview` dashboard: scrape health, per-pod request rate,
+response-code rate, per-pod p95 query duration, and cache hit ratio. All queries
+were checked against live Prometheus data. The existing 13 panels, UID and tags
+are preserved; missing data is not zero-filled. Beacon rebuild and rendered-UI
+verification are still required before marking these panels deployed. No new
+alerts or full DNS query logging are included. Metric semantics follow the
+[CoreDNS metrics](https://coredns.io/plugins/metrics/) and
+[cache](https://coredns.io/plugins/cache/) documentation.
+
 Publication checks: infrastructure lint and workspace/infra typechecking passed.
 The focused DNS, collector, host-enrollment and Vault-state checks passed (14
 passed, three optional chart renders skipped). The full infrastructure suite is
