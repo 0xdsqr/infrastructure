@@ -1,0 +1,111 @@
+# Temporary validation workload; remove this file and its kustomization entry
+# after removing the Cloudflare canary route/DNS. No application data or secrets.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ingress-canary
+automountServiceAccountToken: false
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ingress-canary
+spec:
+  replicas: 2
+  revisionHistoryLimit: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
+  selector:
+    matchLabels: {app.kubernetes.io/name: ingress-canary}
+  template:
+    metadata:
+      labels: {app.kubernetes.io/name: ingress-canary}
+    spec:
+      serviceAccountName: ingress-canary
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile: {type: RuntimeDefault}
+      nodeSelector:
+        platform.dsqr.dev/node-pool: platform
+      tolerations:
+        - key: platform.dsqr.dev/dedicated
+          operator: Equal
+          value: platform
+          effect: NoSchedule
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels: {app.kubernetes.io/name: ingress-canary}
+      containers:
+        - name: echo
+          image: docker.io/hashicorp/http-echo:1.0.0@sha256:fcb75f691c8b0414d670ae570240cbf95502cc18a9ba57e982ecac589760a186
+          args: ["-listen=:8080", "-text=dsqr-labs-indigo-canary-ok"]
+          ports: [{name: http, containerPort: 8080}]
+          readinessProbe:
+            httpGet: {path: /health, port: http}
+          livenessProbe:
+            httpGet: {path: /health, port: http}
+          resources:
+            requests: {cpu: 10m, memory: 16Mi}
+            limits: {cpu: 100m, memory: 64Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ingress-canary
+spec:
+  selector: {app.kubernetes.io/name: ingress-canary}
+  ports: [{name: http, port: 8080, targetPort: http}]
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ingress-canary
+spec:
+  parentRefs:
+    - name: shared
+      namespace: gateway-system
+      sectionName: https
+  hostnames: [canary-indigo.dsqr.dev]
+  rules:
+    - matches:
+        - path: {type: Exact, value: /}
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - {name: Cache-Control, value: "no-store"}
+              - {name: X-Robots-Tag, value: "noindex, nofollow"}
+      backendRefs:
+        - name: ingress-canary
+          port: 8080
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: ingress-canary
+spec:
+  endpointSelector:
+    matchLabels: {app.kubernetes.io/name: ingress-canary}
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: envoy-gateway-system
+            gateway.envoyproxy.io/owning-gateway-name: shared
+            gateway.envoyproxy.io/owning-gateway-namespace: gateway-system
+      toPorts:
+        - ports: [{port: "8080", protocol: TCP}]
+    - fromEntities: [host, remote-node]
+      toPorts:
+        - ports: [{port: "8080", protocol: TCP}]
+  # Namespace default-deny supplies egress isolation: no outbound access needed.

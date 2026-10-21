@@ -5,8 +5,8 @@ import { createCloudflareEdgeEffect } from "@dsqr/pulumi-cloudflare"
 import { runPulumiProgram } from "@dsqr/pulumi-shared"
 
 import * as pulumi from "@pulumi/pulumi"
-import { cloudflare, indigoTunnel } from "../infra/cloudflare/config.ts"
-import { byName, runPulumiMockProgram } from "./pulumi-state-helpers.ts"
+import { cloudflare, indigoIngressRules, indigoTunnel } from "../infra/cloudflare/config.ts"
+import { byName, resolveOutput, runPulumiMockProgram } from "./pulumi-state-helpers.ts"
 
 const tunnelToken = "cloudflare:index/zeroTrustTunnelCloudflared:ZeroTrustTunnelCloudflared"
 const tunnelConfigToken =
@@ -24,7 +24,7 @@ const zoneIds = {
   tastingswithtayCom: "zone-twt",
 } as const
 
-test("Indigo creates only an isolated protected tunnel with a secret token and no public routes", async () => {
+test("Indigo creates an isolated protected tunnel and only the temporary canary DNS", async () => {
   const deployment = await runPulumiMockProgram({
     program: () => runPulumiProgram(createCloudflareEdgeEffect({
       accountId: "account-id",
@@ -33,20 +33,26 @@ test("Indigo creates only an isolated protected tunnel with a secret token and n
       zones: { dsqrDev: "dsqr.dev" },
       zoneSecurity: { dsqrDev: {} },
       manageZoneSecurity: false,
-      ingressRules: [],
+      ingressRules: indigoIngressRules,
       resourceOptions: { protect: true },
     })),
     outputs: result => ({ tunnelToken: result.tunnelToken }),
     call: args => args.token === tunnelTokenInvoke ? { token: "indigo-test-token" } : args.inputs,
     project: "cloudflare-edge",
   })
+  // DNS registration depends on the asynchronous tunnel ID, not the token output.
+  await Promise.all(deployment.captured.map(({resource}) =>
+    resource instanceof pulumi.CustomResource ? resolveOutput(resource.id) : Promise.resolve()))
   const resources = deployment.resources.filter(resource => resource.type.startsWith("cloudflare:"))
-  assert.deepEqual(resources.map(resource => resource.name).sort(), ["dsqr-labs-indigo", "dsqr-labs-indigo-config"])
+  assert.deepEqual(resources.map(resource => resource.name).sort(), ["canary-indigo-dsqr-dev", "dsqr-labs-indigo", "dsqr-labs-indigo-config"])
   const tunnel = byName(resources, "dsqr-labs-indigo")
   assert.equal(tunnel.inputs.configSrc, "cloudflare")
   assert.equal(tunnel.inputs.tunnelSecret, undefined)
   assert.deepEqual(byName(resources, "dsqr-labs-indigo-config").inputs.config, {
-    ingresses: [{ service: "http_status:404" }],
+    ingresses: [
+      ...indigoIngressRules.map(({hostname, service, originRequest}) => ({hostname, service, originRequest})),
+      { service: "http_status:404" },
+    ],
   })
   for (const resource of resources) assert.equal(byName(deployment.captured, resource.name).opts.protect, true)
   assert.equal(await pulumi.isSecret(deployment.result.tunnelToken), true)

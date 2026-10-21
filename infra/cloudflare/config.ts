@@ -25,6 +25,19 @@ export const indigoTunnel = {
   defaultService: "http_status:404",
 } as const
 
+// Temporary public end-to-end check; remove this route and its DNS after validation.
+export const indigoIngressRules = [{
+  hostname: "canary-indigo.dsqr.dev",
+  zone: "dsqrDev",
+  service: "https://envoy-gateway-system-shared-e9cec0f8.envoy-gateway-system.svc.cluster.local:443",
+  originRequest: {
+    http2Origin: false,
+    httpHostHeader: "canary-indigo.dsqr.dev",
+    originServerName: "gateway.indigo.home.arpa",
+    caPool: "/etc/cloudflared-ca/ca.crt",
+  },
+}] as const
+
 export const cloudflare = {
   tunnel: {
     name: "gateway",

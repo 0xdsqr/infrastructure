@@ -94,10 +94,16 @@ spec:
             capabilities:
               drop: [ALL]
           volumeMounts:
+            - name: origin-ca
+              mountPath: /etc/cloudflared-ca
+              readOnly: true
             - name: token
               mountPath: /etc/cloudflared
               readOnly: true
       volumes:
+        - name: origin-ca
+          configMap:
+            name: dsqr-home-root-ca
         - name: token
           secret:
             secretName: cloudflared-token

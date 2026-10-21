@@ -18,6 +18,7 @@ export type CloudflareIngressRule = {
     readonly http2Origin?: boolean
     readonly httpHostHeader?: string
     readonly originServerName?: string
+    readonly caPool?: string
   }
 }
 

@@ -1,0 +1,19 @@
+# Temporary counterpart to cloudflared/overlays/indigo/canary.yaml.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: envoy-shared-to-ingress-canary
+  namespace: envoy-gateway-system
+spec:
+  endpointSelector:
+    matchLabels:
+      gateway.envoyproxy.io/owning-gateway-name: shared
+      gateway.envoyproxy.io/owning-gateway-namespace: gateway-system
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: cloudflare-system
+            app.kubernetes.io/name: ingress-canary
+            k8s:io.cilium.k8s.policy.serviceaccount: ingress-canary
+      toPorts:
+        - ports: [{port: "8080", protocol: TCP}]

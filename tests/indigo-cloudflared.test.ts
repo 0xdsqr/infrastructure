@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs"
 import test from "node:test"
 import { parse, parseAllDocuments } from "yaml"
 import { vault } from "../infra/vault/config.ts"
+import { cloudflare, indigoIngressRules } from "../infra/cloudflare/config.ts"
 
 const render = (component: string) => parseAllDocuments(execFileSync("kubectl", [
   "kustomize", `gitops/components/${component}/overlays/indigo`,
@@ -30,13 +31,47 @@ test("Indigo tunnel is HA, restricted, and exclusively scheduled on platform nod
   assert.ok(container.args.includes("--token-file"))
   assert.equal(container.readinessProbe.httpGet.path, "/ready")
   assert.equal(resources.find(resource => resource.kind === "PodDisruptionBudget").spec.minAvailable, 1)
-  assert.equal(resources.some(resource => ["Secret", "Service", "ClusterRole", "Role"].includes(resource.kind)), false)
+  assert.equal(resources.some(resource => ["Secret", "ClusterRole", "Role"].includes(resource.kind)), false)
   const deny = resources.find(resource => resource.kind === "NetworkPolicy")
   assert.deepEqual(deny.spec.podSelector, {})
   assert.deepEqual(deny.spec.policyTypes, ["Ingress", "Egress"])
   const allow = resources.find(resource => resource.kind === "CiliumNetworkPolicy")
   assert.equal(allow.spec.egress.length, 3)
   assert.deepEqual(allow.spec.egress[1].toPorts[0].ports, [{ port: "7844", protocol: "UDP" }, { port: "7844", protocol: "TCP" }])
+})
+
+test("Temporary canary verifies origin TLS and exposes only a fixed test response", () => {
+  const resources = render("cloudflared")
+  const ca = resources.find(resource => resource.kind === "ConfigMap" && resource.metadata.name === "dsqr-home-root-ca")
+  const issuerCa = render("external-secrets-config").find(resource => resource.kind === "ConfigMap" && resource.metadata.name === "dsqr-home-root-ca" && resource.metadata.namespace === "gateway-system")
+  assert.deepEqual(ca.data, issuerCa.data)
+  const tunnel = resources.find(resource => resource.kind === "Deployment" && resource.metadata.name === "cloudflared")
+  const mount = tunnel.spec.template.spec.containers[0].volumeMounts.find((item: {name: string}) => item.name === "origin-ca")
+  assert.equal(mount.readOnly, true)
+  assert.equal(indigoIngressRules.length, 1)
+  const rule = indigoIngressRules[0]
+  assert.equal(rule.originRequest.caPool, `${mount.mountPath}/ca.crt`)
+  assert.equal(rule.originRequest.originServerName, "gateway.indigo.home.arpa")
+  assert.ok(rule.service.startsWith("https://"))
+  assert.equal("noTlsVerify" in rule.originRequest, false)
+  assert.equal(cloudflare.ingressRules.some(item => String(item.hostname) === rule.hostname), false)
+  const route = resources.find(resource => resource.kind === "HTTPRoute")
+  assert.deepEqual(route.spec.hostnames, [rule.hostname])
+  assert.deepEqual(route.spec.rules[0].matches, [{path: {type: "Exact", value: "/"}}])
+  const deployment = resources.find(resource => resource.kind === "Deployment" && resource.metadata.name === "ingress-canary")
+  const pod = deployment.spec.template.spec
+  assert.equal(deployment.spec.replicas, 2)
+  assert.equal(pod.automountServiceAccountToken, false)
+  assert.equal(pod.volumes, undefined)
+  assert.equal(pod.containers[0].env, undefined)
+  assert.deepEqual(pod.containers[0].args, ["-listen=:8080", "-text=dsqr-labs-indigo-canary-ok"])
+  assert.match(pod.containers[0].image, /@sha256:[a-f0-9]{64}$/)
+  assert.equal(pod.containers[0].securityContext.readOnlyRootFilesystem, true)
+  const policy = resources.find(resource => resource.kind === "CiliumNetworkPolicy" && resource.metadata.name === "ingress-canary")
+  assert.equal(policy.spec.egress, undefined)
+  const gatewayPolicy = render("gateway").find(resource => resource.metadata.name === "envoy-shared-to-ingress-canary")
+  assert.equal(gatewayPolicy.spec.egress[0].toEndpoints[0].matchLabels["k8s:io.cilium.k8s.policy.serviceaccount"], "ingress-canary")
+  assert.deepEqual(gatewayPolicy.spec.egress[0].toPorts, [{ports: [{port: "8080", protocol: "TCP"}]}])
 })
 
 test("Tunnel token is single-path Vault access, with no account credential in GitOps", () => {

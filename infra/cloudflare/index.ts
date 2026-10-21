@@ -6,7 +6,7 @@ import { createCloudflareEdgeEffect, planCloudflareEdgeEffect } from "@dsqr/pulu
 import { registerPulumiResource, runPulumiProgram } from "@dsqr/pulumi-shared"
 
 import { infrastructure } from "../../infra.config.ts"
-import { indigoTunnel, loadCloudflareConfig } from "./config.ts"
+import { indigoIngressRules, indigoTunnel, loadCloudflareConfig } from "./config.ts"
 
 export const indigoEdge = runPulumiProgram(
   Effect.gen(function* () {
@@ -20,7 +20,7 @@ export const indigoEdge = runPulumiProgram(
       zones: { dsqrDev: "dsqr.dev" },
       zoneSecurity: { dsqrDev: {} },
       manageZoneSecurity: false, // The existing cloudflareEdge graph owns zone settings.
-      ingressRules: [],
+      ingressRules: indigoIngressRules,
       resourceOptions: { protect: true },
     })
   }),
