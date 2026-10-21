@@ -8,7 +8,6 @@ resources:
   - networkpolicy.yaml
   - access.ciliumnetworkpolicy.yaml
   - origin-ca.configmap.yaml
-  - canary.yaml
 labels:
   - pairs:
       app.kubernetes.io/managed-by: argocd

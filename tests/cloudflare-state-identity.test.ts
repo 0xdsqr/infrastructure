@@ -24,7 +24,7 @@ const zoneIds = {
   tastingswithtayCom: "zone-twt",
 } as const
 
-test("Indigo creates an isolated protected tunnel and only the temporary canary DNS", async () => {
+test("Indigo stays isolated with no public routes after canary cleanup", async () => {
   const deployment = await runPulumiMockProgram({
     program: () => runPulumiProgram(createCloudflareEdgeEffect({
       accountId: "account-id",
@@ -44,7 +44,7 @@ test("Indigo creates an isolated protected tunnel and only the temporary canary 
   await Promise.all(deployment.captured.map(({resource}) =>
     resource instanceof pulumi.CustomResource ? resolveOutput(resource.id) : Promise.resolve()))
   const resources = deployment.resources.filter(resource => resource.type.startsWith("cloudflare:"))
-  assert.deepEqual(resources.map(resource => resource.name).sort(), ["canary-indigo-dsqr-dev", "dsqr-labs-indigo", "dsqr-labs-indigo-config"])
+  assert.deepEqual(resources.map(resource => resource.name).sort(), ["dsqr-labs-indigo", "dsqr-labs-indigo-config"])
   const tunnel = byName(resources, "dsqr-labs-indigo")
   assert.equal(tunnel.inputs.configSrc, "cloudflare")
   assert.equal(tunnel.inputs.tunnelSecret, undefined)

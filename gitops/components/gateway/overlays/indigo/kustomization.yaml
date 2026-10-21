@@ -5,7 +5,6 @@ resources:
   - ../../base
   - dmz-ingress.ciliumnetworkpolicy.yaml
   - cloudflared-ingress.ciliumnetworkpolicy.yaml
-  - canary-egress.ciliumnetworkpolicy.yaml
 
 components:
   - ../../network-policy
