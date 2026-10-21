@@ -25,7 +25,12 @@ spec:
       namespace: kube-system
     - server: https://kubernetes.default.svc
       namespace: observability
+    - server: https://kubernetes.default.svc
+      namespace: dsqr
   clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+      name: dsqr
     - group: ""
       kind: Namespace
       name: cloudflare-system

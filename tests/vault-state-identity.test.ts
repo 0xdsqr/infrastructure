@@ -105,6 +105,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     [policyToken, "external-secrets-policy-indigo-argocd-github-webhook"],
     [policyToken, "external-secrets-policy-indigo-bootstrap-smoke-test"],
     [policyToken, "external-secrets-policy-indigo-cloudflare-tunnel"],
+    [policyToken, "external-secrets-policy-indigo-dotdev-web"],
     ...Object.keys(externalPolicyNames).map(
       (key) => [policyToken, `external-secrets-policy-${key}`] as const,
     ),
@@ -231,10 +232,12 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     dependsOn: ["kv"],
   })
   lifecycle("external-secrets-token-self-policy-indigo", { protect: true })
+  lifecycle("external-secrets-policy-indigo-dotdev-web", { dependsOn: ["kv"] })
   lifecycle("external-secrets-kubernetes-role-indigo", {
     protect: true,
     dependsOn: [
       "kubernetes-auth-backend-config-indigo",
+      "external-secrets-policy-indigo-dotdev-web",
       "external-secrets-policy-indigo-cloudflare-tunnel",
       "external-secrets-policy-indigo-argocd-github-webhook",
       "external-secrets-policy-indigo-bootstrap-smoke-test",
@@ -429,11 +432,14 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   assert.equal(indigoRole.inputs.roleName, "indigo-external-secrets")
   assert.equal(indigoRole.inputs.tokenNoDefaultPolicy, true)
   assert.deepEqual(indigoRole.inputs.tokenPolicies, [
+    "indigo-external-secrets-dotdev-web",
     "indigo-external-secrets-cloudflare-tunnel",
     "indigo-external-secrets-argocd-github-webhook",
     "indigo-external-secrets-bootstrap-smoke-test",
     "indigo-external-secrets-token-self",
   ])
+  assert.equal(byName(resources, "external-secrets-policy-indigo-dotdev-web").inputs.policy,
+    'path "kv/data/dsqr-labs/clusters/indigo/apps/dotdev-web" {\n  capabilities = ["read"]\n}\n\npath "kv/metadata/dsqr-labs/clusters/indigo/apps/dotdev-web" {\n  capabilities = ["read"]\n}')
 
   for (const key of issuerKeys) {
     const config = vault.pkiIssuers[key]

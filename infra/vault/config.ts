@@ -31,6 +31,11 @@ const kv = {
 } satisfies VaultKvMountConfig
 
 const secretPaths = {
+  indigoDotdevWeb: {
+    path: "dsqr-labs/clusters/indigo/apps/dotdev-web",
+    description: "Indigo Dotdev runtime-only database credential; no owner or migration login.",
+    fields: ["DATABASE_URL"],
+  },
   indigoCloudflareTunnel: {
     path: "dsqr-labs/clusters/indigo/cloudflare/tunnel",
     description: "Indigo-only Cloudflare tunnel connector token; no Cloudflare account API credentials.",
@@ -276,6 +281,11 @@ const externalSecretsKubernetesAuthBoundaries = {
       disableLocalCaJwt: true,
     },
     policies: {
+      dotdevWeb: {
+        name: "indigo-external-secrets-dotdev-web",
+        readPaths: [secretPaths.indigoDotdevWeb.path],
+        resourceName: "external-secrets-policy-indigo-dotdev-web",
+      },
       cloudflareTunnel: {
         name: "indigo-external-secrets-cloudflare-tunnel",
         readPaths: [secretPaths.indigoCloudflareTunnel.path],

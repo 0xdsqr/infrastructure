@@ -3,5 +3,6 @@ kind: Kustomization
 namePrefix: indigo-
 resources:
   - ../../base
+  - applications.applicationset.yaml
 patches:
   - path: inventory.yaml

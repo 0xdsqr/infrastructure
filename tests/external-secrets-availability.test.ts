@@ -83,7 +83,7 @@ test("only Indigo's ESO project gains namespaced disruption-budget permission", 
 })
 
 test("ESO availability remains wired through the existing manually synced ApplicationSet application", () => {
-  const applicationSet = kustomize("gitops/clusters/indigo/applications").find(o => o.kind === "ApplicationSet")
+  const applicationSet = kustomize("gitops/clusters/indigo/applications").find(o => o.metadata.name === "indigo-platform")
   const application = (previewApplicationSet(applicationSet) as any[]).find(o => o.metadata.name === "external-secrets")
   assert.equal(application.spec.project, "platform-external-secrets")
   assert.equal(application.spec.sources[0].targetRevision, "2.8.0")

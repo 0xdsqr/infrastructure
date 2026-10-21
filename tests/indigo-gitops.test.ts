@@ -44,6 +44,7 @@ test("Indigo requires controller sync approval while configuration heals automat
     "indigo-metrics",
     "cloudflared",
     "kube-state-metrics",
+    "dotdev-web",
   ])
   for (const application of applications) {
     const lifecycle = application.metadata.labels["platform.dsqr.dev/lifecycle"]
@@ -143,8 +144,9 @@ test("steady-state lifecycle selection works for new Application names", async (
 test("only hub-a renders the legacy Cilium tracking exception", () => {
   for (const cluster of ["hub-a", "indigo"]) {
     const applications = renderApplications(cluster)
-    const rules = applications.find((application) => application.metadata.name === "cilium").spec
-      .ignoreDifferences ?? []
+    const rules =
+      applications.find((application) => application.metadata.name === "cilium").spec
+        .ignoreDifferences ?? []
     assert.equal(
       rules.some((rule) =>
         rule.jsonPointers.includes("/metadata/annotations/argocd.argoproj.io~1tracking-id"),
@@ -235,13 +237,14 @@ test("Indigo pins the Gateway API Standard Channel and its exact cluster permiss
   assert.doesNotMatch(project, /kind: "\*"|name: "\*"/)
 })
 
-test("Indigo foundation declares only current platform namespaces", async () => {
+test("Indigo foundation declares only current platform and onboarded application namespaces", async () => {
   const namespaces = await read(
     "gitops/components/cluster-foundation/overlays/indigo/namespaces.yaml",
   )
   const names = [...namespaces.matchAll(/^  name: (.+)$/gm)].map((match) => match[1])
 
   assert.deepEqual(names, [
+    "dsqr",
     "cloudflare-system",
     "observability",
     "argocd",
@@ -262,6 +265,98 @@ test("Indigo foundation declares only current platform namespaces", async () => 
   assert.match(
     namespaces,
     /name: metallb-system[\s\S]+pod-security\.kubernetes\.io\/enforce: privileged/,
+  )
+})
+
+test("Indigo Dotdev first deployment is private, pinned, and manually synced", async () => {
+  const application = renderApplications("indigo").find(
+    (resource) => resource.metadata.name === "dotdev-web",
+  )
+  assert.ok(application)
+  assert.equal(application.spec.project, "dsqr")
+  assert.equal(application.spec.destination.namespace, "dsqr")
+  assert.equal(application.spec.syncPolicy.automated.enabled, false)
+  assert.equal(application.spec.syncPolicy.automated.prune, false)
+  assert.equal(application.spec.sources.length, 2)
+  const chart = application.spec.sources[0]
+  assert.equal(chart.repoURL, "https://github.com/0xdsqr/dsqr-dotdev.git")
+  assert.match(chart.targetRevision, /^[a-f0-9]{40}$/)
+  assert.equal(chart.path, "helm/dsqr-app")
+  assert.deepEqual(chart.helm.valueFiles, [
+    "values-dotdev.yaml",
+    "$values/gitops/components/dotdev/overlays/indigo/values-dotdev.yaml",
+  ])
+  const values = parseAllDocuments(
+    await read("gitops/components/dotdev/overlays/indigo/values-dotdev.yaml"),
+  )[0].toJSON()
+  assert.match(values.image.digest, /^sha256:[a-f0-9]{64}$/)
+  assert.equal(values.replicaCount, 1)
+  assert.equal(values.trustProxy, false)
+  assert.deepEqual(values.route, { enabled: false, hostnames: [] })
+  assert.deepEqual(values.database, {
+    existingSecret: "dotdev-web",
+    caConfigMap: "dsqr-home-root-ca",
+    address: "10.10.30.109",
+    port: 5432,
+  })
+})
+
+test("Indigo Dotdev prerequisites isolate the namespace and expose only its runtime URL", async () => {
+  const bootstrap = parseAllDocuments(
+    await read("gitops/clusters/indigo/bootstrap/bootstrap.appproject.yaml"),
+  )[0].toJSON()
+  assert.ok(
+    bootstrap.spec.destinations.some(
+      (destination: { namespace: string }) => destination.namespace === "dsqr",
+    ),
+  )
+  const render = (component: string) =>
+    parseAllDocuments(
+      execFileSync("kubectl", ["kustomize", `gitops/components/${component}/overlays/indigo`], {
+        encoding: "utf8",
+      }),
+    ).map((document) => document.toJSON())
+  const foundation = render("cluster-foundation")
+  const namespace = foundation.find(
+    (resource) => resource.kind === "Namespace" && resource.metadata.name === "dsqr",
+  )
+  assert.equal(namespace.metadata.labels["pod-security.kubernetes.io/enforce"], "restricted")
+  assert.equal(namespace.metadata.labels["platform.dsqr.dev/gateway-access"], undefined)
+  const deny = foundation.find(
+    (resource) => resource.kind === "NetworkPolicy" && resource.metadata.namespace === "dsqr",
+  )
+  assert.deepEqual(deny.spec, {
+    podSelector: {},
+    policyTypes: ["Ingress", "Egress"],
+    ingress: [],
+    egress: [],
+  })
+
+  const resources = render("external-secrets-config").filter(
+    (resource) => resource.metadata.namespace === "dsqr",
+  )
+  assert.equal(resources.length, 2)
+  const secret = resources.find((resource) => resource.kind === "ExternalSecret")
+  assert.equal(secret.metadata.name, "dotdev-web")
+  assert.deepEqual(secret.spec.secretStoreRef, { name: "vault-indigo", kind: "ClusterSecretStore" })
+  assert.equal(secret.spec.dataFrom, undefined)
+  assert.deepEqual(secret.spec.data, [
+    {
+      secretKey: "DATABASE_URL",
+      remoteRef: { key: "dsqr-labs/clusters/indigo/apps/dotdev-web", property: "DATABASE_URL" },
+    },
+  ])
+  assert.equal(
+    resources.find((resource) => resource.kind === "ConfigMap").metadata.name,
+    "dsqr-home-root-ca",
+  )
+  const project = render("argocd").find(
+    (resource) => resource.kind === "AppProject" && resource.metadata.name === "secrets",
+  )
+  assert.ok(
+    project.spec.destinations.some(
+      (destination: { namespace: string }) => destination.namespace === "dsqr",
+    ),
   )
 })
 
@@ -289,11 +384,17 @@ test("Indigo MetalLB reserves the Gateway VIP and advertises only from workers",
   // The same Argo application now supplies the default deny as a companion,
   // replacing the chart's unscoped metrics ingress without changing IP pools.
   assert.match(values, /enabled: false/)
-  const policies = parseAllDocuments(execFileSync("kubectl", ["kustomize",
-    "gitops/components/metallb/controller-access/overlays/indigo"], { encoding: "utf8" }))
-    .map(d => d.toJSON())
-  assert.deepEqual(policies.find(p => p.kind === "NetworkPolicy" && p.metadata.name === "default-deny").spec,
-    { podSelector: {}, policyTypes: ["Ingress", "Egress"] })
+  const policies = parseAllDocuments(
+    execFileSync(
+      "kubectl",
+      ["kustomize", "gitops/components/metallb/controller-access/overlays/indigo"],
+      { encoding: "utf8" },
+    ),
+  ).map((d) => d.toJSON())
+  assert.deepEqual(
+    policies.find((p) => p.kind === "NetworkPolicy" && p.metadata.name === "default-deny").spec,
+    { podSelector: {}, policyTypes: ["Ingress", "Egress"] },
+  )
 })
 
 test("Indigo shared Envoy Gateway is HA, HTTPS-only, and restricted by namespace label", async () => {
@@ -504,10 +605,19 @@ test("Indigo kubelet serving CSR approval is restricted to three controls and si
   const names = new RegExp(config.providerRegex)
   for (let i = 1; i <= 3; i += 1) assert.ok(names.test(`srv-lx-k8s-indigo-control-0${i}`))
   for (let i = 1; i <= 6; i += 1) assert.ok(names.test(`srv-lx-k8s-indigo-worker-0${i}`))
-  for (const name of ["srv-lx-k8s-indigo-control-04", "srv-lx-k8s-indigo-worker-07", "srv-lx-k8s-indigo-worker-00", "other-worker-04", "srv-lx-k8s-indigo-worker-04-extra"]) {
+  for (const name of [
+    "srv-lx-k8s-indigo-control-04",
+    "srv-lx-k8s-indigo-worker-07",
+    "srv-lx-k8s-indigo-worker-00",
+    "other-worker-04",
+    "srv-lx-k8s-indigo-worker-04-extra",
+  ]) {
     assert.equal(names.test(name), false, name)
   }
-  assert.deepEqual(config.providerIpPrefixes, Array.from({ length: 9 }, (_, i) => `10.10.80.${100 + i}/32`))
+  assert.deepEqual(
+    config.providerIpPrefixes,
+    Array.from({ length: 9 }, (_, i) => `10.10.80.${100 + i}/32`),
+  )
   assert.match(values, /bypassDnsResolution: true/)
   assert.match(values, /bypassHostnameCheck: false/)
   assert.match(values, /ignoreNonSystemNode: false/)

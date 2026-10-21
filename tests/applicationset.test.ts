@@ -9,7 +9,9 @@ const applicationSet = () =>
     execFileSync("kubectl", ["kustomize", "gitops/clusters/indigo/applications"], {
       encoding: "utf8",
     }),
-  )[0]!.toJSON()
+  )
+    .map((document) => document.toJSON())
+    .find((resource) => resource.metadata.name === "indigo-platform")
 
 test("Indigo has one protected native owner for all platform Applications", () => {
   const owner = applicationSet()
@@ -21,7 +23,7 @@ test("Indigo has one protected native owner for all platform Applications", () =
     "Prune=confirm,Delete=confirm",
   )
   const apps = previewApplicationSet(owner)
-  assert.equal(apps.length, 17)
+  assert.equal(apps.length, 18)
   assert.ok(apps.some((app) => (app.metadata as { name: string }).name === "argocd"))
   for (const app of apps) {
     const metadata = app.metadata as { namespace: string; finalizers?: string[] }
@@ -31,7 +33,13 @@ test("Indigo has one protected native owner for all platform Applications", () =
 })
 
 test("native inventory rejects empty, duplicate and unknown lifecycle entries", () => {
-  for (const mutation of ["empty", "duplicate", "lifecycle", "missing-field", "include-manifests"]) {
+  for (const mutation of [
+    "empty",
+    "duplicate",
+    "lifecycle",
+    "missing-field",
+    "include-manifests",
+  ]) {
     const owner = applicationSet()
     const inventory = owner.spec.generators[0].matrix.generators[1].list.elements
     if (mutation === "empty") inventory.splice(0)
@@ -55,13 +63,17 @@ test("native inventory cannot silently enable destructive deletion policies", ()
 test("chart companion subdirectories cannot escape their component or silently do nothing", () => {
   for (const value of ["", "..", "../metallb", "/tmp", "a/b", "access.yaml", true]) {
     const owner = applicationSet()
-    const component = owner.spec.generators[0].matrix.generators[1].list.elements.find((c: any) => c.name === "metallb")
+    const component = owner.spec.generators[0].matrix.generators[1].list.elements.find(
+      (c: any) => c.name === "metallb",
+    )
     component.manifestSubdirectory = value
     assert.throws(() => previewApplicationSet(owner), /manifestSubdirectory/)
   }
   for (const mutation of ["disabled", "no-chart"]) {
     const owner = applicationSet()
-    const component = owner.spec.generators[0].matrix.generators[1].list.elements.find((c: any) => c.name === "metallb")
+    const component = owner.spec.generators[0].matrix.generators[1].list.elements.find(
+      (c: any) => c.name === "metallb",
+    )
     if (mutation === "disabled") component.includeManifests = false
     else component.charts = []
     assert.throws(() => previewApplicationSet(owner), /manifestSubdirectory/)
@@ -92,7 +104,7 @@ test("every managed Indigo namespace requires prune and deletion confirmation", 
     }),
   ).map((document) => document.toJSON())
   const namespaces = resources.filter((resource) => resource.kind === "Namespace")
-  assert.equal(namespaces.length, 6)
+  assert.equal(namespaces.length, 8)
   for (const namespace of namespaces) {
     const options = namespace.metadata.annotations["argocd.argoproj.io/sync-options"].split(",")
     assert.ok(options.includes("Prune=confirm"), namespace.metadata.name)

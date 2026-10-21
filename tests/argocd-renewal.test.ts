@@ -15,7 +15,7 @@ const names = ["argocd-repo-server", "argocd-server", "argocd-applicationset-con
 const marker = "/spec/template/metadata/annotations/reloader.stakater.com~1last-reloaded-from"
 
 test("renewal is one generated manually approved Application with narrow Argo drift exclusions", () => {
-  const apps = previewApplicationSet(render("gitops/clusters/indigo/applications")[0]) as any[]
+  const apps = render("gitops/clusters/indigo/applications").flatMap(r => previewApplicationSet(r)) as any[]
   const reloader = apps.find(app => app.metadata.name === "reloader")
   assert.equal(reloader.spec.project, "platform-reloader")
   assert.equal(reloader.spec.syncPolicy.automated.enabled, false)

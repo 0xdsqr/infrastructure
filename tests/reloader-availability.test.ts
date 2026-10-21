@@ -71,7 +71,7 @@ test("pinned Reloader chart renders elected replicas, matching spread and disrup
 })
 
 test("Reloader HA uses the existing generated, manually synced Application", () => {
-  const set = kustomize("gitops/clusters/indigo/applications").find(o => o.kind === "ApplicationSet")
+  const set = kustomize("gitops/clusters/indigo/applications").find(o => o.metadata.name === "indigo-platform")
   const app = (previewApplicationSet(set) as any[]).find(o => o.metadata.name === "reloader")
   assert.equal(app.spec.project, "platform-reloader")
   assert.equal(app.spec.sources[0].targetRevision, "2.2.17")

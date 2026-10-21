@@ -92,7 +92,7 @@ test("only Indigo opts into kube-system disruption budgets, without taking CoreD
 })
 
 test("existing ApplicationSet controller applications retain pinned charts and manual sync", () => {
-  const applicationSet = kustomize("gitops/clusters/indigo/applications").find(o => o.kind === "ApplicationSet")
+  const applicationSet = kustomize("gitops/clusters/indigo/applications").find(o => o.metadata.name === "indigo-platform")
   const apps = previewApplicationSet(applicationSet) as any[]
   for (const [name, version] of [["cilium", "1.20.1"], ["kubelet-csr-approver", "1.2.14"]]) {
     const app = apps.find(o => o.metadata.name === name)

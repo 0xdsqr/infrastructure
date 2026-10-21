@@ -1,0 +1,14 @@
+# Private first rollout: enable an HTTPRoute only after database and filesystem checks.
+# CI 39642456474, dsqr-dotdev commit 1575cb0a25b55ce7ebea839b17662106ad04ddb7.
+image:
+  digest: sha256:c08e6645b94031acc2f5cfbf7c381d78cf6b4878599aae10e37984645af9cc31
+replicaCount: 1
+trustProxy: false
+database:
+  existingSecret: dotdev-web
+  caConfigMap: dsqr-home-root-ca
+  address: 10.10.30.109
+  port: 5432
+route:
+  enabled: false
+  hostnames: []

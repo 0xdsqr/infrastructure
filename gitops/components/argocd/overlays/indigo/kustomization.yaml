@@ -88,6 +88,8 @@ patches:
             namespace: metallb-system
           - server: https://kubernetes.default.svc
             namespace: cloudflare-system
+          - server: https://kubernetes.default.svc
+            namespace: dsqr
       - op: replace
         path: /spec/clusterResourceWhitelist
         value:

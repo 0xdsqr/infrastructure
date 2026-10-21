@@ -1,0 +1,81 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: applications
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=confirm,Delete=confirm
+spec:
+  goTemplate: true
+  goTemplateOptions: [missingkey=error]
+  generators:
+    - matrix:
+        generators:
+          - list:
+              elements:
+                - cluster: indigo
+                  environment: production
+                  repoURL: https://github.com/0xdsqr/infrastructure.git
+                  revision: refs/heads/master
+          - list:
+              elements:
+                - name: dotdev-web
+                  profile: dotdev
+                  appRevision: 1575cb0a25b55ce7ebea839b17662106ad04ddb7
+                  lifecycle: controller
+                  retryProfile: standard
+  syncPolicy:
+    applicationsSync: create-update
+    preserveResourcesOnDeletion: true
+  template:
+    metadata:
+      name: '{{ .name }}'
+      namespace: argocd
+      annotations:
+        argocd.argoproj.io/sync-wave: "6"
+      labels:
+        app.kubernetes.io/name: '{{ .name }}'
+        app.kubernetes.io/instance: '{{ .name }}'
+        app.kubernetes.io/managed-by: argocd
+        app.kubernetes.io/part-of: dsqr-dotdev
+        platform.dsqr.dev/owner: dsqr
+        platform.dsqr.dev/tier: application
+        platform.dsqr.dev/lifecycle: '{{ .lifecycle }}'
+        platform.dsqr.dev/cluster: '{{ .cluster }}'
+        platform.dsqr.dev/environment: '{{ .environment }}'
+    spec:
+      project: dsqr
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: dsqr
+      sources:
+        - repoURL: https://github.com/0xdsqr/dsqr-dotdev.git
+          targetRevision: '{{ .appRevision }}'
+          path: helm/dsqr-app
+          helm:
+            releaseName: '{{ .name }}'
+            valueFiles:
+              - 'values-{{ .profile }}.yaml'
+              - '$values/gitops/components/dotdev/overlays/{{ .cluster }}/values-{{ .profile }}.yaml'
+        - repoURL: '{{ .repoURL }}'
+          targetRevision: '{{ .revision }}'
+          ref: values
+  templatePatch: |
+    spec:
+      syncPolicy:
+        automated:
+          enabled: false
+          selfHeal: false
+          prune: false
+          allowEmpty: false
+        retry:
+          limit: 3
+          refresh: true
+          backoff:
+            duration: 20s
+            factor: 2
+            maxDuration: 2m
+        syncOptions:
+          - ApplyOutOfSyncOnly=true
+          - FailOnSharedResource=true
+          - PruneLast=true

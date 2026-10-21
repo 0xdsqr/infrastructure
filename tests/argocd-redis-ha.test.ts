@@ -171,7 +171,7 @@ test("clients use the chart-selected HA endpoint while preserving credentials an
   }
   // Keep pruning manual: the old standalone resources remain available for
   // rollback until the live client cutover has been independently verified.
-  const applicationSet = parseAllDocuments(execFileSync("kubectl", ["kustomize", "gitops/clusters/indigo/applications"], { encoding: "utf8" }))[0].toJSON()
+  const applicationSet = parseAllDocuments(execFileSync("kubectl", ["kustomize", "gitops/clusters/indigo/applications"], { encoding: "utf8" })).map(d => d.toJSON()).find(r => r.metadata.name === "indigo-platform")
   const argo = (previewApplicationSet(applicationSet) as any[]).find(o => o.metadata.name === "argocd")
   assert.equal(argo.spec.syncPolicy.automated.enabled, false)
   assert.equal(argo.spec.syncPolicy.automated.prune, false)

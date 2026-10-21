@@ -70,7 +70,7 @@ test("only Indigo's Metrics Server project permits the namespaced budget", () =>
 })
 
 test("Metrics Server remains in the shared ApplicationSet with pinned chart and manual sync", () => {
-  const applicationSet = kustomize("gitops/clusters/indigo/applications").find(o => o.kind === "ApplicationSet")
+  const applicationSet = kustomize("gitops/clusters/indigo/applications").find(o => o.metadata.name === "indigo-platform")
   const app = (previewApplicationSet(applicationSet) as any[]).find(o => o.metadata.name === "metrics-server")
   assert.equal(app.spec.project, "platform-metrics-server")
   assert.equal(app.spec.sources[0].targetRevision, "3.13.1")
