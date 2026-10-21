@@ -7,6 +7,7 @@ resources:
   - platform-argocd-access.appproject.yaml
   - platform-envoy-gateway.appproject.yaml
   - platform-gateway.appproject.yaml
+  - platform-cloudflared.appproject.yaml
   - platform-reloader.appproject.yaml
   - platform-telemetry-metrics.appproject.yaml
   - repository-egress.ciliumnetworkpolicy.yaml
@@ -85,6 +86,8 @@ patches:
             namespace: observability
           - server: https://kubernetes.default.svc
             namespace: metallb-system
+          - server: https://kubernetes.default.svc
+            namespace: cloudflare-system
       - op: replace
         path: /spec/clusterResourceWhitelist
         value:

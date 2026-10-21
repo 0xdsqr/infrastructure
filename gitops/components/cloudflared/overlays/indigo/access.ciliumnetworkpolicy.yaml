@@ -1,0 +1,63 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: cloudflared
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: cloudflared
+  ingress:
+    - fromEntities: [host, remote-node]
+      toPorts:
+        - ports:
+            - port: "2000"
+              protocol: TCP
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: kube-system
+            k8s:k8s-app: kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP
+    # Cloudflare's documented global tunnel endpoints; no arbitrary internet egress.
+    # https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/configure-tunnels/tunnel-with-firewall/
+    - toCIDR:
+        - 198.41.192.167/32
+        - 198.41.192.67/32
+        - 198.41.192.57/32
+        - 198.41.192.107/32
+        - 198.41.192.27/32
+        - 198.41.192.7/32
+        - 198.41.192.227/32
+        - 198.41.192.47/32
+        - 198.41.192.37/32
+        - 198.41.192.77/32
+        - 198.41.200.13/32
+        - 198.41.200.193/32
+        - 198.41.200.33/32
+        - 198.41.200.233/32
+        - 198.41.200.53/32
+        - 198.41.200.63/32
+        - 198.41.200.113/32
+        - 198.41.200.73/32
+        - 198.41.200.43/32
+        - 198.41.200.23/32
+      toPorts:
+        - ports:
+            - port: "7844"
+              protocol: UDP
+            - port: "7844"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: envoy-gateway-system
+            gateway.envoyproxy.io/owning-gateway-name: shared
+            gateway.envoyproxy.io/owning-gateway-namespace: gateway-system
+      toPorts:
+        - ports:
+            - port: "10443"
+              protocol: TCP

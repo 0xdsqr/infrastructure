@@ -104,6 +104,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     [policyToken, "external-secrets-token-self-policy-indigo"],
     [policyToken, "external-secrets-policy-indigo-argocd-github-webhook"],
     [policyToken, "external-secrets-policy-indigo-bootstrap-smoke-test"],
+    [policyToken, "external-secrets-policy-indigo-cloudflare-tunnel"],
     ...Object.keys(externalPolicyNames).map(
       (key) => [policyToken, `external-secrets-policy-${key}`] as const,
     ),
@@ -202,13 +203,11 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     assert.equal(resource.opts.protect, protect, `${name}: protect`)
     assert.equal(resource.opts.retainOnDelete, undefined, `${name}: retainOnDelete`)
     assert.equal(resource.opts.ignoreChanges, undefined, `${name}: ignoreChanges`)
-    assert.deepEqual(
-      resource.opts.dependsOn,
-      dependsOn.length === 0
-        ? undefined
-        : dependsOn.map((dependency) => byName(deployment.captured, dependency).resource),
-      `${name}: dependsOn`,
-    )
+    // Compare identities without recursively inspecting Pulumi's cyclic resource graph.
+    const dependencies = resource.opts.dependsOn as pulumi.Resource[] | undefined
+    assert.deepEqual(dependencies?.map(dependency =>
+      deployment.captured.find(candidate => candidate.resource === dependency)?.name ?? "unknown-resource",
+    ), dependsOn.length === 0 ? undefined : dependsOn, `${name}: dependsOn`)
     assert.match(state.provider, /pulumi:providers:vault::vault/)
   }
 
@@ -228,11 +227,15 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   lifecycle("external-secrets-policy-indigo-bootstrap-smoke-test", {
     dependsOn: ["kv"],
   })
+  lifecycle("external-secrets-policy-indigo-cloudflare-tunnel", {
+    dependsOn: ["kv"],
+  })
   lifecycle("external-secrets-token-self-policy-indigo", { protect: true })
   lifecycle("external-secrets-kubernetes-role-indigo", {
     protect: true,
     dependsOn: [
       "kubernetes-auth-backend-config-indigo",
+      "external-secrets-policy-indigo-cloudflare-tunnel",
       "external-secrets-policy-indigo-argocd-github-webhook",
       "external-secrets-policy-indigo-bootstrap-smoke-test",
       "external-secrets-token-self-policy-indigo",
@@ -426,6 +429,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   assert.equal(indigoRole.inputs.roleName, "indigo-external-secrets")
   assert.equal(indigoRole.inputs.tokenNoDefaultPolicy, true)
   assert.deepEqual(indigoRole.inputs.tokenPolicies, [
+    "indigo-external-secrets-cloudflare-tunnel",
     "indigo-external-secrets-argocd-github-webhook",
     "indigo-external-secrets-bootstrap-smoke-test",
     "indigo-external-secrets-token-self",

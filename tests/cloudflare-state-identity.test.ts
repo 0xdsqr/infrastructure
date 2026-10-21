@@ -4,7 +4,8 @@ import { test } from "node:test"
 import { createCloudflareEdgeEffect } from "@dsqr/pulumi-cloudflare"
 import { runPulumiProgram } from "@dsqr/pulumi-shared"
 
-import { cloudflare } from "../infra/cloudflare/config.ts"
+import * as pulumi from "@pulumi/pulumi"
+import { cloudflare, indigoTunnel } from "../infra/cloudflare/config.ts"
 import { byName, runPulumiMockProgram } from "./pulumi-state-helpers.ts"
 
 const tunnelToken = "cloudflare:index/zeroTrustTunnelCloudflared:ZeroTrustTunnelCloudflared"
@@ -22,6 +23,34 @@ const zoneIds = {
   fidaraIo: "zone-fidara",
   tastingswithtayCom: "zone-twt",
 } as const
+
+test("Indigo creates only an isolated protected tunnel with a secret token and no public routes", async () => {
+  const deployment = await runPulumiMockProgram({
+    program: () => runPulumiProgram(createCloudflareEdgeEffect({
+      accountId: "account-id",
+      tunnel: indigoTunnel,
+      zoneIds: { dsqrDev: "zone-dsqr" },
+      zones: { dsqrDev: "dsqr.dev" },
+      zoneSecurity: { dsqrDev: {} },
+      manageZoneSecurity: false,
+      ingressRules: [],
+      resourceOptions: { protect: true },
+    })),
+    outputs: result => ({ tunnelToken: result.tunnelToken }),
+    call: args => args.token === tunnelTokenInvoke ? { token: "indigo-test-token" } : args.inputs,
+    project: "cloudflare-edge",
+  })
+  const resources = deployment.resources.filter(resource => resource.type.startsWith("cloudflare:"))
+  assert.deepEqual(resources.map(resource => resource.name).sort(), ["dsqr-labs-indigo", "dsqr-labs-indigo-config"])
+  const tunnel = byName(resources, "dsqr-labs-indigo")
+  assert.equal(tunnel.inputs.configSrc, "cloudflare")
+  assert.equal(tunnel.inputs.tunnelSecret, undefined)
+  assert.deepEqual(byName(resources, "dsqr-labs-indigo-config").inputs.config, {
+    ingresses: [{ service: "http_status:404" }],
+  })
+  for (const resource of resources) assert.equal(byName(deployment.captured, resource.name).opts.protect, true)
+  assert.equal(await pulumi.isSecret(deployment.result.tunnelToken), true)
+})
 
 const rootOptionsAreStable = (deployment: Awaited<ReturnType<typeof deploy>>, name: string) => {
   const resource = byName(deployment.captured, name)

@@ -37,6 +37,7 @@ export const platformWorkloads = [
   "envoy-gateway-system/envoy-gateway", "envoy-gateway-system/@shared-envoy",
   "kube-system/cilium-operator", "kube-system/coredns", "kube-system/kubelet-csr-approver", "kube-system/metrics-server",
   "metallb-system/metallb-controller",
+  "cloudflare-system/cloudflared",
 ] as const
 
 const toleratesPool = (pod: PodSpec, pool: string) => (pod.tolerations ?? []).some(t =>

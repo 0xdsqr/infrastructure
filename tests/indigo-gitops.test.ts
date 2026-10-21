@@ -42,6 +42,7 @@ test("Indigo requires controller sync approval while configuration heals automat
     "metrics-server",
     "reloader",
     "indigo-metrics",
+    "cloudflared",
     "kube-state-metrics",
   ])
   for (const application of applications) {
@@ -241,6 +242,7 @@ test("Indigo foundation declares only current platform namespaces", async () => 
   const names = [...namespaces.matchAll(/^  name: (.+)$/gm)].map((match) => match[1])
 
   assert.deepEqual(names, [
+    "cloudflare-system",
     "observability",
     "argocd",
     "external-secrets",

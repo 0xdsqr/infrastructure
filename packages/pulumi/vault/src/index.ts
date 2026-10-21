@@ -183,6 +183,10 @@ export type VaultFoundationArgs = {
   readonly connection: VaultConnectionConfig
   readonly kv: VaultKvMountConfig
   readonly secretPaths: VaultSecretPathInventory
+  readonly managedKvSecrets?: Readonly<Record<string, {
+    readonly path: string
+    readonly dataJson: pulumi.Input<string>
+  }>> | undefined
   readonly humanAdminPolicy: VaultHumanAdminPolicyConfig
   readonly externalSecretsPolicies: Readonly<Record<string, VaultExternalSecretsPolicyConfig>>
   readonly externalSecretsKubernetesRole: VaultKubernetesAuthRoleConfig
@@ -1105,6 +1109,19 @@ export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(funct
   )
 
   const secretPaths = Object.values(args.secretPaths).map(({ path }) => path)
+  for (const [name, secret] of Object.entries(args.managedKvSecrets ?? {})) {
+    yield* requireResourceConfigEffect(
+      name.trim().length > 0 && isNormalizedSecretPath(secret.path) && secretPaths.includes(secret.path),
+      "vault:managedKvSecrets",
+      "Managed KV secrets must use a named, explicitly inventoried path.",
+    )
+  }
+  yield* requireResourceConfigEffect(
+    new Set(Object.values(args.managedKvSecrets ?? {}).map(secret => secret.path)).size ===
+      Object.keys(args.managedKvSecrets ?? {}).length,
+    "vault:managedKvSecrets",
+    "Managed KV secret paths must be unique.",
+  )
   yield* requireResourceConfigEffect(
     Object.keys(args.secretPaths).every((key) => key.trim().length > 0) &&
       new Set(secretPaths).size === secretPaths.length,
@@ -1205,6 +1222,15 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
         { ...resourceOptions, dependsOn: [kvMount] },
       ),
   )
+
+  for (const [name, secret] of Object.entries(args.managedKvSecrets ?? {})) {
+    yield* registerPulumiResource(name, () => new vault.kv.SecretV2(name, {
+      mount: kvMount.path,
+      name: secret.path,
+      dataJson: pulumi.secret(secret.dataJson),
+      deleteAllVersions: false,
+    }, { ...resourceOptions, protect: true, dependsOn: [kvConfig] }))
+  }
 
   const adminPolicy = yield* registerPulumiResource(
     resourceNames.humanAdminPolicy,

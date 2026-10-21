@@ -1,0 +1,20 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: envoy-shared-cloudflared-ingress
+  namespace: envoy-gateway-system
+spec:
+  endpointSelector:
+    matchLabels:
+      gateway.envoyproxy.io/owning-gateway-name: shared
+      gateway.envoyproxy.io/owning-gateway-namespace: gateway-system
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: cloudflare-system
+            k8s:io.cilium.k8s.policy.serviceaccount: cloudflared
+            app.kubernetes.io/name: cloudflared
+      toPorts:
+        - ports:
+            - port: "10443"
+              protocol: TCP

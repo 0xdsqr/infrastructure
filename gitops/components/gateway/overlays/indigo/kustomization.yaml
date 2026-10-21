@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - ../../base
   - dmz-ingress.ciliumnetworkpolicy.yaml
+  - cloudflared-ingress.ciliumnetworkpolicy.yaml
 
 components:
   - ../../network-policy

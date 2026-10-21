@@ -299,6 +299,23 @@ spec:
                     - FailOnSharedResource=true
                     - PruneLast=true
                   retryProfile: standard
+                - name: cloudflared
+                  namespace: cloudflare-system
+                  project: platform-cloudflared
+                  partOf: cluster-ingress
+                  tier: platform-addon
+                  lifecycle: controller
+                  version: 2026.10.0
+                  wave: "5"
+                  component: cloudflared
+                  remoteSource: {}
+                  charts: []
+                  ignoreDifferences: []
+                  syncOptions:
+                    - ApplyOutOfSyncOnly=true
+                    - FailOnSharedResource=true
+                    - ServerSideApply=true
+                  retryProfile: standard
                 - name: gateway
                   namespace: gateway-system
                   project: platform-gateway

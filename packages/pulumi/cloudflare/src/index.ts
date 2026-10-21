@@ -61,10 +61,12 @@ export type CloudflareZoneSecurityPolicy = {
 
 export type CloudflareEdgeArgs = {
   readonly accountId: string
-  readonly tunnelSecret: pulumi.Input<string>
+  readonly tunnelSecret?: pulumi.Input<string> | undefined
   readonly zoneIds: Readonly<Record<string, string>>
   readonly zones: Readonly<Record<string, string>>
   readonly zoneSecurity: Readonly<Record<string, CloudflareZoneSecurityPolicy>>
+  /** Set false only when another edge graph owns these zone-wide settings. */
+  readonly manageZoneSecurity?: boolean
   readonly tunnel: {
     readonly name: string
     readonly defaultService: string
@@ -479,7 +481,7 @@ export function planCloudflareEdgeEffect<DirectRecord extends CloudflareDnsRecor
       "Every declared Cloudflare zone must have exactly one explicit security policy.",
     )
 
-    const zoneSecurityPolicies = yield* Effect.forEach(configuredZoneNames, (zone) =>
+    const zoneSecurityPolicies = yield* Effect.forEach(args.manageZoneSecurity === false ? [] : configuredZoneNames, (zone) =>
       Effect.gen(function* () {
         const policy = args.zoneSecurity[zone]!
         const maxAge = policy.strictTransportSecurity?.maxAge

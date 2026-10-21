@@ -19,6 +19,12 @@ export const loadCloudflareConfig = Effect.fn("CloudflareConfig.load")(function*
   } as const
 })
 
+// Separate connector boundary: no production DNS or legacy routes move at bootstrap.
+export const indigoTunnel = {
+  name: "dsqr-labs-indigo",
+  defaultService: "http_status:404",
+} as const
+
 export const cloudflare = {
   tunnel: {
     name: "gateway",

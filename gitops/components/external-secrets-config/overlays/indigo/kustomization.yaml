@@ -10,6 +10,7 @@ resources:
   - ../../../metallb/metrics-tls/overlays/indigo
   - ../../../k8s-monitoring/client-tls/overlays/indigo
   - vault-indigo.clustersecretstore.yaml
+  - cloudflared-token.externalsecret.yaml
   - indigo-bootstrap-smoke-test.externalsecret.yaml
   - gateway-origin-issuer.serviceaccount.yaml
   - gateway-origin-issuer.clusterrolebinding.yaml

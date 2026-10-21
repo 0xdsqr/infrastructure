@@ -6,7 +6,25 @@ import { createCloudflareEdgeEffect, planCloudflareEdgeEffect } from "@dsqr/pulu
 import { registerPulumiResource, runPulumiProgram } from "@dsqr/pulumi-shared"
 
 import { infrastructure } from "../../infra.config.ts"
-import { loadCloudflareConfig } from "./config.ts"
+import { indigoTunnel, loadCloudflareConfig } from "./config.ts"
+
+export const indigoEdge = runPulumiProgram(
+  Effect.gen(function* () {
+    const config = yield* loadCloudflareConfig()
+    return yield* createCloudflareEdgeEffect({
+      accountId: config.accountId,
+      // Cloudflare generates a distinct secret for this remotely managed tunnel.
+      // Never reuse the legacy gateway tunnel secret.
+      tunnel: indigoTunnel,
+      zoneIds: { dsqrDev: config.dsqrDevZoneId },
+      zones: { dsqrDev: "dsqr.dev" },
+      zoneSecurity: { dsqrDev: {} },
+      manageZoneSecurity: false, // The existing cloudflareEdge graph owns zone settings.
+      ingressRules: [],
+      resourceOptions: { protect: true },
+    })
+  }),
+)
 
 export const cloudflareEdge = runPulumiProgram(
   Effect.gen(function* () {

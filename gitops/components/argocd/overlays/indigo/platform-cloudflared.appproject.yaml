@@ -1,0 +1,22 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform-cloudflared
+  namespace: argocd
+  finalizers: [resources-finalizer.argocd.argoproj.io]
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  description: Indigo-only Cloudflare tunnel connectors
+  sourceRepos:
+    - https://github.com/0xdsqr/infrastructure.git
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: cloudflare-system
+  clusterResourceWhitelist: []
+  namespaceResourceWhitelist:
+    - {group: "", kind: ServiceAccount}
+    - {group: apps, kind: Deployment}
+    - {group: policy, kind: PodDisruptionBudget}
+    - {group: networking.k8s.io, kind: NetworkPolicy}
+    - {group: cilium.io, kind: CiliumNetworkPolicy}

@@ -50,6 +50,22 @@ test("Vault accepts an existing audit device with an empty description", () => {
   })))
 })
 
+test("Vault managed KV secrets require explicit unique inventoried paths", () => {
+  const path = vault.secretPaths.indigoCloudflareTunnel.path
+  assert.doesNotThrow(() => Effect.runSync(planVaultFoundationEffect({
+    ...foundationArgs(), managedKvSecrets: { tunnel: { path, dataJson: "{}" } },
+  })))
+  for (const managedKvSecrets of [
+    { tunnel: { path: "not/in/inventory", dataJson: "{}" } },
+    { tunnel: { path, dataJson: "{}" }, duplicate: { path, dataJson: "{}" } },
+  ]) {
+    const count = resources.length
+    const error = Effect.runSync(Effect.flip(createVaultFoundationEffect({ ...foundationArgs(), managedKvSecrets })))
+    assert.match(error.message, /Managed KV/)
+    assert.equal(resources.length, count)
+  }
+})
+
 test("Vault rejects ambiguous certificate purposes before registering resources", () => {
   const count = resources.length
   const error = Effect.runSync(Effect.flip(createVaultFoundationEffect({
