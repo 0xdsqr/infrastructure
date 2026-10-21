@@ -17,8 +17,6 @@ spec:
   namespaceResourceWhitelist:
     - {group: "", kind: ServiceAccount}
     - {group: "", kind: ConfigMap}
-    - {group: "", kind: Service}
-    - {group: gateway.networking.k8s.io, kind: HTTPRoute}
     - {group: apps, kind: Deployment}
     - {group: policy, kind: PodDisruptionBudget}
     - {group: networking.k8s.io, kind: NetworkPolicy}

@@ -69,7 +69,7 @@ test("Tunnel token is single-path Vault access, with no account credential in Gi
   assert.deepEqual(app.charts, [])
   const project = render("argocd").find(resource => resource.kind === "AppProject" && resource.metadata.name === "platform-cloudflared")
   assert.deepEqual(project.spec.clusterResourceWhitelist, [])
-  assert.equal(project.spec.namespaceResourceWhitelist.some((resource: {kind: string}) => resource.kind === "Secret"), false)
+  assert.equal(project.spec.namespaceResourceWhitelist.some((resource: {kind: string}) => ["Secret", "Service", "HTTPRoute"].includes(resource.kind)), false)
 })
 
 test("OPNsense tunnel egress matches the Cilium destination inventory and platform workers only", () => {
