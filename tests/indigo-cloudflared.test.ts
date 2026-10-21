@@ -40,6 +40,8 @@ test("Indigo tunnel is HA, restricted, and exclusively scheduled on platform nod
 })
 
 test("Tunnel token is single-path Vault access, with no account credential in GitOps", () => {
+  const bootstrap = parse(readFileSync("gitops/clusters/indigo/bootstrap/bootstrap.appproject.yaml", "utf8"))
+  assert.ok(bootstrap.spec.clusterResourceWhitelist.some((resource: {kind: string; name: string}) => resource.kind === "Namespace" && resource.name === "cloudflare-system"))
   const secret = render("external-secrets-config").find(resource => resource.kind === "ExternalSecret" && resource.metadata.name === "cloudflared-token")
   assert.equal(secret.metadata.namespace, "cloudflare-system")
   assert.equal(secret.spec.secretStoreRef.name, "vault-indigo")
@@ -53,4 +55,19 @@ test("Tunnel token is single-path Vault access, with no account credential in Gi
   const project = render("argocd").find(resource => resource.kind === "AppProject" && resource.metadata.name === "platform-cloudflared")
   assert.deepEqual(project.spec.clusterResourceWhitelist, [])
   assert.equal(project.spec.namespaceResourceWhitelist.some((resource: {kind: string}) => resource.kind === "Secret"), false)
+})
+
+test("OPNsense tunnel egress matches the Cilium destination inventory and platform workers only", () => {
+  const firewall = JSON.parse(readFileSync("infra/opnsense/indigo-tunnel-egress.json", "utf8"))
+  assert.deepEqual(firewall.aliases[0].addresses, ["10.10.80.103", "10.10.80.104", "10.10.80.105"])
+  const policy = render("cloudflared").find(resource => resource.kind === "CiliumNetworkPolicy")
+  assert.deepEqual(firewall.aliases[1].addresses.map((address: string) => `${address}/32`).sort(), [...policy.spec.egress[1].toCIDR].sort())
+  assert.equal(firewall.rule.destination_port, "7844")
+  assert.equal(firewall.rule.protocol, "TCP/UDP")
+  assert.equal(firewall.rule.source_net, firewall.aliases[0].name)
+  assert.equal(firewall.rule.destination_net, firewall.aliases[1].name)
+  assert.equal(firewall.rule.interface, "opt8")
+  assert.equal(firewall.rule.direction, "in")
+  assert.equal(firewall.rule.source_not, "0")
+  assert.equal(firewall.rule.destination_not, "0")
 })

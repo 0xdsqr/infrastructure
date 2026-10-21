@@ -1,0 +1,43 @@
+{
+  "description": "Indigo platform Cloudflare tunnel egress",
+  "interface": "opt8",
+  "interfaceLabel": "INDIGO",
+  "endpointReference": "https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/configure-tunnels/tunnel-with-firewall/",
+  "aliases": [
+    {
+      "name": "INDIGO_PLATFORM_WORKERS",
+      "type": "host",
+      "description": "Indigo platform workers 01-03; tunnel connectors are confined to this pool",
+      "addresses": ["10.10.80.103", "10.10.80.104", "10.10.80.105"]
+    },
+    {
+      "name": "CLOUDFLARE_TUNNEL_ENDPOINTS",
+      "type": "host",
+      "description": "Cloudflare global tunnel endpoints; keep aligned with Indigo cloudflared Cilium policy",
+      "addresses": [
+        "198.41.192.167", "198.41.192.67", "198.41.192.57", "198.41.192.107",
+        "198.41.192.27", "198.41.192.7", "198.41.192.227", "198.41.192.47",
+        "198.41.192.37", "198.41.192.77", "198.41.200.13", "198.41.200.193",
+        "198.41.200.33", "198.41.200.233", "198.41.200.53", "198.41.200.63",
+        "198.41.200.113", "198.41.200.73", "198.41.200.43", "198.41.200.23"
+      ]
+    }
+  ],
+  "rule": {
+    "enabled": "1",
+    "action": "pass",
+    "quick": "1",
+    "interface": "opt8",
+    "direction": "in",
+    "ipprotocol": "inet",
+    "protocol": "TCP/UDP",
+    "source_net": "INDIGO_PLATFORM_WORKERS",
+    "source_not": "0",
+    "source_port": "",
+    "destination_net": "CLOUDFLARE_TUNNEL_ENDPOINTS",
+    "destination_not": "0",
+    "destination_port": "7844",
+    "log": "1",
+    "description": "Indigo platform Cloudflare tunnel egress"
+  }
+}
