@@ -73,7 +73,9 @@ metadata:
   name: ingress-canary
 spec:
   parentRefs:
-    - name: shared
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: shared
       namespace: gateway-system
       sectionName: https
   hostnames: [canary-indigo.dsqr.dev]
@@ -87,8 +89,11 @@ spec:
               - {name: Cache-Control, value: "no-store"}
               - {name: X-Robots-Tag, value: "noindex, nofollow"}
       backendRefs:
-        - name: ingress-canary
+        - group: ""
+          kind: Service
+          name: ingress-canary
           port: 8080
+          weight: 1
 ---
 apiVersion: cilium.io/v2
 kind: CiliumNetworkPolicy
