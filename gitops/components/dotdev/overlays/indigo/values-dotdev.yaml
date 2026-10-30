@@ -1,14 +1,21 @@
-# Private first rollout: enable an HTTPRoute only after database and filesystem checks.
-# CI 39642456474, dsqr-dotdev commit 1575cb0a25b55ce7ebea839b17662106ad04ddb7.
+# Preview rollout: public DNS for dsqr.dev remains on the old tunnel until validation.
+# CI 41096010868, dsqr-dotdev commit 10e8150b5bd17a5d5e97be052b7a2c47468549fd.
 image:
-  digest: sha256:c08e6645b94031acc2f5cfbf7c381d78cf6b4878599aae10e37984645af9cc31
+  digest: sha256:d3e57f6cdbb9ffdde5d7de43c31c4d702a8e3b379757bd5b19197336e152c630
 replicaCount: 1
-trustProxy: false
+# Verified Cloudflare -> cloudflared -> Envoy chain; untrusted XFF prefixes are ignored.
+trustProxy: true
+trustedProxyHops: 2
+trustedOrigins:
+  - https://dsqr.dev
+  - https://dotdev-preview.dsqr.dev
 database:
   existingSecret: dotdev-web
   caConfigMap: dsqr-home-root-ca
   address: 10.10.30.109
   port: 5432
 route:
-  enabled: false
-  hostnames: []
+  enabled: true
+  hostnames:
+    - dotdev-preview.dsqr.dev
+    - dsqr.dev

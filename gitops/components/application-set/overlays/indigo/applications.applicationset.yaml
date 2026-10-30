@@ -21,7 +21,7 @@ spec:
               elements:
                 - name: dotdev-web
                   profile: dotdev
-                  appRevision: 1575cb0a25b55ce7ebea839b17662106ad04ddb7
+                  appRevision: 10e8150b5bd17a5d5e97be052b7a2c47468549fd
                   lifecycle: controller
                   retryProfile: standard
   syncPolicy:

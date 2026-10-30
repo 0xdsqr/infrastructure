@@ -268,7 +268,7 @@ test("Indigo foundation declares only current platform and onboarded application
   )
 })
 
-test("Indigo Dotdev first deployment is private, pinned, and manually synced", async () => {
+test("Indigo Dotdev preview is pinned, proxy-guarded, and manually synced", async () => {
   const application = renderApplications("indigo").find(
     (resource) => resource.metadata.name === "dotdev-web",
   )
@@ -291,8 +291,13 @@ test("Indigo Dotdev first deployment is private, pinned, and manually synced", a
   )[0].toJSON()
   assert.match(values.image.digest, /^sha256:[a-f0-9]{64}$/)
   assert.equal(values.replicaCount, 1)
-  assert.equal(values.trustProxy, false)
-  assert.deepEqual(values.route, { enabled: false, hostnames: [] })
+  assert.equal(values.trustProxy, true)
+  assert.equal(values.trustedProxyHops, 2)
+  assert.deepEqual(values.trustedOrigins, ["https://dsqr.dev", "https://dotdev-preview.dsqr.dev"])
+  assert.deepEqual(values.route, {
+    enabled: true,
+    hostnames: ["dotdev-preview.dsqr.dev", "dsqr.dev"],
+  })
   assert.deepEqual(values.database, {
     existingSecret: "dotdev-web",
     caConfigMap: "dsqr-home-root-ca",
@@ -321,7 +326,7 @@ test("Indigo Dotdev prerequisites isolate the namespace and expose only its runt
     (resource) => resource.kind === "Namespace" && resource.metadata.name === "dsqr",
   )
   assert.equal(namespace.metadata.labels["pod-security.kubernetes.io/enforce"], "restricted")
-  assert.equal(namespace.metadata.labels["platform.dsqr.dev/gateway-access"], undefined)
+  assert.equal(namespace.metadata.labels["platform.dsqr.dev/gateway-access"], "shared")
   const deny = foundation.find(
     (resource) => resource.kind === "NetworkPolicy" && resource.metadata.namespace === "dsqr",
   )
