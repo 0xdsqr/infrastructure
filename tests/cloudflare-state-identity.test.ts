@@ -24,7 +24,7 @@ const zoneIds = {
   tastingswithtayCom: "zone-twt",
 } as const
 
-test("Indigo adds only the approved preview DNS record and keeps its own tunnel identity", async () => {
+test("Indigo owns Dotdev Web and preview DNS without changing their resource identities", async () => {
   const deployment = await runPulumiMockProgram({
     program: () => runPulumiProgram(createCloudflareEdgeEffect({
       accountId: "account-id",
@@ -44,7 +44,11 @@ test("Indigo adds only the approved preview DNS record and keeps its own tunnel 
   await Promise.all(deployment.captured.map(({resource}) =>
     resource instanceof pulumi.CustomResource ? resolveOutput(resource.id) : Promise.resolve()))
   const resources = deployment.resources.filter(resource => resource.type.startsWith("cloudflare:"))
-  assert.deepEqual(resources.map(resource => resource.name).sort(), ["dotdev-preview-dsqr-dev", "dsqr-labs-indigo", "dsqr-labs-indigo-config"])
+  assert.deepEqual(resources.map(resource => resource.name).sort(), ["dotdev-preview-dsqr-dev", "dsqr-dev", "dsqr-labs-indigo", "dsqr-labs-indigo-config"])
+  const production = byName(resources, "dsqr-dev")
+  assert.equal(production.type, dnsToken)
+  assert.equal(production.inputs.name, "dsqr.dev")
+  assert.equal(production.inputs.proxied, true)
   const preview = byName(resources, "dotdev-preview-dsqr-dev")
   assert.equal(preview.type, dnsToken)
   assert.equal(preview.inputs.name, "dotdev-preview.dsqr.dev")
@@ -118,7 +122,7 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
     resource.type.startsWith("cloudflare:"),
   )
 
-  assert.equal(resources.length, 36)
+  assert.equal(resources.length, 35)
   assert.deepEqual(
     resources
       .map((resource) => [resource.type, resource.name] as const)
@@ -135,7 +139,6 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
       [dnsToken, "argocd-hooks-hub-a-dsqr-dev"],
       [dnsToken, "argocd-hooks-indigo-dsqr-dev"],
       [dnsToken, "cdn-dsqr-dev"],
-      [dnsToken, "dsqr-dev"],
       [zoneSettingToken, "dsqrDev-always-use-https"],
       [zoneSettingToken, "dsqrDev-automatic-https-rewrites"],
       [zoneSettingToken, "dsqrDev-min-tls-version"],

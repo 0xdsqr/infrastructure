@@ -20,14 +20,24 @@ export const loadCloudflareConfig = Effect.fn("CloudflareConfig.load")(function*
   } as const
 })
 
-// Separate connector boundary: no production DNS or legacy routes move at bootstrap.
+// Separate connector boundary for applications migrated to Indigo.
 export const indigoTunnel = {
   name: "dsqr-labs-indigo",
   defaultService: "http_status:404",
 } as const
 
-// Temporary, explicitly approved preview; the production hostname stays on the legacy tunnel.
+// Dotdev Web is the first migrated application; other legacy routes remain unchanged.
 export const indigoIngressRules: ReadonlyArray<CloudflareIngressRule> = [
+  {
+    hostname: "dsqr.dev",
+    zone: "dsqrDev",
+    service: "https://envoy-gateway-system-shared-e9cec0f8.envoy-gateway-system.svc.cluster.local:443",
+    originRequest: {
+      httpHostHeader: "dsqr.dev",
+      originServerName: "gateway.indigo.home.arpa",
+      caPool: "/etc/cloudflared-ca/ca.crt",
+    },
+  },
   {
     hostname: "dotdev-preview.dsqr.dev",
     zone: "dsqrDev",
@@ -127,16 +137,6 @@ export const cloudflare = {
         http2Origin: false,
         httpHostHeader: "argocd-hooks-hub-a.dsqr.dev",
         originServerName: "argocd-hooks-hub-a.dsqr.dev",
-      },
-    },
-    {
-      hostname: "dsqr.dev",
-      zone: "dsqrDev",
-      service: "https://10.10.30.200",
-      originRequest: {
-        http2Origin: false,
-        httpHostHeader: "dsqr.dev",
-        originServerName: "dsqr.dev",
       },
     },
     {

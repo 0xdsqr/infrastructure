@@ -40,7 +40,7 @@ test("Indigo tunnel is HA, restricted, and exclusively scheduled on platform nod
   assert.deepEqual(allow.spec.egress[1].toPorts[0].ports, [{ port: "7844", protocol: "UDP" }, { port: "7844", protocol: "TCP" }])
 })
 
-test("Preview is TLS-verified and does not move the production hostname", () => {
+test("Only Dotdev Web and its preview use the TLS-verified Indigo origin", () => {
   const resources = render("cloudflared")
   const ca = resources.find(resource => resource.kind === "ConfigMap" && resource.metadata.name === "dsqr-home-root-ca")
   const issuerCa = render("external-secrets-config").find(resource => resource.kind === "ConfigMap" && resource.metadata.name === "dsqr-home-root-ca" && resource.metadata.namespace === "gateway-system")
@@ -49,17 +49,20 @@ test("Preview is TLS-verified and does not move the production hostname", () => 
   const mount = tunnel.spec.template.spec.containers[0].volumeMounts.find((item: {name: string}) => item.name === "origin-ca")
   assert.equal(mount.readOnly, true)
   assert.equal(mount.mountPath, "/etc/cloudflared-ca")
-  assert.deepEqual(indigoIngressRules, [{
-    hostname: "dotdev-preview.dsqr.dev",
+  assert.deepEqual(indigoIngressRules, ["dsqr.dev", "dotdev-preview.dsqr.dev"].map(hostname => ({
+    hostname,
     zone: "dsqrDev",
     service: "https://envoy-gateway-system-shared-e9cec0f8.envoy-gateway-system.svc.cluster.local:443",
     originRequest: {
-      httpHostHeader: "dotdev-preview.dsqr.dev",
+      httpHostHeader: hostname,
       originServerName: "gateway.indigo.home.arpa",
       caPool: "/etc/cloudflared-ca/ca.crt",
     },
-  }])
-  assert.ok(cloudflare.ingressRules.some(rule => rule.hostname === "dsqr.dev"))
+  })))
+  assert.equal(cloudflare.ingressRules.some(rule => rule.hostname === "dsqr.dev"), false)
+  for (const hostname of ["labs.dsqr.dev", "studio.dsqr.dev", "tastingswithtay.com"]) {
+    assert.ok(cloudflare.ingressRules.some(rule => rule.hostname === hostname))
+  }
   assert.equal(cloudflare.ingressRules.some(rule => rule.hostname === "dotdev-preview.dsqr.dev"), false)
   assert.equal(resources.some(resource => resource.kind === "HTTPRoute" || resource.metadata.name === "ingress-canary"), false)
   assert.equal(render("gateway").some(resource => resource.metadata.name === "envoy-shared-to-ingress-canary"), false)
