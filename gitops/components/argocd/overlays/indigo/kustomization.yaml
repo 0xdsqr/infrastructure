@@ -24,6 +24,14 @@ patches:
   - target:
       group: argoproj.io
       kind: AppProject
+      name: dsqr
+    patch: |-
+      - op: add
+        path: /spec/namespaceResourceWhitelist/-
+        value: {group: gateway.networking.k8s.io, kind: HTTPRoute}
+  - target:
+      group: argoproj.io
+      kind: AppProject
       name: platform-kube-state-metrics
     patch: |-
       - op: replace

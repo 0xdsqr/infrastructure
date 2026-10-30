@@ -1,0 +1,31 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: envoy-shared-to-dotdev-web
+  namespace: envoy-gateway-system
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+  labels:
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/part-of: dsqr-dotdev
+    platform.dsqr.dev/owner: platform
+    platform.dsqr.dev/tier: platform-policy
+spec:
+  endpointSelector:
+    matchLabels:
+      gateway.envoyproxy.io/owning-gateway-name: shared
+      gateway.envoyproxy.io/owning-gateway-namespace: gateway-system
+  enableDefaultDeny:
+    ingress: false
+    egress: false
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            k8s:io.kubernetes.pod.namespace: dsqr
+            k8s:io.cilium.k8s.policy.serviceaccount: dotdev-web
+            app.kubernetes.io/instance: dotdev-web
+            app.kubernetes.io/name: dsqr-app
+      toPorts:
+        - ports:
+            - port: "3000"
+              protocol: TCP
