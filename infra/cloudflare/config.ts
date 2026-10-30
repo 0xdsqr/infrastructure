@@ -26,8 +26,19 @@ export const indigoTunnel = {
   defaultService: "http_status:404",
 } as const
 
-// Public workloads are onboarded explicitly after ingress validation.
-export const indigoIngressRules: ReadonlyArray<CloudflareIngressRule> = []
+// Temporary, explicitly approved preview; the production hostname stays on the legacy tunnel.
+export const indigoIngressRules: ReadonlyArray<CloudflareIngressRule> = [
+  {
+    hostname: "dotdev-preview.dsqr.dev",
+    zone: "dsqrDev",
+    service: "https://envoy-gateway-system-shared-e9cec0f8.envoy-gateway-system.svc.cluster.local:443",
+    originRequest: {
+      httpHostHeader: "dotdev-preview.dsqr.dev",
+      originServerName: "gateway.indigo.home.arpa",
+      caPool: "/etc/cloudflared-ca/ca.crt",
+    },
+  },
+]
 
 export const cloudflare = {
   tunnel: {

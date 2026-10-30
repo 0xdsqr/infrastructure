@@ -24,7 +24,7 @@ const zoneIds = {
   tastingswithtayCom: "zone-twt",
 } as const
 
-test("Indigo stays isolated with no public routes after canary cleanup", async () => {
+test("Indigo adds only the approved preview DNS record and keeps its own tunnel identity", async () => {
   const deployment = await runPulumiMockProgram({
     program: () => runPulumiProgram(createCloudflareEdgeEffect({
       accountId: "account-id",
@@ -44,7 +44,11 @@ test("Indigo stays isolated with no public routes after canary cleanup", async (
   await Promise.all(deployment.captured.map(({resource}) =>
     resource instanceof pulumi.CustomResource ? resolveOutput(resource.id) : Promise.resolve()))
   const resources = deployment.resources.filter(resource => resource.type.startsWith("cloudflare:"))
-  assert.deepEqual(resources.map(resource => resource.name).sort(), ["dsqr-labs-indigo", "dsqr-labs-indigo-config"])
+  assert.deepEqual(resources.map(resource => resource.name).sort(), ["dotdev-preview-dsqr-dev", "dsqr-labs-indigo", "dsqr-labs-indigo-config"])
+  const preview = byName(resources, "dotdev-preview-dsqr-dev")
+  assert.equal(preview.type, dnsToken)
+  assert.equal(preview.inputs.name, "dotdev-preview.dsqr.dev")
+  assert.equal(preview.inputs.proxied, true)
   const tunnel = byName(resources, "dsqr-labs-indigo")
   assert.equal(tunnel.inputs.configSrc, "cloudflare")
   assert.equal(tunnel.inputs.tunnelSecret, undefined)

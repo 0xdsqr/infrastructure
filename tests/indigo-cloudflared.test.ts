@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs"
 import test from "node:test"
 import { parse, parseAllDocuments } from "yaml"
 import { vault } from "../infra/vault/config.ts"
-import { indigoIngressRules } from "../infra/cloudflare/config.ts"
+import { cloudflare, indigoIngressRules } from "../infra/cloudflare/config.ts"
 
 const render = (component: string) => parseAllDocuments(execFileSync("kubectl", [
   "kustomize", `gitops/components/${component}/overlays/indigo`,
@@ -40,7 +40,7 @@ test("Indigo tunnel is HA, restricted, and exclusively scheduled on platform nod
   assert.deepEqual(allow.spec.egress[1].toPorts[0].ports, [{ port: "7844", protocol: "UDP" }, { port: "7844", protocol: "TCP" }])
 })
 
-test("Connectors retain origin CA trust without leaving temporary canary exposure", () => {
+test("Preview is TLS-verified and does not move the production hostname", () => {
   const resources = render("cloudflared")
   const ca = resources.find(resource => resource.kind === "ConfigMap" && resource.metadata.name === "dsqr-home-root-ca")
   const issuerCa = render("external-secrets-config").find(resource => resource.kind === "ConfigMap" && resource.metadata.name === "dsqr-home-root-ca" && resource.metadata.namespace === "gateway-system")
@@ -49,7 +49,18 @@ test("Connectors retain origin CA trust without leaving temporary canary exposur
   const mount = tunnel.spec.template.spec.containers[0].volumeMounts.find((item: {name: string}) => item.name === "origin-ca")
   assert.equal(mount.readOnly, true)
   assert.equal(mount.mountPath, "/etc/cloudflared-ca")
-  assert.equal(indigoIngressRules.length, 0)
+  assert.deepEqual(indigoIngressRules, [{
+    hostname: "dotdev-preview.dsqr.dev",
+    zone: "dsqrDev",
+    service: "https://envoy-gateway-system-shared-e9cec0f8.envoy-gateway-system.svc.cluster.local:443",
+    originRequest: {
+      httpHostHeader: "dotdev-preview.dsqr.dev",
+      originServerName: "gateway.indigo.home.arpa",
+      caPool: "/etc/cloudflared-ca/ca.crt",
+    },
+  }])
+  assert.ok(cloudflare.ingressRules.some(rule => rule.hostname === "dsqr.dev"))
+  assert.equal(cloudflare.ingressRules.some(rule => rule.hostname === "dotdev-preview.dsqr.dev"), false)
   assert.equal(resources.some(resource => resource.kind === "HTTPRoute" || resource.metadata.name === "ingress-canary"), false)
   assert.equal(render("gateway").some(resource => resource.metadata.name === "envoy-shared-to-ingress-canary"), false)
 })
