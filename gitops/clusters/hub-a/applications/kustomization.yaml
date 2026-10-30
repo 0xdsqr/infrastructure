@@ -13,7 +13,6 @@ resources:
   - k8s-monitoring.yaml
   - external-secrets.yaml
   - external-secrets-config.yaml
-  - dotdev-web.yaml
   - dotdev-studio.yaml
   - dotdev-labs.yaml
   - fidara.yaml

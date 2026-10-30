@@ -40,7 +40,7 @@ test("Indigo tunnel is HA, restricted, and exclusively scheduled on platform nod
   assert.deepEqual(allow.spec.egress[1].toPorts[0].ports, [{ port: "7844", protocol: "UDP" }, { port: "7844", protocol: "TCP" }])
 })
 
-test("Only Dotdev Web and its preview use the TLS-verified Indigo origin", () => {
+test("Only Dotdev Web uses the TLS-verified Indigo origin", () => {
   const resources = render("cloudflared")
   const ca = resources.find(resource => resource.kind === "ConfigMap" && resource.metadata.name === "dsqr-home-root-ca")
   const issuerCa = render("external-secrets-config").find(resource => resource.kind === "ConfigMap" && resource.metadata.name === "dsqr-home-root-ca" && resource.metadata.namespace === "gateway-system")
@@ -49,7 +49,7 @@ test("Only Dotdev Web and its preview use the TLS-verified Indigo origin", () =>
   const mount = tunnel.spec.template.spec.containers[0].volumeMounts.find((item: {name: string}) => item.name === "origin-ca")
   assert.equal(mount.readOnly, true)
   assert.equal(mount.mountPath, "/etc/cloudflared-ca")
-  assert.deepEqual(indigoIngressRules, ["dsqr.dev", "dotdev-preview.dsqr.dev"].map(hostname => ({
+  assert.deepEqual(indigoIngressRules, ["dsqr.dev"].map(hostname => ({
     hostname,
     zone: "dsqrDev",
     service: "https://envoy-gateway-system-shared-e9cec0f8.envoy-gateway-system.svc.cluster.local:443",

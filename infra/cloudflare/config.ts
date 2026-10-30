@@ -38,16 +38,6 @@ export const indigoIngressRules: ReadonlyArray<CloudflareIngressRule> = [
       caPool: "/etc/cloudflared-ca/ca.crt",
     },
   },
-  {
-    hostname: "dotdev-preview.dsqr.dev",
-    zone: "dsqrDev",
-    service: "https://envoy-gateway-system-shared-e9cec0f8.envoy-gateway-system.svc.cluster.local:443",
-    originRequest: {
-      httpHostHeader: "dotdev-preview.dsqr.dev",
-      originServerName: "gateway.indigo.home.arpa",
-      caPool: "/etc/cloudflared-ca/ca.crt",
-    },
-  },
 ]
 
 export const cloudflare = {

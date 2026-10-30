@@ -268,7 +268,7 @@ test("Indigo foundation declares only current platform and onboarded application
   )
 })
 
-test("Indigo Dotdev preview is pinned, proxy-guarded, and manually synced", async () => {
+test("Indigo Dotdev is pinned, proxy-guarded, and manually synced", async () => {
   const application = renderApplications("indigo").find(
     (resource) => resource.metadata.name === "dotdev-web",
   )
@@ -293,10 +293,10 @@ test("Indigo Dotdev preview is pinned, proxy-guarded, and manually synced", asyn
   assert.equal(values.replicaCount, 1)
   assert.equal(values.trustProxy, true)
   assert.equal(values.trustedProxyHops, 2)
-  assert.deepEqual(values.trustedOrigins, ["https://dsqr.dev", "https://dotdev-preview.dsqr.dev"])
+  assert.deepEqual(values.trustedOrigins, ["https://dsqr.dev"])
   assert.deepEqual(values.route, {
     enabled: true,
-    hostnames: ["dotdev-preview.dsqr.dev", "dsqr.dev"],
+    hostnames: ["dsqr.dev"],
   })
   assert.deepEqual(values.database, {
     existingSecret: "dotdev-web",
@@ -304,6 +304,13 @@ test("Indigo Dotdev preview is pinned, proxy-guarded, and manually synced", asyn
     address: "10.10.30.109",
     port: 5432,
   })
+})
+
+test("retired Hub-A Web cannot be recreated by the current GitOps inventory", () => {
+  const names = renderApplications("hub-a").map(application => application.metadata.name)
+  assert.equal(names.includes("dotdev-web"), false)
+  assert.ok(names.includes("dotdev-labs"))
+  assert.ok(names.includes("dotdev-studio"))
 })
 
 test("Indigo Dotdev prerequisites isolate the namespace and expose only its runtime URL", async () => {

@@ -1,4 +1,4 @@
-# Preview rollout: public DNS for dsqr.dev remains on the old tunnel until validation.
+# Production Dotdev Web through the dedicated Indigo Cloudflare tunnel.
 # CI 41096010868, dsqr-dotdev commit 10e8150b5bd17a5d5e97be052b7a2c47468549fd.
 image:
   digest: sha256:d3e57f6cdbb9ffdde5d7de43c31c4d702a8e3b379757bd5b19197336e152c630
@@ -8,7 +8,6 @@ trustProxy: true
 trustedProxyHops: 2
 trustedOrigins:
   - https://dsqr.dev
-  - https://dotdev-preview.dsqr.dev
 database:
   existingSecret: dotdev-web
   caConfigMap: dsqr-home-root-ca
@@ -17,5 +16,4 @@ database:
 route:
   enabled: true
   hostnames:
-    - dotdev-preview.dsqr.dev
     - dsqr.dev
