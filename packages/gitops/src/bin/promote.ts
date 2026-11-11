@@ -6,11 +6,13 @@ import { parse, parseAllDocuments } from "yaml"
 import { Cause, Config, Console, Effect } from "effect"
 import { NodeContext, NodeRuntime } from "@effect/platform-node"
 import {
+  currentLockRevision,
   currentRevision,
   object,
   releaseApp,
   releaseApps,
   updateRelease,
+  validateLockUpdate,
   validateImages,
   validateRun,
 } from "../releases.ts"
@@ -24,7 +26,7 @@ const promote = Effect.fn("GitOps.promote")(function* () {
   const args = process.argv.slice(2)
   if (args.includes("--help")) {
     yield* Console.log(
-      "gitops-promote --app NAME [--run ID] [--write]\nDefault: verify only. --write changes two local pins; never pushes, merges or deploys.",
+      "gitops-promote --app NAME [--run ID] [--write]\nDefault: verify only. --write changes the release, image, and source lock pins; never pushes, merges or deploys.",
     )
     return
   }
@@ -79,8 +81,14 @@ const promote = Effect.fn("GitOps.promote")(function* () {
   const sources = {
     release: yield* fileSystem.readFileString(config.release),
     values: yield* fileSystem.readFileString(config.values),
+    lock: yield* fileSystem.readFileString(config.flakeLock),
   }
   const previous = currentRevision(sources.release, app)
+  assert.equal(
+    currentLockRevision(sources.lock, app),
+    previous,
+    "Release file and flake lock select different source commits",
+  )
   const comparison = object(yield* api(`${base}/compare/${previous}...${commit}`))
   assert.ok(
     comparison.status === "ahead" || comparison.status === "identical",
@@ -234,6 +242,18 @@ const promote = Effect.fn("GitOps.promote")(function* () {
   if (write) {
     yield* fileSystem.writeFileString(config.release, updated.release)
     yield* fileSystem.writeFileString(config.values, updated.values)
+    yield* command("nix", ["flake", "update", config.flakeInput, "--no-warn-dirty"])
+    const lock = yield* fileSystem.readFileString(config.flakeLock)
+    validateLockUpdate(sources.lock, lock, app, commit)
+    assert.deepEqual(
+      (yield* command("git", ["diff", "--name-only", "HEAD"]))
+        .trim()
+        .split("\n")
+        .filter(Boolean)
+        .sort(),
+      [config.flakeLock, config.release, config.values].sort(),
+      "Promotion changed files outside the registered release pins",
+    )
     if (outputPath)
       yield* fileSystem.writeFileString(
         outputPath,

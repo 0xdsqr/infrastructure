@@ -6,10 +6,12 @@ import { Effect } from "effect"
 import { NodeContext } from "@effect/platform-node"
 import { command, commandBytes } from "../packages/gitops/src/release-runtime.ts"
 import {
+  currentLockRevision,
   currentRevision,
   releaseApp,
   releaseApps,
   updateRelease,
+  validateLockUpdate,
   validateImages,
   validateRun,
 } from "../packages/gitops/src/releases.ts"
@@ -39,6 +41,30 @@ const previousSha = "c".repeat(40)
 const previousDigest = `sha256:${"d".repeat(64)}`
 const releaseSource = `# Deployment selection only.\nsourceRevision: ${previousSha}\n`
 const valuesSource = `# CI 1, ${config.repository} commit ${previousSha}.\nimage:\n  digest: ${previousDigest}\nreplicaCount: 1\n`
+const lock = (revision: string) =>
+  `${JSON.stringify(
+    {
+      nodes: {
+        dotdev: {
+          flake: false,
+          locked: {
+            lastModified: 1,
+            narHash: `sha256-${"A".repeat(43)}=`,
+            owner: "0xdsqr",
+            repo: "dsqr-dotdev",
+            rev: revision,
+            type: "github",
+          },
+          original: { owner: "0xdsqr", repo: "dsqr-dotdev", type: "github" },
+        },
+        root: { inputs: { dotdev: "dotdev" } },
+      },
+      root: "root",
+      version: 7,
+    },
+    null,
+    2,
+  )}\n`
 
 test("release process boundary preserves binary output and sends stdin without a shell", async () => {
   const bytes = await Effect.runPromise(
@@ -137,9 +163,25 @@ test("promotion changes only the app/chart revision and image digest", () => {
   assert.throws(() => currentRevision(`${sources.release}\nsourceRevision: ${sha}\n`, app))
 })
 
+test("promotion source lock changes only the registered input to the verified commit", () => {
+  const before = lock(previousSha)
+  const after = lock(sha)
+  assert.equal(currentLockRevision(before, app), previousSha)
+  validateLockUpdate(before, after, app, sha)
+  assert.throws(() => validateLockUpdate(before, after, app, "e".repeat(40)))
+  const unrelated = JSON.parse(after)
+  unrelated.version = 8
+  assert.throws(() => validateLockUpdate(before, JSON.stringify(unrelated), app, sha))
+  const redirected = JSON.parse(after)
+  redirected.nodes.dotdev.original.owner = "attacker"
+  assert.throws(() => currentLockRevision(JSON.stringify(redirected), app))
+})
+
 test("public infrastructure contains generic promotion tooling, not deployment automation", () => {
   assert.equal(existsSync(".github/workflows/promote-app.yml"), false)
   assert.equal(config.release, "apps/dotdev-web/environments/production/release.yaml")
   assert.equal(config.values, "apps/dotdev-web/environments/production/values.yaml")
+  assert.equal(config.flakeLock, "flake.lock")
+  assert.equal(config.flakeInput, "dotdev")
   assert.equal(config.repository, "0xdsqr/dsqr-dotdev")
 })

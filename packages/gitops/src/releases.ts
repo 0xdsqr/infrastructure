@@ -15,6 +15,8 @@ export const releaseApps = {
     kubeVersion: "1.36.0",
     release: "apps/dotdev-web/environments/production/release.yaml",
     values: "apps/dotdev-web/environments/production/values.yaml",
+    flakeLock: "flake.lock",
+    flakeInput: "dotdev",
   },
 } as const
 
@@ -84,6 +86,51 @@ export function currentRevision(source: string, app: ReleaseApp): string {
   assert.equal(typeof revision, "string")
   assert.match(revision as string, shaPattern, "Production chart must be pinned")
   return revision as string
+}
+
+function lockDocument(source: string, app: ReleaseApp) {
+  const config = releaseApps[app]
+  const root = object(JSON.parse(source))
+  const input = object(object(root.nodes)[config.flakeInput])
+  const locked = object(input.locked)
+  const [owner, repo] = config.repository.split("/")
+  assert.deepEqual(input.original, { owner, repo, type: "github" })
+  assert.deepEqual(Object.keys(locked).sort(), [
+    "lastModified",
+    "narHash",
+    "owner",
+    "repo",
+    "rev",
+    "type",
+  ])
+  assert.equal(locked.type, "github")
+  assert.equal(locked.owner, owner)
+  assert.equal(locked.repo, repo)
+  assert.ok(Number.isSafeInteger(locked.lastModified) && (locked.lastModified as number) > 0)
+  assert.equal(typeof locked.narHash, "string")
+  assert.match(locked.narHash as string, /^sha256-[A-Za-z0-9+/]+={0,2}$/)
+  assert.equal(typeof locked.rev, "string")
+  assert.match(locked.rev as string, shaPattern)
+  return { root, input, locked }
+}
+
+export function currentLockRevision(source: string, app: ReleaseApp): string {
+  return lockDocument(source, app).locked.rev as string
+}
+
+export function validateLockUpdate(
+  before: string,
+  after: string,
+  app: ReleaseApp,
+  commit: string,
+): void {
+  assert.match(commit, shaPattern)
+  const previous = lockDocument(before, app)
+  const next = lockDocument(after, app)
+  assert.equal(next.locked.rev, commit, "Flake lock does not select the verified source commit")
+  previous.input.locked = "<release-lock>"
+  next.input.locked = "<release-lock>"
+  assert.deepEqual(next.root, previous.root, "Promotion changed unrelated flake lock state")
 }
 
 export function updateRelease(

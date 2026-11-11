@@ -9,6 +9,7 @@ let
     pkgs.kubectl
     pkgs.gh
     pkgs.git
+    pkgs.nix
     pkgs.unzip
     pkgs.kubernetes-helm
   ];

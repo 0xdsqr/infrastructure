@@ -4,12 +4,14 @@ import assert from "node:assert/strict"
 import { Cause, Config, Console, Effect } from "effect"
 import { NodeContext, NodeRuntime } from "@effect/platform-node"
 import {
+  currentLockRevision,
   currentRevision,
   object,
   releaseApp,
   releaseApps,
   shaPattern,
   updateRelease,
+  validateLockUpdate,
 } from "../releases.ts"
 import { parse } from "yaml"
 
@@ -35,7 +37,7 @@ const publish = Effect.fn("GitOps.releasePr")(function* () {
     "Run only from deployments master",
   )
   const config = releaseApps[app]
-  const paths = [config.release, config.values].sort()
+  const paths = [config.flakeLock, config.release, config.values].sort()
   const changed = (yield* command("git", ["diff", "--name-only", "HEAD"])).trim().split("\n").sort()
   assert.deepEqual(changed, paths, "Release PR must change exactly the two registered pin files")
   assert.equal(
@@ -48,6 +50,10 @@ const publish = Effect.fn("GitOps.releasePr")(function* () {
   const values = yield* fileSystem.readFileString(config.values)
   const digest = object(object(parse(values)).image).digest
   assert.equal(typeof digest, "string")
+  const lock = yield* fileSystem.readFileString(config.flakeLock)
+  assert.equal(currentLockRevision(lock, app), commit)
+  const previousLock = yield* command("git", ["show", `HEAD:${config.flakeLock}`])
+  validateLockUpdate(previousLock, lock, app, commit)
   const expected = updateRelease(
     app,
     {
@@ -125,7 +131,7 @@ const publish = Effect.fn("GitOps.releasePr")(function* () {
   const body = [
     `Promote **${app}** to \`${commit}\`.`,
     `Source CI: https://github.com/${config.repository}/actions/runs/${run}`,
-    "Verified successful default-branch CI, immutable multi-architecture image, source-bound provenance, and forward-only source ancestry.",
+    "Verified successful default-branch CI, immutable multi-architecture image, source-bound provenance, forward-only source ancestry, and a matching source lock.",
     "Review rendered production manifests and any database compatibility requirements before merging. This PR does not apply migrations, change credentials, or automatically merge itself.",
     "Argo reconciles after merge only once this application's auto-sync has been explicitly enabled. Revert the release pins to roll back the image/chart; database changes are separate.",
   ].join("\n\n")
