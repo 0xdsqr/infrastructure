@@ -69,6 +69,16 @@
             program = "${packages.gitopsRender}/bin/gitops-render";
             meta.description = "Render every GitOps surface";
           };
+          gitops-promote = {
+            type = "app";
+            program = "${packages.gitops}/bin/gitops-promote";
+            meta.description = "Verify an application release and prepare production pins";
+          };
+          gitops-release-pr = {
+            type = "app";
+            program = "${packages.gitops}/bin/gitops-release-pr";
+            meta.description = "Open a reviewed application release PR from CI";
+          };
           security-audit = {
             type = "app";
             program = "${packages.securityAudit}/bin/security-audit";

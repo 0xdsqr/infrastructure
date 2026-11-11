@@ -3,6 +3,7 @@ let
   excludedDirectories = [
     ".direnv"
     ".git"
+    ".local-notes"
     ".pulumi"
     "dist"
     "node_modules"

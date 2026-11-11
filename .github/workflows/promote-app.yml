@@ -1,0 +1,102 @@
+name: Promote application release
+
+# Bootstrap before enabling:
+# - Install a dedicated GitHub App on infrastructure and each registered source repo.
+# - App permissions: Actions/Attestations read, Contents/Pull requests write;
+#   each minted token below is narrowed to its repository and role.
+# - Set RELEASE_APP_CLIENT_ID (variable), RELEASE_APP_PRIVATE_KEY (Actions secret)
+#   ONLY in infrastructure, then RELEASE_PROMOTION_ENABLED=true.
+# - Protect master with required Check, review, up-to-date branches, no bot bypass.
+# - Prove a release PR and rollback before enabling Argo auto-sync per application.
+# No cluster credentials, automatic merges, migrations, or app-source execution.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run-id:
+        description: "Optional successful source CI run ID (blank selects current master release)"
+        required: false
+        type: string
+  schedule:
+    - cron: "17,37,57 * * * *"
+
+permissions: {}
+
+# Serialize promotions, including manual retries; do not interrupt branch/PR creation.
+concurrency:
+  group: application-release-promotion
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: github.repository == '0xdsqr/infrastructure' && github.ref == 'refs/heads/master' && vars.RELEASE_PROMOTION_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        # Explicit opt-in; add an entry only after its chart/secrets/placement are ready.
+        include:
+          - app: dotdev-web
+            source-repository: dsqr-dotdev
+    steps:
+      - name: Check out infrastructure
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          ref: master
+
+      - name: Set up Nix
+        uses: ./.github/actions/setup-nix
+
+      - name: Read-only source token
+        id: source-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ matrix.source-repository }}
+          permission-actions: read
+          permission-attestations: read
+          permission-contents: read
+
+      - name: Verify release and prepare pins
+        id: release
+        env:
+          GH_TOKEN: ${{ steps.source-token.outputs.token }}
+          RELEASE_APP: ${{ matrix.app }}
+          RELEASE_RUN: ${{ inputs.run-id }}
+        run: |
+          args=(--app "$RELEASE_APP" --write)
+          if [[ -n "$RELEASE_RUN" ]]; then args+=(--run "$RELEASE_RUN"); fi
+          nix run .#gitops-promote -- "${args[@]}"
+
+      - name: Check whitespace
+        if: steps.release.outputs.changed == 'true'
+        run: git diff --check
+
+      - name: Infrastructure-only PR token
+        if: steps.release.outputs.changed == 'true'
+        id: pr-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: infrastructure
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Open reviewed infrastructure release PR
+        if: steps.release.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.pr-token.outputs.token }}
+          RELEASE_APP: ${{ matrix.app }}
+          RELEASE_COMMIT: ${{ steps.release.outputs.commit }}
+          RELEASE_RUN: ${{ steps.release.outputs.run }}
+        run: nix run .#gitops-release-pr

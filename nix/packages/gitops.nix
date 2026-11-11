@@ -5,7 +5,13 @@
 }:
 let
   src = import ../lib/source.nix { inherit lib; };
-  runtimePath = lib.makeBinPath [ pkgs.kubectl ];
+  runtimePath = lib.makeBinPath [
+    pkgs.kubectl
+    pkgs.gh
+    pkgs.git
+    pkgs.unzip
+    pkgs.kubernetes-helm
+  ];
 in
 pkgs.stdenvNoCC.mkDerivation {
   name = "gitops-tools";
@@ -33,7 +39,7 @@ pkgs.stdenvNoCC.mkDerivation {
     CGO_ENABLED=0 GO111MODULE=off go build -o gitops-template-render packages/gitops/tools/render-template.go
 
     node_modules/.bin/esbuild \
-      packages/gitops/src/bin/{check,generate,render}.ts \
+      packages/gitops/src/bin/{check,generate,render,promote,release-pr}.ts \
       --bundle \
       --splitting \
       --format=esm \
@@ -54,7 +60,7 @@ pkgs.stdenvNoCC.mkDerivation {
     mkdir -p "$out/bin" "$out/libexec"
     cp -R dist/. "$out/libexec/"
     cp gitops-template-render "$out/libexec/"
-    for command in check generate render; do
+    for command in check generate render promote release-pr; do
       makeWrapper ${pkgs.nodejs_24}/bin/node "$out/bin/gitops-$command" \
         --set GITOPS_TEMPLATE_RENDERER "$out/libexec/gitops-template-render" \
         --add-flags "$out/libexec/gitops-$command.mjs" \

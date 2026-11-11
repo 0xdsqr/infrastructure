@@ -68,6 +68,8 @@ test("Effect runtime execution is restricted to documented application boundarie
     "packages/gitops/src/bin/check.ts",
     "packages/gitops/src/bin/generate.ts",
     "packages/gitops/src/bin/render.ts",
+    "packages/gitops/src/bin/promote.ts",
+    "packages/gitops/src/bin/release-pr.ts",
     "packages/cluster/src/bin.ts",
     "packages/cli/src/bin.ts",
     "packages/pulumi/shared/src/index.ts",

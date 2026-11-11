@@ -20,6 +20,7 @@ in
     global.excludes = [
       ".direnv/**"
       ".git/**"
+      ".local-notes/**"
       "dist/**"
       "node_modules/**"
       "result*"
