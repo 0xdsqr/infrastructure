@@ -12,9 +12,9 @@
   },
   "dependencies": {
     "@dsqr/pulumi-shared": "0.0.0",
-    "@pulumi/kubernetes": "4.33.0",
-    "@pulumi/pulumi": "3.254.0",
-    "effect": "3.22.0"
+    "@pulumi/kubernetes": "4.34.3",
+    "@pulumi/pulumi": "3.274.1",
+    "effect": "3.22.4"
   },
   "engines": {
     "node": ">=24"

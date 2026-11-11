@@ -116,6 +116,6 @@ test("reusable Pulumi packages pin their Effect runtime", () => {
     const packageJson = JSON.parse(readFileSync(manifest, "utf8")) as {
       readonly dependencies?: Readonly<Record<string, string>>
     }
-    assert.equal(packageJson.dependencies?.effect, "3.22.0", relative(root.pathname, manifest))
+    assert.equal(packageJson.dependencies?.effect, "3.22.4", relative(root.pathname, manifest))
   }
 })

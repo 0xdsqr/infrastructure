@@ -16,9 +16,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@effect/platform": "0.97.0",
-    "@effect/platform-node": "0.108.0",
-    "effect": "3.22.0",
+    "@effect/platform": "0.97.3",
+    "@effect/platform-node": "0.108.4",
+    "effect": "3.22.4",
     "yaml": "2.9.0"
   },
   "engines": {

@@ -15,10 +15,10 @@
   },
   "dependencies": {
     "@dsqr/core": "0.0.0",
-    "@effect/cli": "0.76.0",
-    "@effect/platform": "0.97.0",
-    "@effect/platform-node": "0.108.0",
-    "effect": "3.22.0"
+    "@effect/cli": "0.77.2",
+    "@effect/platform": "0.97.3",
+    "@effect/platform-node": "0.108.4",
+    "effect": "3.22.4"
   },
   "engines": {
     "node": ">=24"

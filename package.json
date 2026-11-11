@@ -28,12 +28,15 @@
     "@dsqr/pulumi-shared": "0.0.0",
     "@dsqr/pulumi-tailscale": "0.0.0",
     "@dsqr/pulumi-vault": "0.0.0",
-    "@effect/platform": "0.97.0",
-    "@effect/platform-node": "0.108.0",
-    "@pulumi/pulumi": "3.254.0",
-    "effect": "3.22.0"
+    "@effect/platform": "0.97.3",
+    "@effect/platform-node": "0.108.4",
+    "@pulumi/pulumi": "3.274.1",
+    "effect": "3.22.4"
   },
   "devDependencies": {
+    "@effect/printer": "0.51.0",
+    "@effect/printer-ansi": "0.51.0",
+    "@effect/typeclass": "0.41.0",
     "@types/node": "24.13.3",
     "esbuild": "0.28.1",
     "oxlint": "1.75.0",
@@ -41,6 +44,9 @@
   },
   "overrides": {
     "esbuild": "$esbuild",
+    "glob": "14.0.4",
+    "minimatch": "11.0.8",
+    "toml": "5.0.1",
     "typescript": "$typescript"
   },
   "engines": {
@@ -50,7 +56,7 @@
   "packageManager": "npm@11.16.0",
   "allowScripts": {
     "@parcel/watcher": false,
-    "@pulumi/kubernetes@4.33.0": true,
+    "@pulumi/kubernetes@4.34.3": true,
     "esbuild@0.28.1": true,
     "msgpackr-extract": false,
     "protobufjs@7.6.5": true
