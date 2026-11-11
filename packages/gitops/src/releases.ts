@@ -13,9 +13,8 @@ export const releaseApps = {
     profile: "values-dotdev.yaml",
     namespace: "dsqr",
     kubeVersion: "1.36.0",
-    applicationSet:
-      "gitops/components/application-set/overlays/indigo/applications.applicationset.yaml",
-    values: "gitops/components/dotdev/overlays/indigo/values-dotdev.yaml",
+    release: "apps/dotdev-web/environments/production/release.yaml",
+    values: "apps/dotdev-web/environments/production/values.yaml",
   },
 } as const
 
@@ -73,38 +72,11 @@ function document(source: string) {
   return doc
 }
 
-function revisionPath(source: string, app: ReleaseApp): (string | number)[] {
+function revisionPath(source: string, _app: ReleaseApp): (string | number)[] {
   const doc = document(source)
   const root = object(doc.toJS())
-  assert.equal(root.kind, "ApplicationSet")
-  const generators = object(root.spec).generators
-  assert.ok(Array.isArray(generators))
-  const matches: (string | number)[][] = []
-  generators.forEach((generator, gi) => {
-    const matrix = object(object(generator).matrix).generators
-    assert.ok(Array.isArray(matrix))
-    matrix.forEach((entry, mi) => {
-      const elements = object(object(entry).list).elements
-      assert.ok(Array.isArray(elements))
-      elements.forEach((element, ei) => {
-        if (object(element).name === app)
-          matches.push([
-            "spec",
-            "generators",
-            gi,
-            "matrix",
-            "generators",
-            mi,
-            "list",
-            "elements",
-            ei,
-            "appRevision",
-          ])
-      })
-    })
-  })
-  assert.equal(matches.length, 1, "Expected exactly one registered application")
-  return matches[0]!
+  assert.deepEqual(Object.keys(root).sort(), ["sourceRevision"], "Unexpected release fields")
+  return ["sourceRevision"]
 }
 
 export function currentRevision(source: string, app: ReleaseApp): string {
@@ -116,25 +88,25 @@ export function currentRevision(source: string, app: ReleaseApp): string {
 
 export function updateRelease(
   app: ReleaseApp,
-  sources: { applicationSet: string; values: string },
+  sources: { release: string; values: string },
   commit: string,
   digest: string,
   runId: string,
-): { applicationSet: string; values: string } {
+): { release: string; values: string } {
   assert.match(commit, shaPattern)
   assert.match(digest, digestPattern)
   assert.match(runId, /^[1-9][0-9]*$/)
-  currentRevision(sources.applicationSet, app)
-  const applicationSet = document(sources.applicationSet)
+  currentRevision(sources.release, app)
+  const release = document(sources.release)
   const values = document(sources.values)
   const previousDigest = values.getIn(["image", "digest"])
   assert.equal(typeof previousDigest, "string")
   assert.match(previousDigest as string, digestPattern)
-  applicationSet.setIn(revisionPath(sources.applicationSet, app), commit)
+  release.setIn(revisionPath(sources.release, app), commit)
   values.setIn(["image", "digest"], digest)
   // Replace the existing release evidence comment; do not touch runtime settings.
   const renderedValues = values
     .toString()
     .replace(/^# CI [^\n]*$/m, `# CI ${runId}, ${releaseApps[app].repository} commit ${commit}.`)
-  return { applicationSet: applicationSet.toString(), values: renderedValues }
+  return { release: release.toString(), values: renderedValues }
 }

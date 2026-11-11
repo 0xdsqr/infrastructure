@@ -50,7 +50,7 @@ const promote = Effect.fn("GitOps.promote")(function* () {
     assert.equal(
       (yield* command("git", ["rev-parse", "HEAD"])).trim(),
       (yield* command("git", ["rev-parse", "origin/master"])).trim(),
-      "Checkout must match infrastructure master",
+      "Checkout must match deployments master",
     )
   }
   const head = object(yield* api(`${base}/commits/${config.branch}`)).sha
@@ -77,10 +77,10 @@ const promote = Effect.fn("GitOps.promote")(function* () {
   }
   const commit = validateRun(app, yield* api(`${base}/actions/runs/${runId}`), head as string)
   const sources = {
-    applicationSet: yield* fileSystem.readFileString(config.applicationSet),
+    release: yield* fileSystem.readFileString(config.release),
     values: yield* fileSystem.readFileString(config.values),
   }
-  const previous = currentRevision(sources.applicationSet, app)
+  const previous = currentRevision(sources.release, app)
   const comparison = object(yield* api(`${base}/compare/${previous}...${commit}`))
   assert.ok(
     comparison.status === "ahead" || comparison.status === "identical",
@@ -232,7 +232,7 @@ const promote = Effect.fn("GitOps.promote")(function* () {
     "Source changed during chart validation; retry",
   )
   if (write) {
-    yield* fileSystem.writeFileString(config.applicationSet, updated.applicationSet)
+    yield* fileSystem.writeFileString(config.release, updated.release)
     yield* fileSystem.writeFileString(config.values, updated.values)
     if (outputPath)
       yield* fileSystem.writeFileString(

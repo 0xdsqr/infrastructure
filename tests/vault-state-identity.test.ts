@@ -24,8 +24,6 @@ const auditToken = "vault:index/audit:Audit"
 const externalPolicyNames = {
   argocdFidaraRepo: "hub-a-external-secrets-argocd-fidara-repo",
   argocdGithubWebhook: "hub-a-external-secrets-argocd-github-webhook",
-  dotdevStudio: "hub-a-external-secrets-dotdev-studio",
-  dotdevWeb: "hub-a-external-secrets-dotdev-web",
   fidaraApi: "hub-a-external-secrets-fidara-api",
   fidaraWeb: "hub-a-external-secrets-fidara-web",
   githubArgoRepoRead: "hub-a-external-secrets-github-argocd-repo-read",

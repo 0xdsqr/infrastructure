@@ -19,12 +19,13 @@ test("hub-a distributes the expected home root CA to application namespaces", ()
     /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g,
   )
 
-  assert.equal(certificates?.length, 3)
-  assert.equal((manifest.match(/name: dsqr-home-root-ca/g) ?? []).length, 3)
+  assert.equal(certificates?.length, 2)
+  assert.equal((manifest.match(/name: dsqr-home-root-ca/g) ?? []).length, 2)
 
-  for (const namespace of ["dsqr", "fidara", "twt"]) {
+  for (const namespace of ["fidara", "twt"]) {
     assert.match(manifest, new RegExp(`namespace: ${namespace}`))
   }
+  assert.doesNotMatch(manifest, /namespace: dsqr/)
 
   for (const indentedCertificate of certificates ?? []) {
     const certificate = new X509Certificate(
@@ -43,14 +44,15 @@ test("hub-a distributes the expected home root CA to application namespaces", ()
     "utf8",
   )
 
-  for (const namespace of ["argocd", "dsqr", "fidara", "twt"]) {
+  for (const namespace of ["argocd", "fidara", "twt"]) {
     assert.match(bootstrapProject, new RegExp(`namespace: ${namespace}`))
   }
+  assert.doesNotMatch(bootstrapProject, /namespace: dsqr/)
   assert.match(bootstrapProject, /group: ""\n      kind: ConfigMap/)
 })
 
-test("all hub-a Node workloads load the additional trust anchor", () => {
-  for (const app of ["dotdev-web", "dotdev-studio", "dotdev-labs", "twt-web", "twt-admin"]) {
+test("all remaining hub-a Node workloads load the additional trust anchor", () => {
+  for (const app of ["twt-web", "twt-admin"]) {
     const values = readFileSync(
       new URL(`../gitops/components/${app}/overlays/hub-a/values-overrides.yaml`, import.meta.url),
       "utf8",

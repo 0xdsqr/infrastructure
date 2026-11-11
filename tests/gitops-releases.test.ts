@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { readFileSync } from "node:fs"
+import { existsSync } from "node:fs"
 import test from "node:test"
 import { parse } from "yaml"
 import { Effect } from "effect"
@@ -35,6 +35,10 @@ const image = {
   ref: `${config.image}@${digest}`,
   platforms: { "linux/amd64": digest, "linux/arm64": digest },
 }
+const previousSha = "c".repeat(40)
+const previousDigest = `sha256:${"d".repeat(64)}`
+const releaseSource = `# Deployment selection only.\nsourceRevision: ${previousSha}\n`
+const valuesSource = `# CI 1, ${config.repository} commit ${previousSha}.\nimage:\n  digest: ${previousDigest}\nreplicaCount: 1\n`
 
 test("release process boundary preserves binary output and sends stdin without a shell", async () => {
   const bytes = await Effect.runPromise(
@@ -114,16 +118,12 @@ test("release artifact binds the immutable multi-platform image to its source", 
 
 test("promotion changes only the app/chart revision and image digest", () => {
   const sources = {
-    applicationSet: readFileSync(config.applicationSet, "utf8"),
-    values: readFileSync(config.values, "utf8"),
+    release: releaseSource,
+    values: valuesSource,
   }
-  assert.match(currentRevision(sources.applicationSet, app), /^[a-f0-9]{40}$/)
+  assert.equal(currentRevision(sources.release, app), previousSha)
   const result = updateRelease(app, sources, sha, digest, "12345")
-  const oldSet = parse(sources.applicationSet)
-  const nextSet = parse(result.applicationSet)
-  oldSet.spec.generators[0].matrix.generators[1].list.elements[0].appRevision = sha
-  assert.deepEqual(nextSet, oldSet)
-  assert.equal(nextSet.spec.templatePatch, parse(sources.applicationSet).spec.templatePatch)
+  assert.deepEqual(parse(result.release), { sourceRevision: sha })
   const oldValues = parse(sources.values)
   oldValues.image.digest = digest
   assert.deepEqual(parse(result.values), oldValues)
@@ -132,26 +132,14 @@ test("promotion changes only the app/chart revision and image digest", () => {
   for (const bad of ["master", "../x", "a".repeat(39)])
     assert.throws(() => updateRelease(app, sources, bad, digest, "12345"))
   assert.throws(() => updateRelease(app, sources, sha, digest, "123\ninject=true"))
-  assert.throws(() =>
-    currentRevision(sources.applicationSet.replace("name: dotdev-web", "name: unknown"), app),
-  )
-  assert.throws(() => currentRevision(`${sources.applicationSet}\nspec: {}\n`, app))
+  assert.throws(() => currentRevision(`sourceRevision: ${previousSha}\nproject: admin\n`, app))
+  assert.throws(() => currentRevision(`sourceRevision: master\n`, app))
+  assert.throws(() => currentRevision(`${sources.release}\nsourceRevision: ${sha}\n`, app))
 })
 
-test("release workflow is disabled until explicitly configured and never deploys", () => {
-  const workflow = readFileSync(".github/workflows/promote-app.yml", "utf8")
-  assert.match(workflow, /RELEASE_PROMOTION_ENABLED == 'true'/)
-  assert.match(workflow, /permission-actions: read/)
-  assert.match(workflow, /repositories: infrastructure/)
-  assert.match(workflow, /permission-pull-requests: write/)
-  assert.doesNotMatch(
-    workflow,
-    /secrets: inherit|pull_request_target|kubectl|argocd .*sync|pr merge/,
-  )
-  const matrix = parse(workflow).jobs.promote.strategy.matrix.include
-  assert.deepEqual(
-    matrix.map((entry: { app: string }) => entry.app).sort(),
-    Object.keys(releaseApps).sort(),
-  )
-  assert.equal(matrix[0]["source-repository"], config.repository.split("/")[1])
+test("public infrastructure contains generic promotion tooling, not deployment automation", () => {
+  assert.equal(existsSync(".github/workflows/promote-app.yml"), false)
+  assert.equal(config.release, "apps/dotdev-web/environments/production/release.yaml")
+  assert.equal(config.values, "apps/dotdev-web/environments/production/values.yaml")
+  assert.equal(config.repository, "0xdsqr/dsqr-dotdev")
 })

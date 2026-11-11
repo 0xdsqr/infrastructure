@@ -106,8 +106,12 @@ test("Only Dotdev Web uses the TLS-verified Indigo origin", () => {
     cloudflare.ingressRules.some((rule) => rule.hostname === "dsqr.dev"),
     false,
   )
-  for (const hostname of ["labs.dsqr.dev", "studio.dsqr.dev", "tastingswithtay.com"]) {
-    assert.ok(cloudflare.ingressRules.some((rule) => rule.hostname === hostname))
+  assert.ok(cloudflare.ingressRules.some((rule) => rule.hostname === "tastingswithtay.com"))
+  for (const hostname of ["labs.dsqr.dev", "studio.dsqr.dev"]) {
+    assert.equal(
+      cloudflare.ingressRules.some((rule) => rule.hostname === hostname),
+      false,
+    )
   }
   assert.equal(
     cloudflare.ingressRules.some((rule) => rule.hostname === "dotdev-preview.dsqr.dev"),

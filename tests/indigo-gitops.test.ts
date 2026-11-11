@@ -163,7 +163,7 @@ test("only hub-a renders the legacy Cilium tracking exception", () => {
   }
 })
 
-test("Indigo excludes legacy Traefik but retains roadmap AppProjects", () => {
+test("cluster overlays retain only their active AppProjects", () => {
   for (const cluster of ["hub-a", "indigo"]) {
     const projects = parseAllDocuments(
       execFileSync("kubectl", ["kustomize", `gitops/components/argocd/overlays/${cluster}`], {
@@ -174,8 +174,8 @@ test("Indigo excludes legacy Traefik but retains roadmap AppProjects", () => {
       .filter((resource) => resource.kind === "AppProject")
       .map((resource) => resource.metadata.name)
     assert.equal(projects.includes("platform-traefik"), cluster === "hub-a")
+    assert.equal(projects.includes("dsqr"), cluster === "indigo")
     for (const project of [
-      "dsqr",
       "twt",
       "fidara",
       "platform-k8s-monitoring",
@@ -284,33 +284,33 @@ test("Indigo Dotdev is pinned, proxy-guarded, and manually synced", async () => 
   assert.equal(chart.path, "helm/dsqr-app")
   assert.deepEqual(chart.helm.valueFiles, [
     "values-dotdev.yaml",
-    "$values/gitops/components/dotdev/overlays/indigo/values-dotdev.yaml",
+    "$values/apps/dotdev-web/environments/production/values.yaml",
   ])
-  const values = parseAllDocuments(
-    await read("gitops/components/dotdev/overlays/indigo/values-dotdev.yaml"),
+  const deploymentValues = application.spec.sources[1]
+  assert.deepEqual(deploymentValues, {
+    repoURL: "https://github.com/dsqr-labs/deployments.git",
+    targetRevision: "refs/heads/master",
+    ref: "values",
+  })
+  const owner = parseAllDocuments(
+    await read(
+      "gitops/components/application-set/overlays/indigo/applications.applicationset.yaml",
+    ),
   )[0].toJSON()
-  assert.match(values.image.digest, /^sha256:[a-f0-9]{64}$/)
-  assert.equal(values.replicaCount, 1)
-  assert.equal(values.trustProxy, true)
-  assert.equal(values.trustedProxyHops, 2)
-  assert.deepEqual(values.trustedOrigins, ["https://dsqr.dev"])
-  assert.deepEqual(values.route, {
-    enabled: true,
-    hostnames: ["dsqr.dev"],
+  const generator = owner.spec.generators[0].matrix.generators[1].git
+  assert.deepEqual(generator, {
+    repoURL: "https://github.com/dsqr-labs/deployments.git",
+    revision: "refs/heads/master",
+    files: [{ path: "apps/dotdev-web/environments/production/release.yaml" }],
   })
-  assert.deepEqual(values.database, {
-    existingSecret: "dotdev-web",
-    caConfigMap: "dsqr-home-root-ca",
-    address: "10.10.30.109",
-    port: 5432,
-  })
+  assert.equal(owner.spec.template.spec.project, "dsqr")
+  assert.equal(owner.spec.template.spec.destination.namespace, "dsqr")
 })
 
-test("retired Hub-A Web cannot be recreated by the current GitOps inventory", () => {
+test("retired Hub-A Dotdev applications cannot be recreated by the current GitOps inventory", () => {
   const names = renderApplications("hub-a").map((application) => application.metadata.name)
-  assert.equal(names.includes("dotdev-web"), false)
-  assert.ok(names.includes("dotdev-labs"))
-  assert.ok(names.includes("dotdev-studio"))
+  for (const name of ["dotdev-web", "dotdev-labs", "dotdev-studio"])
+    assert.equal(names.includes(name), false)
 })
 
 test("Indigo Dotdev prerequisites isolate the namespace and expose only its runtime URL", async () => {

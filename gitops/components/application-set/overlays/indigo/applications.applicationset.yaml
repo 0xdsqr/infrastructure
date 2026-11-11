@@ -13,17 +13,19 @@ spec:
         generators:
           - list:
               elements:
-                - cluster: indigo
-                  environment: production
-                  repoURL: https://github.com/0xdsqr/infrastructure.git
-                  revision: refs/heads/master
-          - list:
-              elements:
+                # Privilege-bearing fields are declared here, in public infrastructure.
+                # This private generator contributes only the immutable source revision;
+                # its separate values source is constrained by the public chart and project.
                 - name: dotdev-web
-                  profile: dotdev
-                  appRevision: 10e8150b5bd17a5d5e97be052b7a2c47468549fd
+                  cluster: indigo
+                  environment: production
                   lifecycle: controller
                   retryProfile: standard
+          - git:
+              repoURL: https://github.com/dsqr-labs/deployments.git
+              revision: refs/heads/master
+              files:
+                - path: apps/dotdev-web/environments/production/release.yaml
   syncPolicy:
     applicationsSync: create-update
     preserveResourcesOnDeletion: true
@@ -50,15 +52,15 @@ spec:
         namespace: dsqr
       sources:
         - repoURL: https://github.com/0xdsqr/dsqr-dotdev.git
-          targetRevision: '{{ .appRevision }}'
+          targetRevision: '{{ .sourceRevision }}'
           path: helm/dsqr-app
           helm:
             releaseName: '{{ .name }}'
             valueFiles:
-              - 'values-{{ .profile }}.yaml'
-              - '$values/gitops/components/dotdev/overlays/{{ .cluster }}/values-{{ .profile }}.yaml'
-        - repoURL: '{{ .repoURL }}'
-          targetRevision: '{{ .revision }}'
+              - values-dotdev.yaml
+              - $values/apps/dotdev-web/environments/production/values.yaml
+        - repoURL: https://github.com/dsqr-labs/deployments.git
+          targetRevision: refs/heads/master
           ref: values
   templatePatch: |
     spec:

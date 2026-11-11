@@ -13,7 +13,7 @@ import {
 } from "../releases.ts"
 import { parse } from "yaml"
 
-const repository = "0xdsqr/infrastructure"
+const repository = "dsqr-labs/deployments"
 import { FileSystem } from "@effect/platform"
 import { api, command } from "../release-runtime.ts"
 
@@ -27,15 +27,15 @@ const publish = Effect.fn("GitOps.releasePr")(function* () {
   assert.equal(
     yield* Config.string("GITHUB_REPOSITORY"),
     repository,
-    "Run only in the infrastructure workflow",
+    "Run only in the deployments workflow",
   )
   assert.equal(
     yield* Config.string("GITHUB_REF"),
     "refs/heads/master",
-    "Run only from infrastructure master",
+    "Run only from deployments master",
   )
   const config = releaseApps[app]
-  const paths = [config.applicationSet, config.values].sort()
+  const paths = [config.release, config.values].sort()
   const changed = (yield* command("git", ["diff", "--name-only", "HEAD"])).trim().split("\n").sort()
   assert.deepEqual(changed, paths, "Release PR must change exactly the two registered pin files")
   assert.equal(
@@ -43,24 +43,24 @@ const publish = Effect.fn("GitOps.releasePr")(function* () {
     "",
     "Unexpected untracked files",
   )
-  const applicationSet = yield* fileSystem.readFileString(config.applicationSet)
-  assert.equal(currentRevision(applicationSet, app), commit)
+  const release = yield* fileSystem.readFileString(config.release)
+  assert.equal(currentRevision(release, app), commit)
   const values = yield* fileSystem.readFileString(config.values)
   const digest = object(object(parse(values)).image).digest
   assert.equal(typeof digest, "string")
   const expected = updateRelease(
     app,
     {
-      applicationSet: yield* command("git", ["show", `HEAD:${config.applicationSet}`]),
+      release: yield* command("git", ["show", `HEAD:${config.release}`]),
       values: yield* command("git", ["show", `HEAD:${config.values}`]),
     },
     commit,
     digest as string,
     run,
   )
-  assert.equal(applicationSet, expected.applicationSet, "Unexpected ApplicationSet changes")
+  assert.equal(release, expected.release, "Unexpected release pin changes")
   assert.equal(values, expected.values, "Unexpected production setting changes")
-  const prefix = `release/indigo-${app}-`
+  const prefix = `release/${app}-`
   const open = JSON.parse(
     yield* command("gh", [
       "pr",
@@ -85,7 +85,7 @@ const publish = Effect.fn("GitOps.releasePr")(function* () {
   assert.equal(
     object(object(yield* api(`repos/${repository}/git/ref/heads/master`)).object).sha,
     base,
-    "Infrastructure master moved; retry on the new base",
+    "Deployments master moved; retry on the new base",
   )
   const branch = `${prefix}${run}`
   // Never force-push or reuse an existing branch. Retries fail safely if interrupted.

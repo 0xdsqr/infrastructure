@@ -15,7 +15,7 @@ spec:
   description: dsqr.dev application workloads
   sourceRepos:
     - https://github.com/0xdsqr/dsqr-dotdev.git
-    - https://github.com/0xdsqr/infrastructure.git
+    - https://github.com/dsqr-labs/deployments.git
   destinations:
     - server: https://kubernetes.default.svc
       namespace: dsqr

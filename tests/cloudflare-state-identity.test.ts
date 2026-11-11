@@ -136,7 +136,7 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
     resource.type.startsWith("cloudflare:"),
   )
 
-  assert.equal(resources.length, 35)
+  assert.equal(resources.length, 33)
   assert.deepEqual(
     resources
       .map((resource) => [resource.type, resource.name] as const)
@@ -168,9 +168,7 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
       [tunnelConfigToken, "gateway-config"],
       [r2BucketToken, "dsqr-platform-backups"],
       [r2BucketLockToken, "dsqr-platform-backups-lock"],
-      [dnsToken, "labs-dsqr-dev"],
       [dnsToken, "s3-dsqr-dev"],
-      [dnsToken, "studio-dsqr-dev"],
       [dnsToken, "tastingswithtay-com"],
       [zoneSettingToken, "tastingswithtayCom-always-use-https"],
       [zoneSettingToken, "tastingswithtayCom-automatic-https-rewrites"],
