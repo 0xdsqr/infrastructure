@@ -63,8 +63,10 @@ test("renewal is one generated manually approved Application with narrow Argo dr
   }
   const companionPaths = new Map([
     ["cilium", "gitops/components/cilium/overlays/indigo"],
+    ["envoy-gateway", "gitops/components/envoy-gateway/overlays/indigo"],
     ["indigo-metrics", "gitops/components/telemetry-metrics/overlays/indigo"],
     ["kube-state-metrics", "gitops/components/kube-state-metrics/overlays/indigo"],
+    ["metallb", "gitops/components/metallb/controller-access/overlays/indigo"],
   ])
   for (const app of apps.filter((app) => app !== reloader)) {
     assert.equal(

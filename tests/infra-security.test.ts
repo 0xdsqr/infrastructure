@@ -225,6 +225,8 @@ test("Tailscale machine enrollment keys are hardened while the live ACL remains 
   assert.ok(policy.grants.some((grant) => grant.src[0] === tailscale.tags.role.workstation))
   assert.deepEqual(policy.hosts, {
     "beacon-observability": tailscale.hosts.beaconObservability,
+    "backup-collector": tailscale.hosts.backupCollector,
+    "indigo-etcd-source": tailscale.hosts.indigoEtcdSource,
   })
   assert.ok(
     policy.grants.some(

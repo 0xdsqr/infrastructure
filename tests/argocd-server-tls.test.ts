@@ -153,6 +153,16 @@ test("existing generated secrets Application owns certificate preparation with s
         kind: "ClusterRoleBinding",
         name: "telemetry-client-issuer-auth-delegator",
       },
+      {
+        group: "rbac.authorization.k8s.io",
+        kind: "ClusterRoleBinding",
+        name: "metallb-controller-metrics-issuer-auth-delegator",
+      },
+      {
+        group: "rbac.authorization.k8s.io",
+        kind: "ClusterRoleBinding",
+        name: "metallb-speaker-metrics-issuer-auth-delegator",
+      },
     ],
   )
 })

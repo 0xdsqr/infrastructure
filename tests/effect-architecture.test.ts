@@ -45,6 +45,15 @@ test("infrastructure production code keeps side effects behind Effect boundaries
       if (label === "raw Node filesystem" && relativePath === "infra/kubernetes/preflight.ts") {
         continue
       }
+      // ApplicationSet preview is intentionally synchronous so validation can
+      // render the strict Go-template profile before any generated output is
+      // accepted. The packaged wrapper pins the renderer to its Nix-store path.
+      if (
+        (label === "ambient process environment" || label === "raw child process") &&
+        relativePath === "packages/gitops/src/applicationset.ts"
+      ) {
+        continue
+      }
       if (pattern.test(source)) {
         violations.push(`${relativePath}: ${label}`)
       }

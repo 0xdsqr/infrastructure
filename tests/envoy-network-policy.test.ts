@@ -26,7 +26,15 @@ test("Envoy allow rules stage without enabling default-deny prematurely", () => 
       resource.kind === "CiliumNetworkPolicy" &&
       resource.metadata.namespace === "envoy-gateway-system",
   )
-  assert.equal(policies.length, 5)
+  assert.deepEqual(policies.map((policy) => policy.metadata.name).sort(), [
+    "envoy-gateway-certgen-access",
+    "envoy-gateway-controller-access",
+    "envoy-shared-cloudflared-ingress",
+    "envoy-shared-dmz-ingress",
+    "envoy-shared-proxy-access",
+    "envoy-shared-to-argocd",
+    "envoy-shared-to-dotdev-web",
+  ])
   for (const policy of policies) {
     assert.equal(policy.metadata.annotations["argocd.argoproj.io/sync-wave"], "0")
     assert.deepEqual(policy.spec.enableDefaultDeny, { ingress: false, egress: false })
