@@ -186,6 +186,19 @@ const secretPaths = {
       "repository",
     ],
   },
+  githubPromotionTrigger: {
+    path: "dsqr-labs/platform/github/apps/promotion-trigger",
+    description:
+      "Trigger-only GitHub App credentials for dispatching the private promotion workflow.",
+    fields: [
+      "githubAppSlug",
+      "githubAppID",
+      "githubAppClientID",
+      "githubAppInstallationID",
+      "githubAppPrivateKey",
+      "repository",
+    ],
+  },
   indigoBootstrapSmokeTest: {
     path: "dsqr-labs/clusters/indigo/bootstrap/eso-smoke-test",
     description: "Harmless validation data for the Indigo External Secrets bootstrap path.",
