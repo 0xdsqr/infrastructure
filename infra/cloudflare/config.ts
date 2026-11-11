@@ -31,7 +31,8 @@ export const indigoIngressRules: ReadonlyArray<CloudflareIngressRule> = [
   {
     hostname: "dsqr.dev",
     zone: "dsqrDev",
-    service: "https://envoy-gateway-system-shared-e9cec0f8.envoy-gateway-system.svc.cluster.local:443",
+    service:
+      "https://envoy-gateway-system-shared-e9cec0f8.envoy-gateway-system.svc.cluster.local:443",
     originRequest: {
       httpHostHeader: "dsqr.dev",
       originServerName: "gateway.indigo.home.arpa",

@@ -307,7 +307,7 @@ test("Indigo Dotdev is pinned, proxy-guarded, and manually synced", async () => 
 })
 
 test("retired Hub-A Web cannot be recreated by the current GitOps inventory", () => {
-  const names = renderApplications("hub-a").map(application => application.metadata.name)
+  const names = renderApplications("hub-a").map((application) => application.metadata.name)
   assert.equal(names.includes("dotdev-web"), false)
   assert.ok(names.includes("dotdev-labs"))
   assert.ok(names.includes("dotdev-studio"))

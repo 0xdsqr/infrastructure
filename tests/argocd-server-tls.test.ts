@@ -7,13 +7,16 @@ import { vault } from "../infra/vault/config.ts"
 import { previewApplicationSet } from "../packages/gitops/src/applicationset.ts"
 
 const render = (path: string) =>
-  parseAllDocuments(execFileSync("kubectl", ["kustomize", path], { encoding: "utf8" }))
-    .map((document) => document.toJSON())
+  parseAllDocuments(execFileSync("kubectl", ["kustomize", path], { encoding: "utf8" })).map(
+    (document) => document.toJSON(),
+  )
 
 const resources = render("gitops/components/external-secrets-config/overlays/indigo")
 const resource = (kind: string, name: string, namespace?: string) => {
-  const matches = resources.filter((item) => item.kind === kind && item.metadata.name === name &&
-    item.metadata.namespace === namespace)
+  const matches = resources.filter(
+    (item) =>
+      item.kind === kind && item.metadata.name === name && item.metadata.namespace === namespace,
+  )
   assert.equal(matches.length, 1, `${kind}/${namespace ?? ""}/${name}`)
   return matches[0]
 }
@@ -30,23 +33,38 @@ test("Argo certificate issuance is restricted to its service identity and dedica
   assert.equal(generator.method, "POST")
   assert.equal(generator.resultType, "Data")
   assert.deepEqual(generator.parameters, {
-    common_name: issuer.allowedDomains[0], ttl: `${issuer.ttlHours}h`,
+    common_name: issuer.allowedDomains[0],
+    ttl: `${issuer.ttlHours}h`,
   })
   assert.equal(generator.provider.server, "https://vault.service.home.arpa:8200")
   assert.deepEqual(generator.provider.caProvider, {
-    type: "ConfigMap", name: "dsqr-home-root-ca", key: "ca.crt",
+    type: "ConfigMap",
+    name: "dsqr-home-root-ca",
+    key: "ca.crt",
   })
   const auth = issuer.kubernetesAuthRole
   assert.deepEqual(auth.boundServiceAccountNames, ["argocd-server-issuer"])
   assert.deepEqual(auth.boundServiceAccountNamespaces, ["argocd"])
-  assert.deepEqual(generator.provider.auth, { kubernetes: {
-    mountPath: auth.backend, role: auth.roleName,
-    serviceAccountRef: { name: auth.boundServiceAccountNames[0] },
-  } })
-  assert.equal(resource("ServiceAccount", "argocd-server-issuer", "argocd").automountServiceAccountToken, false)
+  assert.deepEqual(generator.provider.auth, {
+    kubernetes: {
+      mountPath: auth.backend,
+      role: auth.roleName,
+      serviceAccountRef: { name: auth.boundServiceAccountNames[0] },
+    },
+  })
+  assert.equal(
+    resource("ServiceAccount", "argocd-server-issuer", "argocd").automountServiceAccountToken,
+    false,
+  )
   const binding = resource("ClusterRoleBinding", "argocd-server-issuer-auth-delegator")
-  assert.deepEqual(binding.subjects, [{ kind: "ServiceAccount", name: "argocd-server-issuer", namespace: "argocd" }])
-  assert.deepEqual(binding.roleRef, { apiGroup: "rbac.authorization.k8s.io", kind: "ClusterRole", name: "system:auth-delegator" })
+  assert.deepEqual(binding.subjects, [
+    { kind: "ServiceAccount", name: "argocd-server-issuer", namespace: "argocd" },
+  ])
+  assert.deepEqual(binding.roleRef, {
+    apiGroup: "rbac.authorization.k8s.io",
+    kind: "ClusterRole",
+    name: "system:auth-delegator",
+  })
 })
 
 test("External Secrets prepares the standard Argo TLS Secret with a renewal margin and CA chain", () => {
@@ -62,38 +80,89 @@ test("External Secrets prepares the standard Argo TLS Secret with a renewal marg
   assert.equal(secret.target.template.metadata.labels["platform.dsqr.dev/cluster"], "indigo")
   assert.equal(secret.target.template.data["tls.crt"], "{{ .certificate }}\n{{ .issuing_ca }}\n")
   assert.equal(secret.target.template.data["tls.key"], "{{ .private_key }}\n")
-  assert.deepEqual(secret.dataFrom, [{ sourceRef: { generatorRef: {
-    apiVersion: "generators.external-secrets.io/v1alpha1", kind: "VaultDynamicSecret", name: "argocd-server-tls",
-  } } }])
-  assert.deepEqual(resource("ConfigMap", "dsqr-home-root-ca", "argocd").data,
-    resource("ConfigMap", "dsqr-home-root-ca", "external-secrets").data)
-  assert.equal(resources.some((item) => item.kind === "Secret" && item.metadata.name === "argocd-server-tls"), false)
+  assert.deepEqual(secret.dataFrom, [
+    {
+      sourceRef: {
+        generatorRef: {
+          apiVersion: "generators.external-secrets.io/v1alpha1",
+          kind: "VaultDynamicSecret",
+          name: "argocd-server-tls",
+        },
+      },
+    },
+  ])
+  assert.deepEqual(
+    resource("ConfigMap", "dsqr-home-root-ca", "argocd").data,
+    resource("ConfigMap", "dsqr-home-root-ca", "external-secrets").data,
+  )
+  assert.equal(
+    resources.some((item) => item.kind === "Secret" && item.metadata.name === "argocd-server-tls"),
+    false,
+  )
 })
 
 test("existing generated secrets Application owns certificate preparation with scoped project access", () => {
-  const applications = render("gitops/clusters/indigo/applications")
-    .flatMap((item) => item.kind === "ApplicationSet" ? previewApplicationSet(item) : [item])
+  const applications = render("gitops/clusters/indigo/applications").flatMap((item) =>
+    item.kind === "ApplicationSet" ? previewApplicationSet(item) : [item],
+  )
   const app = applications.find((item) => item.metadata.name === "external-secrets-config")
   assert.equal(app.spec.project, "secrets")
   assert.equal(app.spec.source.path, "gitops/components/external-secrets-config/overlays/indigo")
-  assert.equal(applications.some((item) => item.metadata.name === "argocd-server-tls"), false)
-  const project = render("gitops/components/argocd/overlays/indigo")
-    .find((item) => item.kind === "AppProject" && item.metadata.name === "secrets")
-  assert.ok(project.spec.destinations.some((item: { namespace: string }) => item.namespace === "argocd"))
-  assert.deepEqual(project.spec.clusterResourceWhitelist.filter((item: { kind: string }) => item.kind === "ClusterRoleBinding"), [
-    { group: "rbac.authorization.k8s.io", kind: "ClusterRoleBinding", name: "gateway-origin-issuer-auth-delegator" },
-    { group: "rbac.authorization.k8s.io", kind: "ClusterRoleBinding", name: "argocd-server-issuer-auth-delegator" },
-    { group: "rbac.authorization.k8s.io", kind: "ClusterRoleBinding", name: "argocd-repo-server-issuer-auth-delegator" },
-    { group: "rbac.authorization.k8s.io", kind: "ClusterRoleBinding", name: "hubble-server-issuer-auth-delegator" },
-    { group: "rbac.authorization.k8s.io", kind: "ClusterRoleBinding", name: "metrics-server-issuer-auth-delegator" },
-    { group: "rbac.authorization.k8s.io", kind: "ClusterRoleBinding", name: "telemetry-client-issuer-auth-delegator" },
-  ])
+  assert.equal(
+    applications.some((item) => item.metadata.name === "argocd-server-tls"),
+    false,
+  )
+  const project = render("gitops/components/argocd/overlays/indigo").find(
+    (item) => item.kind === "AppProject" && item.metadata.name === "secrets",
+  )
+  assert.ok(
+    project.spec.destinations.some((item: { namespace: string }) => item.namespace === "argocd"),
+  )
+  assert.deepEqual(
+    project.spec.clusterResourceWhitelist.filter(
+      (item: { kind: string }) => item.kind === "ClusterRoleBinding",
+    ),
+    [
+      {
+        group: "rbac.authorization.k8s.io",
+        kind: "ClusterRoleBinding",
+        name: "gateway-origin-issuer-auth-delegator",
+      },
+      {
+        group: "rbac.authorization.k8s.io",
+        kind: "ClusterRoleBinding",
+        name: "argocd-server-issuer-auth-delegator",
+      },
+      {
+        group: "rbac.authorization.k8s.io",
+        kind: "ClusterRoleBinding",
+        name: "argocd-repo-server-issuer-auth-delegator",
+      },
+      {
+        group: "rbac.authorization.k8s.io",
+        kind: "ClusterRoleBinding",
+        name: "hubble-server-issuer-auth-delegator",
+      },
+      {
+        group: "rbac.authorization.k8s.io",
+        kind: "ClusterRoleBinding",
+        name: "metrics-server-issuer-auth-delegator",
+      },
+      {
+        group: "rbac.authorization.k8s.io",
+        kind: "ClusterRoleBinding",
+        name: "telemetry-client-issuer-auth-delegator",
+      },
+    ],
+  )
 })
 
 test("Indigo routes use authenticated backend TLS while hub-a retains its existing server mode", () => {
   const values = parse(readFileSync("gitops/components/argocd/base/values-common.yaml", "utf8"))
   assert.equal(values.configs.params["server.insecure"], "true")
-  const indigoValues = parse(readFileSync("gitops/components/argocd/overlays/indigo/values-overrides.yaml", "utf8"))
+  const indigoValues = parse(
+    readFileSync("gitops/components/argocd/overlays/indigo/values-overrides.yaml", "utf8"),
+  )
   assert.equal(indigoValues.configs.params["server.insecure"], "false")
   const access = render("gitops/components/argocd/access/overlays/indigo")
   const policies = access.filter((item) => item.kind === "BackendTLSPolicy")
@@ -108,17 +177,32 @@ test("Indigo routes use authenticated backend TLS while hub-a retains its existi
       caCertificateRefs: [{ group: "", kind: "ConfigMap", name: "dsqr-home-root-ca" }],
     },
   })
-  const project = render("gitops/components/argocd/overlays/indigo")
-    .find((item) => item.kind === "AppProject" && item.metadata.name === "platform-argocd-access")
-  assert.ok(project.spec.namespaceResourceWhitelist.some((item: { group: string; kind: string }) =>
-    item.group === "gateway.networking.k8s.io" && item.kind === "BackendTLSPolicy"))
+  const project = render("gitops/components/argocd/overlays/indigo").find(
+    (item) => item.kind === "AppProject" && item.metadata.name === "platform-argocd-access",
+  )
+  assert.ok(
+    project.spec.namespaceResourceWhitelist.some(
+      (item: { group: string; kind: string }) =>
+        item.group === "gateway.networking.k8s.io" && item.kind === "BackendTLSPolicy",
+    ),
+  )
   const routes = access.filter((item) => item.kind === "HTTPRoute")
   assert.equal(routes.length, 2)
   for (const route of routes) {
     for (const rule of route.spec.rules) {
-      assert.deepEqual(rule.backendRefs.map((backend: { name: string; port: number }) => [backend.name, backend.port]), [["argocd-server", 443]])
+      assert.deepEqual(
+        rule.backendRefs.map((backend: { name: string; port: number }) => [
+          backend.name,
+          backend.port,
+        ]),
+        [["argocd-server", 443]],
+      )
     }
   }
-  assert.equal(render("gitops/components/external-secrets-config/overlays/hub-a")
-    .some((item) => ["argocd-server-tls", "argocd-server-issuer"].includes(item.metadata.name)), false)
+  assert.equal(
+    render("gitops/components/external-secrets-config/overlays/hub-a").some((item) =>
+      ["argocd-server-tls", "argocd-server-issuer"].includes(item.metadata.name),
+    ),
+    false,
+  )
 })

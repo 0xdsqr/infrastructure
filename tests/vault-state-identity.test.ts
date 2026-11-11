@@ -53,9 +53,10 @@ const issuerKeys = [
 
 test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state contracts", async () => {
   const deployment = await runPulumiMockProgram({
-    newResource: (args) => args.type === "vault:pkiSecret/secretBackendRootCert:SecretBackendRootCert"
-      ? { issuerId: "mock-hubble-issuer", certificate: "PUBLIC-TEST-CA" }
-      : {},
+    newResource: (args) =>
+      args.type === "vault:pkiSecret/secretBackendRootCert:SecretBackendRootCert"
+        ? { issuerId: "mock-hubble-issuer", certificate: "PUBLIC-TEST-CA" }
+        : {},
     program: () =>
       runPulumiProgram(
         createVaultFoundationEffect({
@@ -138,7 +139,10 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoTelemetryClient"],
     [providerToken, "vault"],
     [mountToken, "pki-issuer-mount-indigoHubbleServer"],
-    ["vault:pkiSecret/secretBackendRootCert:SecretBackendRootCert", "pki-issuer-root-indigoHubbleServer"],
+    [
+      "vault:pkiSecret/secretBackendRootCert:SecretBackendRootCert",
+      "pki-issuer-root-indigoHubbleServer",
+    ],
     [pkiRoleToken, "pki-issuer-role-indigoHubbleServer"],
     [policyToken, "pki-issuer-policy-indigoHubbleServer"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoHubbleServer"],
@@ -159,7 +163,14 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     assert.equal(role.clientFlag, true)
     assert.equal(role.serverFlag, false)
     assert.deepEqual(role.extKeyUsages, ["ClientAuth"])
-    for (const flag of ["allowAnyName", "allowGlobDomains", "allowSubdomains", "allowWildcardCertificates", "allowIpSans", "allowLocalhost"]) {
+    for (const flag of [
+      "allowAnyName",
+      "allowGlobDomains",
+      "allowSubdomains",
+      "allowWildcardCertificates",
+      "allowIpSans",
+      "allowLocalhost",
+    ]) {
       assert.equal(role[flag], false, `${key}/${flag}`)
     }
     const auth = byName(resources, `pki-issuer-approle-${key}`).inputs
@@ -171,8 +182,10 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     assert.deepEqual(auth.secretIdBoundCidrs, issuer.appRole.secretIdBoundCidrs)
     assert.deepEqual(auth.tokenBoundCidrs, issuer.appRole.tokenBoundCidrs)
     assert.deepEqual(auth.tokenPolicies, [issuer.policyName])
-    assert.equal(byName(resources, `pki-issuer-policy-${key}`).inputs.policy,
-      `path "pki_int/issue/${issuer.roleName}" {\n  capabilities = ["create", "update"]\n}`)
+    assert.equal(
+      byName(resources, `pki-issuer-policy-${key}`).inputs.policy,
+      `path "pki_int/issue/${issuer.roleName}" {\n  capabilities = ["create", "update"]\n}`,
+    )
     for (const kind of ["role", "policy", "approle"]) {
       assert.equal(byName(deployment.captured, `pki-issuer-${kind}-${key}`).opts.protect, true)
     }
@@ -206,9 +219,15 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     assert.equal(resource.opts.ignoreChanges, undefined, `${name}: ignoreChanges`)
     // Compare identities without recursively inspecting Pulumi's cyclic resource graph.
     const dependencies = resource.opts.dependsOn as pulumi.Resource[] | undefined
-    assert.deepEqual(dependencies?.map(dependency =>
-      deployment.captured.find(candidate => candidate.resource === dependency)?.name ?? "unknown-resource",
-    ), dependsOn.length === 0 ? undefined : dependsOn, `${name}: dependsOn`)
+    assert.deepEqual(
+      dependencies?.map(
+        (dependency) =>
+          deployment.captured.find((candidate) => candidate.resource === dependency)?.name ??
+          "unknown-resource",
+      ),
+      dependsOn.length === 0 ? undefined : dependsOn,
+      `${name}: dependsOn`,
+    )
     assert.match(state.provider, /pulumi:providers:vault::vault/)
   }
 
@@ -247,25 +266,44 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   lifecycle("audit", { protect: true })
   lifecycle("pki-issuer-mount-indigoHubbleServer", { protect: true })
   lifecycle("pki-issuer-root-indigoHubbleServer", {
-    protect: true, dependsOn: ["pki-issuer-mount-indigoHubbleServer"],
+    protect: true,
+    dependsOn: ["pki-issuer-mount-indigoHubbleServer"],
   })
   lifecycle("pki-issuer-role-indigoHubbleServer", {
-    protect: true, dependsOn: ["pki-issuer-root-indigoHubbleServer"],
+    protect: true,
+    dependsOn: ["pki-issuer-root-indigoHubbleServer"],
   })
   lifecycle("pki-issuer-policy-indigoHubbleServer", {
-    protect: true, dependsOn: ["pki-issuer-role-indigoHubbleServer"],
+    protect: true,
+    dependsOn: ["pki-issuer-role-indigoHubbleServer"],
   })
   lifecycle("pki-issuer-kubernetes-role-indigoHubbleServer", {
-    protect: true, dependsOn: ["pki-issuer-role-indigoHubbleServer", "pki-issuer-policy-indigoHubbleServer", "external-secrets-token-self-policy-indigo"],
+    protect: true,
+    dependsOn: [
+      "pki-issuer-role-indigoHubbleServer",
+      "pki-issuer-policy-indigoHubbleServer",
+      "external-secrets-token-self-policy-indigo",
+    ],
   })
   assert.deepEqual(byName(resources, "pki-issuer-mount-indigoHubbleServer").inputs, {
-    path: "pki_indigo_hubble", type: "pki", description: "DSQR Indigo Hubble CA",
-    defaultLeaseTtlSeconds: 720 * 3600, maxLeaseTtlSeconds: 3 * 365 * 24 * 3600,
+    path: "pki_indigo_hubble",
+    type: "pki",
+    description: "DSQR Indigo Hubble CA",
+    defaultLeaseTtlSeconds: 720 * 3600,
+    maxLeaseTtlSeconds: 3 * 365 * 24 * 3600,
   })
   assert.deepEqual(byName(resources, "pki-issuer-root-indigoHubbleServer").inputs, {
-    backend: "pki_indigo_hubble", type: "internal", commonName: "DSQR Indigo Hubble CA",
-    issuerName: "dsqr-root-v1", keyName: "dsqr-root-v1", ttl: `${3 * 365 * 24 * 3600}s`,
-    keyType: "ec", keyBits: 256, format: "pem", excludeCnFromSans: true, maxPathLength: 0,
+    backend: "pki_indigo_hubble",
+    type: "internal",
+    commonName: "DSQR Indigo Hubble CA",
+    issuerName: "dsqr-root-v1",
+    keyName: "dsqr-root-v1",
+    ttl: `${3 * 365 * 24 * 3600}s`,
+    keyType: "ec",
+    keyBits: 256,
+    format: "pem",
+    excludeCnFromSans: true,
+    maxPathLength: 0,
   })
   const hubbleRole = byName(resources, "pki-issuer-role-indigoHubbleServer").inputs
   assert.equal(hubbleRole.backend, "pki_indigo_hubble")
@@ -273,16 +311,28 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   assert.deepEqual(hubbleRole.allowedDomains, ["*.indigo.hubble-grpc.cilium.io"])
   assert.equal(hubbleRole.allowBareDomains, true)
   assert.equal(hubbleRole.allowWildcardCertificates, true)
-  for (const option of ["allowAnyName", "allowGlobDomains", "allowSubdomains", "allowIpSans", "clientFlag", "generateLease"]) {
+  for (const option of [
+    "allowAnyName",
+    "allowGlobDomains",
+    "allowSubdomains",
+    "allowIpSans",
+    "clientFlag",
+    "generateLease",
+  ]) {
     assert.equal(hubbleRole[option], false, option)
   }
   assert.deepEqual(hubbleRole.extKeyUsages, ["ServerAuth"])
   const hubbleAuth = byName(resources, "pki-issuer-kubernetes-role-indigoHubbleServer").inputs
   assert.deepEqual(hubbleAuth.boundServiceAccountNames, ["hubble-server-issuer"])
   assert.deepEqual(hubbleAuth.boundServiceAccountNamespaces, ["kube-system"])
-  assert.deepEqual(hubbleAuth.tokenPolicies, ["dsqr-labs-pki-indigo-hubble-server", "indigo-external-secrets-token-self"])
-  assert.equal(byName(resources, "pki-issuer-policy-indigoHubbleServer").inputs.policy,
-    'path "pki_indigo_hubble/issue/indigo-hubble-server" {\n  capabilities = ["create", "update"]\n}')
+  assert.deepEqual(hubbleAuth.tokenPolicies, [
+    "dsqr-labs-pki-indigo-hubble-server",
+    "indigo-external-secrets-token-self",
+  ])
+  assert.equal(
+    byName(resources, "pki-issuer-policy-indigoHubbleServer").inputs.policy,
+    'path "pki_indigo_hubble/issue/indigo-hubble-server" {\n  capabilities = ["create", "update"]\n}',
+  )
 
   for (const key of Object.keys(externalPolicyNames)) {
     lifecycle(`external-secrets-policy-${key}`, { dependsOn: ["kv"] })
@@ -351,11 +401,18 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   for (const key of ["indigoMetallbControllerMetrics", "indigoMetallbSpeakerMetrics"] as const) {
     lifecycle(`pki-issuer-kubernetes-role-${key}`, {
       protect: true,
-      dependsOn: [`pki-issuer-role-${key}`, `pki-issuer-policy-${key}`, "external-secrets-token-self-policy-indigo"],
+      dependsOn: [
+        `pki-issuer-role-${key}`,
+        `pki-issuer-policy-${key}`,
+        "external-secrets-token-self-policy-indigo",
+      ],
     })
     const issuer = vault.pkiIssuers[key]
     const role = byName(resources, `pki-issuer-kubernetes-role-${key}`).inputs
-    assert.deepEqual(role.boundServiceAccountNames, issuer.kubernetesAuthRole.boundServiceAccountNames)
+    assert.deepEqual(
+      role.boundServiceAccountNames,
+      issuer.kubernetesAuthRole.boundServiceAccountNames,
+    )
     assert.deepEqual(role.boundServiceAccountNamespaces, ["metallb-system"])
     assert.equal(role.tokenNoDefaultPolicy, true)
     assert.deepEqual(role.tokenPolicies, [issuer.policyName, "indigo-external-secrets-token-self"])
@@ -438,8 +495,10 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     "indigo-external-secrets-bootstrap-smoke-test",
     "indigo-external-secrets-token-self",
   ])
-  assert.equal(byName(resources, "external-secrets-policy-indigo-dotdev-web").inputs.policy,
-    'path "kv/data/dsqr-labs/clusters/indigo/apps/dotdev-web" {\n  capabilities = ["read"]\n}\n\npath "kv/metadata/dsqr-labs/clusters/indigo/apps/dotdev-web" {\n  capabilities = ["read"]\n}')
+  assert.equal(
+    byName(resources, "external-secrets-policy-indigo-dotdev-web").inputs.policy,
+    'path "kv/data/dsqr-labs/clusters/indigo/apps/dotdev-web" {\n  capabilities = ["read"]\n}\n\npath "kv/metadata/dsqr-labs/clusters/indigo/apps/dotdev-web" {\n  capabilities = ["read"]\n}',
+  )
 
   for (const key of issuerKeys) {
     const config = vault.pkiIssuers[key]
@@ -508,7 +567,16 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   const traefikRole = byName(resources, "pki-issuer-kubernetes-role-hubATraefikOrigin")
   const telemetryRole = byName(resources, "pki-issuer-role-indigoTelemetryClient").inputs
   assert.deepEqual(telemetryRole.allowedDomains, ["indigo.telemetry-client.home.arpa"])
-  for (const option of ["allowAnyName", "allowGlobDomains", "allowLocalhost", "allowSubdomains", "allowWildcardCertificates", "allowIpSans", "serverFlag", "generateLease"]) {
+  for (const option of [
+    "allowAnyName",
+    "allowGlobDomains",
+    "allowLocalhost",
+    "allowSubdomains",
+    "allowWildcardCertificates",
+    "allowIpSans",
+    "serverFlag",
+    "generateLease",
+  ]) {
     assert.equal(telemetryRole[option], false, option)
   }
   assert.equal(telemetryRole.clientFlag, true)
@@ -519,17 +587,28 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   assert.equal(telemetryAuth.backend, "kubernetes-indigo")
   assert.deepEqual(telemetryAuth.boundServiceAccountNames, ["telemetry-client-issuer"])
   assert.deepEqual(telemetryAuth.boundServiceAccountNamespaces, ["observability"])
-  assert.deepEqual(telemetryAuth.tokenPolicies, ["dsqr-labs-pki-indigo-telemetry-client", "indigo-external-secrets-token-self"])
+  assert.deepEqual(telemetryAuth.tokenPolicies, [
+    "dsqr-labs-pki-indigo-telemetry-client",
+    "indigo-external-secrets-token-self",
+  ])
   assert.equal(telemetryAuth.tokenNoDefaultPolicy, true)
   assert.equal(telemetryAuth.tokenExplicitMaxTtl, 3600)
-  assert.equal(byName(resources, "pki-issuer-policy-indigoTelemetryClient").inputs.policy,
-    'path "pki_int/issue/indigo-telemetry-client" {\n  capabilities = ["create", "update"]\n}')
+  assert.equal(
+    byName(resources, "pki-issuer-policy-indigoTelemetryClient").inputs.policy,
+    'path "pki_int/issue/indigo-telemetry-client" {\n  capabilities = ["create", "update"]\n}',
+  )
   lifecycle("pki-issuer-role-indigoTelemetryClient", { protect: true })
   lifecycle("pki-issuer-policy-indigoTelemetryClient", {
-    protect: true, dependsOn: ["pki-issuer-role-indigoTelemetryClient"],
+    protect: true,
+    dependsOn: ["pki-issuer-role-indigoTelemetryClient"],
   })
   lifecycle("pki-issuer-kubernetes-role-indigoTelemetryClient", {
-    protect: true, dependsOn: ["pki-issuer-role-indigoTelemetryClient", "pki-issuer-policy-indigoTelemetryClient", "external-secrets-token-self-policy-indigo"],
+    protect: true,
+    dependsOn: [
+      "pki-issuer-role-indigoTelemetryClient",
+      "pki-issuer-policy-indigoTelemetryClient",
+      "external-secrets-token-self-policy-indigo",
+    ],
   })
   const beaconRole = byName(resources, "pki-issuer-role-beaconTelemetry").inputs
   assert.deepEqual(beaconRole.allowedDomains, ["beacon-telemetry.service.home.arpa"])
@@ -545,10 +624,12 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   assert.deepEqual(beaconAuth.tokenBoundCidrs, ["10.10.30.102/32"])
   assert.deepEqual(beaconAuth.tokenPolicies, ["homelab-pki-beacon-telemetry-listener"])
   assert.equal(beaconAuth.bindSecretId, true)
-  assert.equal(byName(resources, "pki-issuer-policy-beaconTelemetry").inputs.policy,
-    'path "pki_int/issue/beacon-telemetry-listener" {\n  capabilities = ["create", "update"]\n}')
+  assert.equal(
+    byName(resources, "pki-issuer-policy-beaconTelemetry").inputs.policy,
+    'path "pki_int/issue/beacon-telemetry-listener" {\n  capabilities = ["create", "update"]\n}',
+  )
   // The bootstrap secret and leaf private key are not Pulumi resources.
-  assert.ok(!resources.some(resource => /secretid|secretbackendcert/i.test(resource.type)))
+  assert.ok(!resources.some((resource) => /secretid|secretbackendcert/i.test(resource.type)))
   assert.equal(traefikRole.inputs.roleName, "hub-a-traefik-origin-issuer")
   assert.deepEqual(traefikRole.inputs.boundServiceAccountNames, ["traefik-origin-issuer"])
   assert.deepEqual(traefikRole.inputs.boundServiceAccountNamespaces, ["traefik"])
@@ -557,15 +638,10 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     "hub-a-external-secrets-token-self",
   ])
 
-  const indigoGatewayRole = byName(
-    resources,
-    "pki-issuer-kubernetes-role-indigoGatewayOrigin",
-  )
+  const indigoGatewayRole = byName(resources, "pki-issuer-kubernetes-role-indigoGatewayOrigin")
   assert.equal(indigoGatewayRole.inputs.backend, "kubernetes-indigo")
   assert.equal(indigoGatewayRole.inputs.roleName, "indigo-gateway-origin-issuer")
-  assert.deepEqual(indigoGatewayRole.inputs.boundServiceAccountNames, [
-    "gateway-origin-issuer",
-  ])
+  assert.deepEqual(indigoGatewayRole.inputs.boundServiceAccountNames, ["gateway-origin-issuer"])
   assert.deepEqual(indigoGatewayRole.inputs.boundServiceAccountNamespaces, ["gateway-system"])
   assert.deepEqual(indigoGatewayRole.inputs.tokenPolicies, [
     "dsqr-labs-pki-indigo-gateway-origin",
@@ -584,7 +660,10 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   ])
 
   const repoIssuerRole = byName(resources, "pki-issuer-kubernetes-role-indigoArgocdRepoServer")
-  const metricsIssuerRole = byName(resources, "pki-issuer-kubernetes-role-indigoMetricsServer").inputs
+  const metricsIssuerRole = byName(
+    resources,
+    "pki-issuer-kubernetes-role-indigoMetricsServer",
+  ).inputs
   assert.equal(metricsIssuerRole.backend, "kubernetes-indigo")
   assert.equal(metricsIssuerRole.roleName, "indigo-metrics-server-issuer")
   assert.deepEqual(metricsIssuerRole.boundServiceAccountNames, ["metrics-server-issuer"])
@@ -594,10 +673,13 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   assert.equal(metricsIssuerRole.tokenMaxTtl, 3_600)
   assert.equal(metricsIssuerRole.tokenExplicitMaxTtl, 3_600)
   assert.deepEqual(metricsIssuerRole.tokenPolicies, [
-    "dsqr-labs-pki-indigo-metrics-server", "indigo-external-secrets-token-self",
+    "dsqr-labs-pki-indigo-metrics-server",
+    "indigo-external-secrets-token-self",
   ])
-  assert.equal(byName(resources, "pki-issuer-policy-indigoMetricsServer").inputs.policy,
-    'path "pki_int/issue/indigo-metrics-server" {\n  capabilities = ["create", "update"]\n}')
+  assert.equal(
+    byName(resources, "pki-issuer-policy-indigoMetricsServer").inputs.policy,
+    'path "pki_int/issue/indigo-metrics-server" {\n  capabilities = ["create", "update"]\n}',
+  )
   assert.equal(repoIssuerRole.inputs.backend, "kubernetes-indigo")
   assert.equal(repoIssuerRole.inputs.roleName, "indigo-argocd-repo-server-issuer")
   assert.deepEqual(repoIssuerRole.inputs.boundServiceAccountNames, ["argocd-repo-server-issuer"])
@@ -611,11 +693,14 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     "indigo-external-secrets-token-self",
   ])
   const repoIssuerPolicy = byName(resources, "pki-issuer-policy-indigoArgocdRepoServer")
-  assert.equal(repoIssuerPolicy.inputs.policy, [
-    'path "pki_int/issue/indigo-argocd-repo-server" {',
-    '  capabilities = ["create", "update"]',
-    '}',
-  ].join("\n"))
+  assert.equal(
+    repoIssuerPolicy.inputs.policy,
+    [
+      'path "pki_int/issue/indigo-argocd-repo-server" {',
+      '  capabilities = ["create", "update"]',
+      "}",
+    ].join("\n"),
+  )
 
   assert.deepEqual(byName(resources, "audit").inputs, {
     description: "",

@@ -129,10 +129,12 @@ export type VaultPkiIssuerConfig = {
   readonly certificatePurpose?: "server" | "client" | undefined
   // Optional isolated trust domain. The signer is generated inside Vault and
   // is never exported to Pulumi, Git, or a Kubernetes Secret.
-  readonly managedCa?: {
-    readonly commonName: string
-    readonly ttlHours: number
-  } | undefined
+  readonly managedCa?:
+    | {
+        readonly commonName: string
+        readonly ttlHours: number
+      }
+    | undefined
   readonly roleName: string
   readonly policyName: string
   readonly allowedDomains: readonly string[]
@@ -183,10 +185,17 @@ export type VaultFoundationArgs = {
   readonly connection: VaultConnectionConfig
   readonly kv: VaultKvMountConfig
   readonly secretPaths: VaultSecretPathInventory
-  readonly managedKvSecrets?: Readonly<Record<string, {
-    readonly path: string
-    readonly dataJson: pulumi.Input<string>
-  }>> | undefined
+  readonly managedKvSecrets?:
+    | Readonly<
+        Record<
+          string,
+          {
+            readonly path: string
+            readonly dataJson: pulumi.Input<string>
+          }
+        >
+      >
+    | undefined
   readonly humanAdminPolicy: VaultHumanAdminPolicyConfig
   readonly externalSecretsPolicies: Readonly<Record<string, VaultExternalSecretsPolicyConfig>>
   readonly externalSecretsKubernetesRole: VaultKubernetesAuthRoleConfig
@@ -469,12 +478,17 @@ export function validatePkiIssuerInventoryEffect(
     for (const [key, issuer] of Object.entries(issuers)) {
       const resource = `vault:pki-issuer:${key}`
 
-      if (issuer.certificatePurpose !== undefined &&
-          issuer.certificatePurpose !== "server" && issuer.certificatePurpose !== "client") {
-        return yield* Effect.fail(new PulumiResourceConfigError({
-          resource,
-          message: `PKI issuer "${key}" certificate purpose must be server or client.`,
-        }))
+      if (
+        issuer.certificatePurpose !== undefined &&
+        issuer.certificatePurpose !== "server" &&
+        issuer.certificatePurpose !== "client"
+      ) {
+        return yield* Effect.fail(
+          new PulumiResourceConfigError({
+            resource,
+            message: `PKI issuer "${key}" certificate purpose must be server or client.`,
+          }),
+        )
       }
 
       if (!issuer.backend || issuer.backend.includes("/") || issuer.backend.includes("*")) {
@@ -505,10 +519,12 @@ export function validatePkiIssuerInventoryEffect(
           issuer.managedCa.ttlHours <= issuer.maxTtlHours ||
           issuer.managedCa.ttlHours > 5 * 365 * 24
         ) {
-          return yield* Effect.fail(new PulumiResourceConfigError({
-            resource,
-            message: `PKI issuer "${key}" needs a unique managed CA mount and a CA lifetime longer than its leaves, capped at five years.`,
-          }))
+          return yield* Effect.fail(
+            new PulumiResourceConfigError({
+              resource,
+              message: `PKI issuer "${key}" needs a unique managed CA mount and a CA lifetime longer than its leaves, capped at five years.`,
+            }),
+          )
         }
         managedCaBackends.add(issuer.backend)
       }
@@ -529,9 +545,8 @@ export function validatePkiIssuerInventoryEffect(
         issuer.allowedDomains.some((domain) => {
           // A literal leftmost wildcard is allowed only by explicit opt-in.
           // Vault still uses exact matching, never glob/subdomain matching.
-          const name = issuer.allowWildcardCertificates && domain.startsWith("*.")
-            ? domain.slice(2)
-            : domain
+          const name =
+            issuer.allowWildcardCertificates && domain.startsWith("*.") ? domain.slice(2) : domain
           return name.includes("*") || !isDnsName(name)
         })
       ) {
@@ -972,7 +987,9 @@ export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(funct
   yield* validatePkiIssuerInventoryEffect(args.pkiIssuers)
 
   yield* requireResourceConfigEffect(
-    Object.values(args.pkiIssuers).every((issuer) => !issuer.managedCa || issuer.backend !== args.kv.path),
+    Object.values(args.pkiIssuers).every(
+      (issuer) => !issuer.managedCa || issuer.backend !== args.kv.path,
+    ),
     "vault:pki-issuers",
     "A managed PKI CA cannot use the KV mount path.",
   )
@@ -1111,13 +1128,15 @@ export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(funct
   const secretPaths = Object.values(args.secretPaths).map(({ path }) => path)
   for (const [name, secret] of Object.entries(args.managedKvSecrets ?? {})) {
     yield* requireResourceConfigEffect(
-      name.trim().length > 0 && isNormalizedSecretPath(secret.path) && secretPaths.includes(secret.path),
+      name.trim().length > 0 &&
+        isNormalizedSecretPath(secret.path) &&
+        secretPaths.includes(secret.path),
       "vault:managedKvSecrets",
       "Managed KV secrets must use a named, explicitly inventoried path.",
     )
   }
   yield* requireResourceConfigEffect(
-    new Set(Object.values(args.managedKvSecrets ?? {}).map(secret => secret.path)).size ===
+    new Set(Object.values(args.managedKvSecrets ?? {}).map((secret) => secret.path)).size ===
       Object.keys(args.managedKvSecrets ?? {}).length,
     "vault:managedKvSecrets",
     "Managed KV secret paths must be unique.",
@@ -1224,12 +1243,20 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
   )
 
   for (const [name, secret] of Object.entries(args.managedKvSecrets ?? {})) {
-    yield* registerPulumiResource(name, () => new vault.kv.SecretV2(name, {
-      mount: kvMount.path,
-      name: secret.path,
-      dataJson: pulumi.secret(secret.dataJson),
-      deleteAllVersions: false,
-    }, { ...resourceOptions, protect: true, dependsOn: [kvConfig] }))
+    yield* registerPulumiResource(
+      name,
+      () =>
+        new vault.kv.SecretV2(
+          name,
+          {
+            mount: kvMount.path,
+            name: secret.path,
+            dataJson: pulumi.secret(secret.dataJson),
+            deleteAllVersions: false,
+          },
+          { ...resourceOptions, protect: true, dependsOn: [kvConfig] },
+        ),
+    )
   }
 
   const adminPolicy = yield* registerPulumiResource(
@@ -1468,36 +1495,44 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
     yield* Effect.forEach(pkiIssuerEntries, ({ key, issuer, resourceNames: issuerResourceNames }) =>
       Effect.gen(function* () {
         const caMount = issuer.managedCa
-          ? yield* registerPulumiResource(issuerResourceNames.caMount, () => new vault.Mount(
+          ? yield* registerPulumiResource(
               issuerResourceNames.caMount,
-              {
-                path: issuer.backend,
-                type: "pki",
-                description: issuer.managedCa!.commonName,
-                defaultLeaseTtlSeconds: issuer.ttlHours * 3600,
-                maxLeaseTtlSeconds: issuer.managedCa!.ttlHours * 3600,
-              },
-              protectedPkiResourceOptions,
-            ))
+              () =>
+                new vault.Mount(
+                  issuerResourceNames.caMount,
+                  {
+                    path: issuer.backend,
+                    type: "pki",
+                    description: issuer.managedCa!.commonName,
+                    defaultLeaseTtlSeconds: issuer.ttlHours * 3600,
+                    maxLeaseTtlSeconds: issuer.managedCa!.ttlHours * 3600,
+                  },
+                  protectedPkiResourceOptions,
+                ),
+            )
           : undefined
         const caRoot = caMount
-          ? yield* registerPulumiResource(issuerResourceNames.caRoot, () => new vault.pkisecret.SecretBackendRootCert(
+          ? yield* registerPulumiResource(
               issuerResourceNames.caRoot,
-              {
-                backend: caMount.path,
-                type: "internal",
-                commonName: issuer.managedCa!.commonName,
-                issuerName: "dsqr-root-v1",
-                keyName: "dsqr-root-v1",
-                ttl: `${issuer.managedCa!.ttlHours * 3600}s`,
-                keyType: "ec",
-                keyBits: 256,
-                format: "pem",
-                excludeCnFromSans: true,
-                maxPathLength: 0,
-              },
-              { ...protectedPkiResourceOptions, dependsOn: [caMount] },
-            ))
+              () =>
+                new vault.pkisecret.SecretBackendRootCert(
+                  issuerResourceNames.caRoot,
+                  {
+                    backend: caMount.path,
+                    type: "internal",
+                    commonName: issuer.managedCa!.commonName,
+                    issuerName: "dsqr-root-v1",
+                    keyName: "dsqr-root-v1",
+                    ttl: `${issuer.managedCa!.ttlHours * 3600}s`,
+                    keyType: "ec",
+                    keyBits: 256,
+                    format: "pem",
+                    excludeCnFromSans: true,
+                    maxPathLength: 0,
+                  },
+                  { ...protectedPkiResourceOptions, dependsOn: [caMount] },
+                ),
+            )
           : undefined
         const role = yield* registerPulumiResource(
           issuerResourceNames.role,
@@ -1521,7 +1556,9 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
                 codeSigningFlag: false,
                 emailProtectionFlag: false,
                 enforceHostnames: true,
-                extKeyUsages: [issuer.certificatePurpose === "client" ? "ClientAuth" : "ServerAuth"],
+                extKeyUsages: [
+                  issuer.certificatePurpose === "client" ? "ClientAuth" : "ServerAuth",
+                ],
                 generateLease: issuer.generateLease,
                 issuerRef: caRoot ? caRoot.issuerId : "default",
                 keyBits: 2_048,
@@ -1584,46 +1621,43 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
           : undefined
 
         const kubernetesAuthRole = issuer.kubernetesAuthRole
-          ? yield* registerPulumiResource(
-              issuerResourceNames.kubernetesAuthRole,
-              () => {
-                const managedBoundary = externalSecretsKubernetesAuthBoundaryEntries.find(
-                  ({ boundary }) => boundary.backend.path === issuer.kubernetesAuthRole!.backend,
-                )
-                const managedBoundaryResources = managedBoundary
-                  ? externalSecretsKubernetesAuthBoundaryResources[managedBoundary.key]
-                  : undefined
-                const backend =
-                  managedBoundaryResources?.authBackend.path ?? issuer.kubernetesAuthRole!.backend
-                const tokenSelfPolicy =
-                  managedBoundaryResources?.tokenSelfPolicy ?? externalSecretsTokenSelfPolicy
+          ? yield* registerPulumiResource(issuerResourceNames.kubernetesAuthRole, () => {
+              const managedBoundary = externalSecretsKubernetesAuthBoundaryEntries.find(
+                ({ boundary }) => boundary.backend.path === issuer.kubernetesAuthRole!.backend,
+              )
+              const managedBoundaryResources = managedBoundary
+                ? externalSecretsKubernetesAuthBoundaryResources[managedBoundary.key]
+                : undefined
+              const backend =
+                managedBoundaryResources?.authBackend.path ?? issuer.kubernetesAuthRole!.backend
+              const tokenSelfPolicy =
+                managedBoundaryResources?.tokenSelfPolicy ?? externalSecretsTokenSelfPolicy
 
-                return new vault.kubernetes.AuthBackendRole(
-                  issuerResourceNames.kubernetesAuthRole,
-                  {
-                    backend,
-                    roleName: issuer.kubernetesAuthRole!.roleName,
-                    boundServiceAccountNames: [
-                      ...issuer.kubernetesAuthRole!.boundServiceAccountNames,
-                    ],
-                    boundServiceAccountNamespaces: [
-                      ...issuer.kubernetesAuthRole!.boundServiceAccountNamespaces,
-                    ],
-                    tokenExplicitMaxTtl: issuer.kubernetesAuthRole!.tokenExplicitMaxTtlSeconds,
-                    tokenMaxTtl: issuer.kubernetesAuthRole!.tokenMaxTtlSeconds,
-                    tokenNoDefaultPolicy: true,
-                    tokenNumUses: 0,
-                    tokenPolicies: [policy.name, tokenSelfPolicy.name],
-                    tokenTtl: issuer.kubernetesAuthRole!.tokenTtlSeconds,
-                    tokenType: "service",
-                  },
-                  {
-                    ...protectedPkiResourceOptions,
-                    dependsOn: [role, policy, tokenSelfPolicy],
-                  },
-                )
-              },
-            )
+              return new vault.kubernetes.AuthBackendRole(
+                issuerResourceNames.kubernetesAuthRole,
+                {
+                  backend,
+                  roleName: issuer.kubernetesAuthRole!.roleName,
+                  boundServiceAccountNames: [
+                    ...issuer.kubernetesAuthRole!.boundServiceAccountNames,
+                  ],
+                  boundServiceAccountNamespaces: [
+                    ...issuer.kubernetesAuthRole!.boundServiceAccountNamespaces,
+                  ],
+                  tokenExplicitMaxTtl: issuer.kubernetesAuthRole!.tokenExplicitMaxTtlSeconds,
+                  tokenMaxTtl: issuer.kubernetesAuthRole!.tokenMaxTtlSeconds,
+                  tokenNoDefaultPolicy: true,
+                  tokenNumUses: 0,
+                  tokenPolicies: [policy.name, tokenSelfPolicy.name],
+                  tokenTtl: issuer.kubernetesAuthRole!.tokenTtlSeconds,
+                  tokenType: "service",
+                },
+                {
+                  ...protectedPkiResourceOptions,
+                  dependsOn: [role, policy, tokenSelfPolicy],
+                },
+              )
+            })
           : undefined
 
         return [

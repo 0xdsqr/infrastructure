@@ -8,24 +8,27 @@ import { byName, runPulumiMockProgram } from "./pulumi-state-helpers.ts"
 
 test("Managed tunnel credentials are protected, secret-wrapped KV v2 resources", async () => {
   const deployment = await runPulumiMockProgram({
-    program: () => runPulumiProgram(createVaultFoundationEffect({
-      connection: { address: "https://vault.example.test:8200", token: "test-token" },
-      resourceNames: vault.resourceNames,
-      kv: vault.kv,
-      secretPaths: vault.secretPaths,
-      humanAdminPolicy: vault.policies.humanAdmin,
-      externalSecretsPolicies: vault.policies.externalSecrets,
-      externalSecretsKubernetesRole: vault.externalSecretsKubernetesRole,
-      pkiIssuers: { gatewayCaddy: vault.pkiIssuers.gatewayCaddy },
-      audit: vault.audit,
-      managedKvSecrets: {
-        "indigo-cloudflare-tunnel-token": {
-          path: vault.secretPaths.indigoCloudflareTunnel.path,
-          dataJson: JSON.stringify({ token: "test-only-token" }),
-        },
-      },
-    })),
-    outputs: result => ({ kv: result.mounts.kv }),
+    program: () =>
+      runPulumiProgram(
+        createVaultFoundationEffect({
+          connection: { address: "https://vault.example.test:8200", token: "test-token" },
+          resourceNames: vault.resourceNames,
+          kv: vault.kv,
+          secretPaths: vault.secretPaths,
+          humanAdminPolicy: vault.policies.humanAdmin,
+          externalSecretsPolicies: vault.policies.externalSecrets,
+          externalSecretsKubernetesRole: vault.externalSecretsKubernetesRole,
+          pkiIssuers: { gatewayCaddy: vault.pkiIssuers.gatewayCaddy },
+          audit: vault.audit,
+          managedKvSecrets: {
+            "indigo-cloudflare-tunnel-token": {
+              path: vault.secretPaths.indigoCloudflareTunnel.path,
+              dataJson: JSON.stringify({ token: "test-only-token" }),
+            },
+          },
+        }),
+      ),
+    outputs: (result) => ({ kv: result.mounts.kv }),
     project: "vault-homelab",
   })
   const resource = byName(deployment.captured, "indigo-cloudflare-tunnel-token")

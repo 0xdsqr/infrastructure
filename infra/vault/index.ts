@@ -11,14 +11,19 @@ export const foundation = runPulumiProgram(
   Effect.gen(function* () {
     const environment = yield* loadVaultEnvironment()
     const connection = yield* loadVaultConnectionConfigEffect({ environment })
-    const edge = yield* registerPulumiResource("indigo-cloudflare-edge", () =>
-      new pulumi.StackReference("indigo-cloudflare-edge", { name: "0xdsqr/cloudflare-edge/dev" }),
+    const edge = yield* registerPulumiResource(
+      "indigo-cloudflare-edge",
+      () =>
+        new pulumi.StackReference("indigo-cloudflare-edge", { name: "0xdsqr/cloudflare-edge/dev" }),
     )
-    const tunnelToken = pulumi.secret(edge.requireOutput("indigoEdge").apply(value => {
-      const token = (value as { tunnelToken?: unknown }).tunnelToken
-      if (typeof token !== "string" || token.length === 0) throw new Error("Indigo tunnel token is missing; deploy the Cloudflare stack first.")
-      return JSON.stringify({ token })
-    }))
+    const tunnelToken = pulumi.secret(
+      edge.requireOutput("indigoEdge").apply((value) => {
+        const token = (value as { tunnelToken?: unknown }).tunnelToken
+        if (typeof token !== "string" || token.length === 0)
+          throw new Error("Indigo tunnel token is missing; deploy the Cloudflare stack first.")
+        return JSON.stringify({ token })
+      }),
+    )
     return yield* createVaultFoundationEffect({
       connection,
       resourceNames: infrastructure.vault.resourceNames,

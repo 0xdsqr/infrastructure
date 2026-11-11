@@ -137,18 +137,24 @@ test("policy assertions protect admin SSH and check representative lateral-acces
 test("policy assertions use the configured admin identity rather than a hardcoded account", () => {
   const alternate = tailscale.createPolicy({ adminUser: "admin@example.test" })
   assert.deepEqual(alternate.tagOwners[indigoTag], ["admin@example.test"])
-  assert.deepEqual(alternate.tests.find(check => check.src === "admin@example.test"), {
-    src: "admin@example.test",
-    proto: "tcp",
-    accept: [`${indigoTag}:22`],
-  })
+  assert.deepEqual(
+    alternate.tests.find((check) => check.src === "admin@example.test"),
+    {
+      src: "admin@example.test",
+      proto: "tcp",
+      accept: [`${indigoTag}:22`],
+    },
+  )
 })
 
 test("backup policy assertions allow SSH export but deny etcd and Kubernetes API access", () => {
-  assert.deepEqual(policy.tests.find(check => check.src === tailscale.hosts.backupCollector), {
-    src: "100.71.152.103",
-    proto: "tcp",
-    accept: ["indigo-etcd-source:22"],
-    deny: ["indigo-etcd-source:2379", "indigo-etcd-source:6443", "indigo-etcd-source:10250"],
-  })
+  assert.deepEqual(
+    policy.tests.find((check) => check.src === tailscale.hosts.backupCollector),
+    {
+      src: "100.71.152.103",
+      proto: "tcp",
+      accept: ["indigo-etcd-source:22"],
+      deny: ["indigo-etcd-source:2379", "indigo-etcd-source:6443", "indigo-etcd-source:10250"],
+    },
+  )
 })

@@ -45,22 +45,34 @@ const foundationArgs = (): VaultFoundationArgs => ({
 })
 
 test("Vault accepts an existing audit device with an empty description", () => {
-  assert.doesNotThrow(() => Effect.runSync(planVaultFoundationEffect({
-    ...foundationArgs(), audit: { ...vault.audit, description: "" },
-  })))
+  assert.doesNotThrow(() =>
+    Effect.runSync(
+      planVaultFoundationEffect({
+        ...foundationArgs(),
+        audit: { ...vault.audit, description: "" },
+      }),
+    ),
+  )
 })
 
 test("Vault managed KV secrets require explicit unique inventoried paths", () => {
   const path = vault.secretPaths.indigoCloudflareTunnel.path
-  assert.doesNotThrow(() => Effect.runSync(planVaultFoundationEffect({
-    ...foundationArgs(), managedKvSecrets: { tunnel: { path, dataJson: "{}" } },
-  })))
+  assert.doesNotThrow(() =>
+    Effect.runSync(
+      planVaultFoundationEffect({
+        ...foundationArgs(),
+        managedKvSecrets: { tunnel: { path, dataJson: "{}" } },
+      }),
+    ),
+  )
   for (const managedKvSecrets of [
     { tunnel: { path: "not/in/inventory", dataJson: "{}" } },
     { tunnel: { path, dataJson: "{}" }, duplicate: { path, dataJson: "{}" } },
   ]) {
     const count = resources.length
-    const error = Effect.runSync(Effect.flip(createVaultFoundationEffect({ ...foundationArgs(), managedKvSecrets })))
+    const error = Effect.runSync(
+      Effect.flip(createVaultFoundationEffect({ ...foundationArgs(), managedKvSecrets })),
+    )
     assert.match(error.message, /Managed KV/)
     assert.equal(resources.length, count)
   }
@@ -68,13 +80,20 @@ test("Vault managed KV secrets require explicit unique inventoried paths", () =>
 
 test("Vault rejects ambiguous certificate purposes before registering resources", () => {
   const count = resources.length
-  const error = Effect.runSync(Effect.flip(createVaultFoundationEffect({
-    ...foundationArgs(), pkiIssuers: { invalid: {
-      ...vault.pkiIssuers.indigoTelemetryClient,
-      // @ts-expect-error Exercise runtime validation of untyped input.
-      certificatePurpose: "both",
-    } },
-  })))
+  const error = Effect.runSync(
+    Effect.flip(
+      createVaultFoundationEffect({
+        ...foundationArgs(),
+        pkiIssuers: {
+          invalid: {
+            ...vault.pkiIssuers.indigoTelemetryClient,
+            // @ts-expect-error Exercise runtime validation of untyped input.
+            certificatePurpose: "both",
+          },
+        },
+      }),
+    ),
+  )
   assert.match(error.message, /certificate purpose must be server or client/)
   assert.equal(resources.length, count)
 })
@@ -87,9 +106,14 @@ test("Vault rejects empty audit paths and options before registering resources",
     { ...vault.audit, options: { " ": "/var/log/vault/audit.log" } },
   ]) {
     const count = resources.length
-    const error = Effect.runSync(Effect.flip(createVaultFoundationEffect({
-      ...foundationArgs(), audit,
-    })))
+    const error = Effect.runSync(
+      Effect.flip(
+        createVaultFoundationEffect({
+          ...foundationArgs(),
+          audit,
+        }),
+      ),
+    )
     assert.match(error.message, /audit devices require non-empty path and options/)
     assert.equal(resources.length, count)
   }
@@ -103,22 +127,37 @@ test("Vault rejects unsafe dedicated CA configuration before registering resourc
     { ...original.managedCa, commonName: " " },
   ]) {
     const count = resources.length
-    const error = Effect.runSync(Effect.flip(createVaultFoundationEffect({
-      ...foundationArgs(), pkiIssuers: { isolated: { ...original, managedCa } },
-    })))
+    const error = Effect.runSync(
+      Effect.flip(
+        createVaultFoundationEffect({
+          ...foundationArgs(),
+          pkiIssuers: { isolated: { ...original, managedCa } },
+        }),
+      ),
+    )
     assert.match(error.message, /unique managed CA mount/)
     assert.equal(resources.length, count)
   }
-  const collision = Effect.runSync(Effect.flip(planVaultFoundationEffect({
-    ...foundationArgs(), pkiIssuers: { isolated: { ...original, backend: vault.kv.path } },
-  })))
+  const collision = Effect.runSync(
+    Effect.flip(
+      planVaultFoundationEffect({
+        ...foundationArgs(),
+        pkiIssuers: { isolated: { ...original, backend: vault.kv.path } },
+      }),
+    ),
+  )
   assert.match(collision.message, /KV mount path/)
-  const duplicate = Effect.runSync(Effect.flip(planVaultFoundationEffect({
-    ...foundationArgs(), pkiIssuers: {
-      isolated: original,
-      duplicate: { ...original, roleName: "other", policyName: "other" },
-    },
-  })))
+  const duplicate = Effect.runSync(
+    Effect.flip(
+      planVaultFoundationEffect({
+        ...foundationArgs(),
+        pkiIssuers: {
+          isolated: original,
+          duplicate: { ...original, roleName: "other", policyName: "other" },
+        },
+      }),
+    ),
+  )
   assert.match(duplicate.message, /unique managed CA mount/)
 })
 
@@ -129,11 +168,20 @@ test("Vault accepts only explicitly enabled literal leftmost wildcard names", ()
     [true, ["*.*.hubble-grpc.cilium.io"]],
     [true, ["node*.indigo.hubble-grpc.cilium.io"]],
   ] as const) {
-    const error = Effect.runSync(Effect.flip(planVaultFoundationEffect({
-      ...foundationArgs(), pkiIssuers: { isolated: {
-        ...original, allowWildcardCertificates, allowedDomains,
-      } },
-    })))
+    const error = Effect.runSync(
+      Effect.flip(
+        planVaultFoundationEffect({
+          ...foundationArgs(),
+          pkiIssuers: {
+            isolated: {
+              ...original,
+              allowWildcardCertificates,
+              allowedDomains,
+            },
+          },
+        }),
+      ),
+    )
     assert.match(error.message, /exact lowercase DNS names/)
   }
   assert.doesNotThrow(() => Effect.runSync(planVaultFoundationEffect(foundationArgs())))
@@ -276,7 +324,10 @@ test("Vault rejects PKI roles targeting undeclared Kubernetes auth backends", ()
     ),
   )
 
-  assert.match(error.message, /must reference a declared external or managed Kubernetes auth backend/)
+  assert.match(
+    error.message,
+    /must reference a declared external or managed Kubernetes auth backend/,
+  )
   assert.equal(resources.length, count)
 })
 

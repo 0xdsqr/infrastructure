@@ -48,16 +48,24 @@ export const previewApplicationSet = (applicationSet: YamlRecord): YamlRecord[] 
         throw new Error("Unknown Application lifecycle")
       if (!["standard", "extended"].includes(String(component.retryProfile)))
         throw new Error("Unknown Application retry profile")
-      if (component.includeManifests !== undefined && typeof component.includeManifests !== "boolean")
+      if (
+        component.includeManifests !== undefined &&
+        typeof component.includeManifests !== "boolean"
+      )
         throw new Error("includeManifests must be a boolean")
       // Keep chart companion resources separate from another Application's
       // configuration overlay without permitting arbitrary repository paths.
-      if (component.manifestSubdirectory !== undefined && (
-        component.includeManifests !== true ||
-        !Array.isArray(component.charts) || component.charts.length === 0 ||
-        typeof component.manifestSubdirectory !== "string" ||
-        !/^[a-z][a-z0-9-]*$/.test(component.manifestSubdirectory)
-      )) throw new Error("manifestSubdirectory requires chart companions and one safe directory name")
+      if (
+        component.manifestSubdirectory !== undefined &&
+        (component.includeManifests !== true ||
+          !Array.isArray(component.charts) ||
+          component.charts.length === 0 ||
+          typeof component.manifestSubdirectory !== "string" ||
+          !/^[a-z][a-z0-9-]*$/.test(component.manifestSubdirectory))
+      )
+        throw new Error(
+          "manifestSubdirectory requires chart companions and one safe directory name",
+        )
       return {
         template: spec.template,
         patch: spec.templatePatch,

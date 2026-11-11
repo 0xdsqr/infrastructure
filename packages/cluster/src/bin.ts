@@ -3,7 +3,18 @@
 import { Command, Path } from "@effect/platform"
 import { NodeContext, NodeRuntime } from "@effect/platform-node"
 import { Config, Console, Data, Effect, Option, Stream } from "effect"
-import { assertReservationSafe, dedicatedKey, indigoWorkers, labelPatch, poolLabel, reservationPatch, validateWorkers, type Node, type Pod, type Workload } from "./node-pools.ts"
+import {
+  assertReservationSafe,
+  dedicatedKey,
+  indigoWorkers,
+  labelPatch,
+  poolLabel,
+  reservationPatch,
+  validateWorkers,
+  type Node,
+  type Pod,
+  type Workload,
+} from "./node-pools.ts"
 import { joinWorker, parseJoinArgs, type JoinOptions, type ProcessOptions } from "./join-worker.ts"
 
 const usage = `Usage:
@@ -41,13 +52,24 @@ type Result = {
   readonly stdout: string
 }
 
-const run = Effect.fn("Cluster.run")(function* (command: string, args: readonly string[], options: ProcessOptions = {}) {
+const run = Effect.fn("Cluster.run")(function* (
+  command: string,
+  args: readonly string[],
+  options: ProcessOptions = {},
+) {
   return yield* Effect.scoped(
     Effect.gen(function* () {
       const spec = Command.make(command, ...args)
-      const process = yield* Command.start(options.input === undefined ? spec : Command.feed(spec, options.input)).pipe(
+      const process = yield* Command.start(
+        options.input === undefined ? spec : Command.feed(spec, options.input),
+      ).pipe(
         Effect.mapError(
-          (cause) => new ClusterError({ message: options.sensitive ? `Unable to start ${command}; sensitive diagnostics suppressed.` : `Unable to start ${command}: ${String(cause)}` }),
+          (cause) =>
+            new ClusterError({
+              message: options.sensitive
+                ? `Unable to start ${command}; sensitive diagnostics suppressed.`
+                : `Unable to start ${command}: ${String(cause)}`,
+            }),
         ),
       )
       const result = yield* Effect.all(
@@ -65,15 +87,22 @@ const run = Effect.fn("Cluster.run")(function* (command: string, args: readonly 
         { concurrency: "unbounded" },
       ).pipe(
         Effect.mapError(
-          (cause) => new ClusterError({ message: options.sensitive ? `Unable to run ${command}; sensitive diagnostics suppressed.` : `Unable to run ${command}: ${String(cause)}` }),
+          (cause) =>
+            new ClusterError({
+              message: options.sensitive
+                ? `Unable to run ${command}; sensitive diagnostics suppressed.`
+                : `Unable to run ${command}: ${String(cause)}`,
+            }),
         ),
       )
 
       if (result.exitCode !== 0) {
         return yield* new ClusterError({
-          message: options.sensitive ? `${command} failed (${result.exitCode}); sensitive diagnostics suppressed.` : `${command} ${args.join(" ")} failed (${result.exitCode})${
-            result.stderr.trim() === "" ? "" : `\n${result.stderr.trim()}`
-          }`,
+          message: options.sensitive
+            ? `${command} failed (${result.exitCode}); sensitive diagnostics suppressed.`
+            : `${command} ${args.join(" ")} failed (${result.exitCode})${
+                result.stderr.trim() === "" ? "" : `\n${result.stderr.trim()}`
+              }`,
         })
       }
       return result satisfies Result
@@ -305,40 +334,59 @@ const validateIndigo = Effect.fn("Cluster.validateIndigo")(function* () {
   yield* Console.log(applications.stdout.trim())
 })
 
-const readJson = <A>(args: readonly string[]) => kubectl([...args, "-o", "json"]).pipe(
-  Effect.flatMap(result => Effect.try({ try: () => JSON.parse(result.stdout) as A,
-    catch: () => new ClusterError({ message: "kubectl returned invalid JSON" }) })),
-)
-const poolCheck = (check: () => void) => Effect.try({ try: check,
-  catch: cause => new ClusterError({ message: String(cause) }) })
+const readJson = <A>(args: readonly string[]) =>
+  kubectl([...args, "-o", "json"]).pipe(
+    Effect.flatMap((result) =>
+      Effect.try({
+        try: () => JSON.parse(result.stdout) as A,
+        catch: () => new ClusterError({ message: "kubectl returned invalid JSON" }),
+      }),
+    ),
+  )
+const poolCheck = (check: () => void) =>
+  Effect.try({ try: check, catch: (cause) => new ClusterError({ message: String(cause) }) })
 
 const nodePools = Effect.fn("Cluster.nodePools")(function* (stage: string) {
   yield* guardIndigo()
   const nodes = (yield* readJson<{ items: Node[] }>(["get", "nodes"])).items
   if (stage === "plan") {
     for (const target of indigoWorkers) {
-      const node = nodes.find(n => n.metadata.name === target.name)
-      yield* Console.log(`${target.name}: ${node?.metadata.labels?.[poolLabel] ?? "unlabelled"} -> ${target.pool}; taints=${JSON.stringify(node?.spec.taints ?? [])}`)
+      const node = nodes.find((n) => n.metadata.name === target.name)
+      yield* Console.log(
+        `${target.name}: ${node?.metadata.labels?.[poolLabel] ?? "unlabelled"} -> ${target.pool}; taints=${JSON.stringify(node?.spec.taints ?? [])}`,
+      )
     }
     return
   }
   yield* poolCheck(() => validateWorkers(nodes, stage !== "labels", stage === "labels"))
   if (stage === "reserve" || stage === "verify") {
-    const workloads = (yield* readJson<{ items: Workload[] }>(["get", "deployments,statefulsets,daemonsets", "-A"])).items
+    const workloads = (yield* readJson<{ items: Workload[] }>([
+      "get",
+      "deployments,statefulsets,daemonsets",
+      "-A",
+    ])).items
     const pods = (yield* readJson<{ items: Pod[] }>(["get", "pods", "-A"])).items
     yield* poolCheck(() => assertReservationSafe(nodes, workloads, pods))
     if (stage === "verify") {
       for (const target of indigoWorkers) {
-        if (!nodes.find(n => n.metadata.name === target.name)?.spec.taints?.some(t => t.key === dedicatedKey && t.value === target.pool && t.effect === "NoSchedule")) {
+        if (
+          !nodes
+            .find((n) => n.metadata.name === target.name)
+            ?.spec.taints?.some(
+              (t) => t.key === dedicatedKey && t.value === target.pool && t.effect === "NoSchedule",
+            )
+        ) {
           return yield* new ClusterError({ message: `Pool reservation missing: ${target.name}` })
         }
       }
-      yield* Console.log("Platform placement, both pool reservations, empty application pool and node agents verified.")
+      yield* Console.log(
+        "Platform placement, both pool reservations, empty application pool and node agents verified.",
+      )
       return
     }
   }
   for (const target of indigoWorkers) {
-    if (!nodes.some(n => n.metadata.name === target.name)) {
+    if (!nodes.some((n) => n.metadata.name === target.name)) {
       yield* Console.log(`not registered yet: ${target.name}; rerun labels after registration`)
       continue
     }
@@ -349,7 +397,16 @@ const nodePools = Effect.fn("Cluster.nodePools")(function* (stage: string) {
   }
 })
 
-type Action = "argocd" | "cilium-adoption" | "help" | "root" | "validate" | "pool-plan" | "pool-labels" | "pool-reserve" | "pool-verify"
+type Action =
+  | "argocd"
+  | "cilium-adoption"
+  | "help"
+  | "root"
+  | "validate"
+  | "pool-plan"
+  | "pool-labels"
+  | "pool-reserve"
+  | "pool-verify"
 
 const parse = (argv: readonly string[]): Effect.Effect<Action, ClusterError> => {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
@@ -358,8 +415,13 @@ const parse = (argv: readonly string[]): Effect.Effect<Action, ClusterError> => 
   if (argv[0] === "validate" && argv[1] === "indigo" && argv.length === 2) {
     return Effect.succeed("validate" as const)
   }
-  if (argv[0] === "node-pools" && argv[1] === "indigo" && argv[2] === "--stage" && argv.length === 4 &&
-      ["plan", "labels", "reserve", "verify"].includes(argv[3] ?? "")) {
+  if (
+    argv[0] === "node-pools" &&
+    argv[1] === "indigo" &&
+    argv[2] === "--stage" &&
+    argv.length === 4 &&
+    ["plan", "labels", "reserve", "verify"].includes(argv[3] ?? "")
+  ) {
     return Effect.succeed(`pool-${argv[3]}` as Action)
   }
   if (
@@ -375,14 +437,20 @@ const parse = (argv: readonly string[]): Effect.Effect<Action, ClusterError> => 
 }
 
 const argv = process.argv.slice(2)
-const selected: Effect.Effect<Action | JoinOptions, ClusterError> = argv[0] === "join-worker" && !argv.includes("--help") && !argv.includes("-h")
-  ? Effect.try({ try: () => parseJoinArgs(argv), catch: cause => new ClusterError({ message: String(cause) }) })
-  : parse(argv)
+const selected: Effect.Effect<Action | JoinOptions, ClusterError> =
+  argv[0] === "join-worker" && !argv.includes("--help") && !argv.includes("-h")
+    ? Effect.try({
+        try: () => parseJoinArgs(argv),
+        catch: (cause) => new ClusterError({ message: String(cause) }),
+      })
+    : parse(argv)
 const program = selected.pipe(
   Effect.flatMap((action) => {
     if (typeof action !== "string") {
-      return kubeconfig().pipe(Effect.flatMap(config => joinWorker({ run }, action, config)),
-        Effect.mapError(cause => new ClusterError({ message: cause.message })))
+      return kubeconfig().pipe(
+        Effect.flatMap((config) => joinWorker({ run }, action, config)),
+        Effect.mapError((cause) => new ClusterError({ message: cause.message })),
+      )
     }
     switch (action) {
       case "pool-plan":

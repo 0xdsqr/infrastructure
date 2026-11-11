@@ -38,7 +38,8 @@ const secretPaths = {
   },
   indigoCloudflareTunnel: {
     path: "dsqr-labs/clusters/indigo/cloudflare/tunnel",
-    description: "Indigo-only Cloudflare tunnel connector token; no Cloudflare account API credentials.",
+    description:
+      "Indigo-only Cloudflare tunnel connector token; no Cloudflare account API credentials.",
     fields: ["token"],
   },
   dotdevWeb: {

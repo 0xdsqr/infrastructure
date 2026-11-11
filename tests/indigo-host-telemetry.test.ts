@@ -1,12 +1,31 @@
 import assert from "node:assert/strict"
 import test from "node:test"
 import { vault } from "../infra/vault/config.ts"
-import { indigoHostTelemetryIssuers, indigoHostTelemetryNodes } from "../infra/vault/indigo-host-telemetry.ts"
+import {
+  indigoHostTelemetryIssuers,
+  indigoHostTelemetryNodes,
+} from "../infra/vault/indigo-host-telemetry.ts"
 
 test("host telemetry enrolls exactly three controls and six workers, each independently", () => {
-  const suffixes = ["control-01", "control-02", "control-03", "worker-01", "worker-02", "worker-03", "worker-04", "worker-05", "worker-06"]
-  assert.deepEqual(indigoHostTelemetryNodes.map(n => n.host), suffixes.map(s => `srv-lx-k8s-indigo-${s}`))
-  assert.deepEqual(indigoHostTelemetryNodes.map(n => n.address), suffixes.map((_, i) => `10.10.80.${100 + i}`))
+  const suffixes = [
+    "control-01",
+    "control-02",
+    "control-03",
+    "worker-01",
+    "worker-02",
+    "worker-03",
+    "worker-04",
+    "worker-05",
+    "worker-06",
+  ]
+  assert.deepEqual(
+    indigoHostTelemetryNodes.map((n) => n.host),
+    suffixes.map((s) => `srv-lx-k8s-indigo-${s}`),
+  )
+  assert.deepEqual(
+    indigoHostTelemetryNodes.map((n) => n.address),
+    suffixes.map((_, i) => `10.10.80.${100 + i}`),
+  )
   assert.equal(Object.keys(indigoHostTelemetryIssuers).length, 9)
   for (const { host, address } of indigoHostTelemetryNodes) {
     const key = `indigoHostTelemetry-${host}`
@@ -27,8 +46,11 @@ test("host telemetry enrolls exactly three controls and six workers, each indepe
     assert.equal(issuer.appRole.secretIdTtlSeconds, 0)
     assert.equal(issuer.appRole.tokenNumUses, 0)
   }
-  assert.equal(new Set(Object.values(indigoHostTelemetryIssuers).map(i => i.appRole.roleName)).size, 9)
-  assert.equal(new Set(Object.values(indigoHostTelemetryIssuers).map(i => i.policyName)).size, 9)
+  assert.equal(
+    new Set(Object.values(indigoHostTelemetryIssuers).map((i) => i.appRole.roleName)).size,
+    9,
+  )
+  assert.equal(new Set(Object.values(indigoHostTelemetryIssuers).map((i) => i.policyName)).size, 9)
 })
 
 test("host enrollment does not reuse the in-cluster collector identity or Kubernetes login", () => {
@@ -43,7 +65,17 @@ test("host enrollment does not reuse the in-cluster collector identity or Kubern
 })
 
 test("host policies use dsqr-labs while roles use the existing Indigo naming convention", () => {
-  const suffixes = ["control-01", "control-02", "control-03", "worker-01", "worker-02", "worker-03", "worker-04", "worker-05", "worker-06"]
+  const suffixes = [
+    "control-01",
+    "control-02",
+    "control-03",
+    "worker-01",
+    "worker-02",
+    "worker-03",
+    "worker-04",
+    "worker-05",
+    "worker-06",
+  ]
   for (const suffix of suffixes) {
     const host = `srv-lx-k8s-indigo-${suffix}`
     const issuer = indigoHostTelemetryIssuers[`indigoHostTelemetry-${host}`]!

@@ -482,25 +482,27 @@ export function planCloudflareEdgeEffect<DirectRecord extends CloudflareDnsRecor
       "Every declared Cloudflare zone must have exactly one explicit security policy.",
     )
 
-    const zoneSecurityPolicies = yield* Effect.forEach(args.manageZoneSecurity === false ? [] : configuredZoneNames, (zone) =>
-      Effect.gen(function* () {
-        const policy = args.zoneSecurity[zone]!
-        const maxAge = policy.strictTransportSecurity?.maxAge
+    const zoneSecurityPolicies = yield* Effect.forEach(
+      args.manageZoneSecurity === false ? [] : configuredZoneNames,
+      (zone) =>
+        Effect.gen(function* () {
+          const policy = args.zoneSecurity[zone]!
+          const maxAge = policy.strictTransportSecurity?.maxAge
 
-        if (maxAge !== undefined) {
-          yield* requireResourceConfigEffect(
-            Number.isInteger(maxAge) && maxAge >= 0,
-            `zone-security:${zone}`,
-            `Cloudflare zone "${zone}" HSTS maxAge must be a non-negative integer.`,
-          )
-        }
+          if (maxAge !== undefined) {
+            yield* requireResourceConfigEffect(
+              Number.isInteger(maxAge) && maxAge >= 0,
+              `zone-security:${zone}`,
+              `Cloudflare zone "${zone}" HSTS maxAge must be a non-negative integer.`,
+            )
+          }
 
-        return {
-          zone,
-          zoneId: args.zoneIds[zone]!,
-          policy,
-        } as const
-      }),
+          return {
+            zone,
+            zoneId: args.zoneIds[zone]!,
+            policy,
+          } as const
+        }),
     )
 
     const normalizedIngressHostnames = args.ingressRules.map((rule) =>

@@ -26,25 +26,38 @@ const zoneIds = {
 
 test("Indigo owns the existing Dotdev Web DNS identity without retaining preview DNS", async () => {
   const deployment = await runPulumiMockProgram({
-    program: () => runPulumiProgram(createCloudflareEdgeEffect({
-      accountId: "account-id",
-      tunnel: indigoTunnel,
-      zoneIds: { dsqrDev: "zone-dsqr" },
-      zones: { dsqrDev: "dsqr.dev" },
-      zoneSecurity: { dsqrDev: {} },
-      manageZoneSecurity: false,
-      ingressRules: indigoIngressRules,
-      resourceOptions: { protect: true },
-    })),
-    outputs: result => ({ tunnelToken: result.tunnelToken }),
-    call: args => args.token === tunnelTokenInvoke ? { token: "indigo-test-token" } : args.inputs,
+    program: () =>
+      runPulumiProgram(
+        createCloudflareEdgeEffect({
+          accountId: "account-id",
+          tunnel: indigoTunnel,
+          zoneIds: { dsqrDev: "zone-dsqr" },
+          zones: { dsqrDev: "dsqr.dev" },
+          zoneSecurity: { dsqrDev: {} },
+          manageZoneSecurity: false,
+          ingressRules: indigoIngressRules,
+          resourceOptions: { protect: true },
+        }),
+      ),
+    outputs: (result) => ({ tunnelToken: result.tunnelToken }),
+    call: (args) =>
+      args.token === tunnelTokenInvoke ? { token: "indigo-test-token" } : args.inputs,
     project: "cloudflare-edge",
   })
   // DNS registration depends on the asynchronous tunnel ID, not the token output.
-  await Promise.all(deployment.captured.map(({resource}) =>
-    resource instanceof pulumi.CustomResource ? resolveOutput(resource.id) : Promise.resolve()))
-  const resources = deployment.resources.filter(resource => resource.type.startsWith("cloudflare:"))
-  assert.deepEqual(resources.map(resource => resource.name).sort(), ["dsqr-dev", "dsqr-labs-indigo", "dsqr-labs-indigo-config"])
+  await Promise.all(
+    deployment.captured.map(({ resource }) =>
+      resource instanceof pulumi.CustomResource ? resolveOutput(resource.id) : Promise.resolve(),
+    ),
+  )
+  const resources = deployment.resources.filter((resource) =>
+    resource.type.startsWith("cloudflare:"),
+  )
+  assert.deepEqual(resources.map((resource) => resource.name).sort(), [
+    "dsqr-dev",
+    "dsqr-labs-indigo",
+    "dsqr-labs-indigo-config",
+  ])
   const production = byName(resources, "dsqr-dev")
   assert.equal(production.type, dnsToken)
   assert.equal(production.inputs.name, "dsqr.dev")
@@ -54,11 +67,16 @@ test("Indigo owns the existing Dotdev Web DNS identity without retaining preview
   assert.equal(tunnel.inputs.tunnelSecret, undefined)
   assert.deepEqual(byName(resources, "dsqr-labs-indigo-config").inputs.config, {
     ingresses: [
-      ...indigoIngressRules.map(({hostname, service, originRequest}) => ({hostname, service, originRequest})),
+      ...indigoIngressRules.map(({ hostname, service, originRequest }) => ({
+        hostname,
+        service,
+        originRequest,
+      })),
       { service: "http_status:404" },
     ],
   })
-  for (const resource of resources) assert.equal(byName(deployment.captured, resource.name).opts.protect, true)
+  for (const resource of resources)
+    assert.equal(byName(deployment.captured, resource.name).opts.protect, true)
   assert.equal(await pulumi.isSecret(deployment.result.tunnelToken), true)
 })
 
@@ -163,7 +181,10 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
   )
 
   for (const resource of resources) {
-    if (resource.name === "dsqr-platform-backups" || resource.name === "dsqr-platform-backups-lock") {
+    if (
+      resource.name === "dsqr-platform-backups" ||
+      resource.name === "dsqr-platform-backups-lock"
+    ) {
       assert.equal(byName(deployment.captured, resource.name).opts.protect, true)
     } else {
       rootOptionsAreStable(deployment, resource.name)

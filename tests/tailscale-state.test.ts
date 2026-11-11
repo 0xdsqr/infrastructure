@@ -144,10 +144,18 @@ test("Tailscale infrastructure manages its policy and rotating server bootstrap 
     deviceId: "n35gDmGxvw11CNTRL",
     tags: ["tag:dsqr-indigo-node"],
   })
-  for (const [suffix, deviceId] of [["04", "npWfR3aXau11CNTRL"], ["05", "ngDfnjfsdC21CNTRL"], ["06", "nBNGiopbXz11CNTRL"]]) {
-    assert.deepEqual(resources.find(r => r.name === `dsqr-indigo-worker-${suffix}-tags`)?.inputs, {
-      deviceId, tags: ["tag:dsqr-indigo-node"],
-    })
+  for (const [suffix, deviceId] of [
+    ["04", "npWfR3aXau11CNTRL"],
+    ["05", "ngDfnjfsdC21CNTRL"],
+    ["06", "nBNGiopbXz11CNTRL"],
+  ]) {
+    assert.deepEqual(
+      resources.find((r) => r.name === `dsqr-indigo-worker-${suffix}-tags`)?.inputs,
+      {
+        deviceId,
+        tags: ["tag:dsqr-indigo-node"],
+      },
+    )
   }
 })
 
