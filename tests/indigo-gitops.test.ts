@@ -28,7 +28,7 @@ const read = (path: string) => {
   return readFile(new URL(`../${path}`, import.meta.url), "utf8")
 }
 
-test("Indigo requires controller sync approval while configuration heals automatically", () => {
+test("Indigo keeps platform controllers reviewed while Dotdev deploys automatically", () => {
   const render = renderApplications
   const applications = render("indigo")
   const reviewedPrune = new Set([
@@ -48,6 +48,7 @@ test("Indigo requires controller sync approval while configuration heals automat
   ])
   for (const application of applications) {
     const lifecycle = application.metadata.labels["platform.dsqr.dev/lifecycle"]
+    const automatic = lifecycle !== "controller" || application.metadata.name === "dotdev-web"
     assert.ok(
       ["controller", "configuration", "foundation"].includes(lifecycle),
       application.metadata.name,
@@ -59,12 +60,12 @@ test("Indigo requires controller sync approval while configuration heals automat
     )
     assert.equal(
       application.spec.syncPolicy.automated.enabled,
-      lifecycle !== "controller",
+      automatic,
       application.metadata.name,
     )
     assert.equal(
       application.spec.syncPolicy.automated.selfHeal,
-      lifecycle !== "controller",
+      automatic,
       application.metadata.name,
     )
     assert.equal(application.spec.syncPolicy.automated.allowEmpty, false, application.metadata.name)
@@ -268,14 +269,15 @@ test("Indigo foundation declares only current platform and onboarded application
   )
 })
 
-test("Indigo Dotdev is pinned, proxy-guarded, and manually synced", async () => {
+test("Indigo Dotdev is pinned, proxy-guarded, and automatically synced", async () => {
   const application = renderApplications("indigo").find(
     (resource) => resource.metadata.name === "dotdev-web",
   )
   assert.ok(application)
   assert.equal(application.spec.project, "dsqr")
   assert.equal(application.spec.destination.namespace, "dsqr")
-  assert.equal(application.spec.syncPolicy.automated.enabled, false)
+  assert.equal(application.spec.syncPolicy.automated.enabled, true)
+  assert.equal(application.spec.syncPolicy.automated.selfHeal, true)
   assert.equal(application.spec.syncPolicy.automated.prune, false)
   assert.equal(application.spec.sources.length, 2)
   const chart = application.spec.sources[0]
