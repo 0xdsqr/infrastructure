@@ -12,3 +12,24 @@ labels:
   - pairs:
       platform.dsqr.dev/cluster: hub-a
       platform.dsqr.dev/environment: lab
+
+patches:
+  - patch: |-
+      apiVersion: argoproj.io/v1alpha1
+      kind: AppProject
+      metadata:
+        name: dsqr
+        namespace: argocd
+      $patch: delete
+  - target:
+      group: argoproj.io
+      kind: AppProject
+      name: secrets
+    patch: |-
+      - op: replace
+        path: /spec/destinations
+        value:
+          - {server: https://kubernetes.default.svc, namespace: external-secrets}
+          - {server: https://kubernetes.default.svc, namespace: fidara}
+          - {server: https://kubernetes.default.svc, namespace: twt}
+          - {server: https://kubernetes.default.svc, namespace: traefik}

@@ -42,16 +42,6 @@ const secretPaths = {
       "Indigo-only Cloudflare tunnel connector token; no Cloudflare account API credentials.",
     fields: ["token"],
   },
-  dotdevWeb: {
-    path: "homelab/apps/dsqr/dotdev-web",
-    description: "Runtime secrets for dsqr.dev web and shared dsqr app workloads.",
-    fields: ["AUTH_SECRET", "DATABASE_URL", "RESEND_API_KEY", "S3_ACCESS_KEY", "S3_SECRET_KEY"],
-  },
-  dotdevStudio: {
-    path: "homelab/apps/dsqr/dotdev-studio",
-    description: "Reserved runtime secret path for studio.dsqr.dev.",
-    fields: ["AUTH_SECRET", "DATABASE_URL", "RESEND_API_KEY", "S3_ACCESS_KEY", "S3_SECRET_KEY"],
-  },
   fidaraApi: {
     path: "homelab/apps/fidara/api",
     description: "Runtime secrets for the Fidara API.",
@@ -221,14 +211,6 @@ const audit = {
 } satisfies VaultAuditConfig
 
 const externalSecretsPolicies = {
-  dotdevWeb: {
-    name: "hub-a-external-secrets-dotdev-web",
-    readPaths: [secretPaths.dotdevWeb.path],
-  },
-  dotdevStudio: {
-    name: "hub-a-external-secrets-dotdev-studio",
-    readPaths: [secretPaths.dotdevStudio.path],
-  },
   fidaraApi: {
     name: "hub-a-external-secrets-fidara-api",
     readPaths: [secretPaths.fidaraApi.path],
@@ -579,10 +561,7 @@ const pkiIssuers = {
       "api.fidara.io",
       "argocd.hub-a.home.arpa",
       "argocd-hooks-hub-a.dsqr.dev",
-      "dsqr.dev",
       "fidara.io",
-      "labs.dsqr.dev",
-      "studio.dsqr.dev",
       "tastingswithtay.com",
     ],
     allowWildcardCertificates: false,

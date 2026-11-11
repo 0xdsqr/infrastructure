@@ -5,6 +5,7 @@ result*
 *.tgz
 
 # Local state and credentials
+.local-notes/
 .direnv
 .pulumi
 .env

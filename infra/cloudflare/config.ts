@@ -131,26 +131,6 @@ export const cloudflare = {
       },
     },
     {
-      hostname: "studio.dsqr.dev",
-      zone: "dsqrDev",
-      service: "https://10.10.30.200",
-      originRequest: {
-        http2Origin: false,
-        httpHostHeader: "studio.dsqr.dev",
-        originServerName: "studio.dsqr.dev",
-      },
-    },
-    {
-      hostname: "labs.dsqr.dev",
-      zone: "dsqrDev",
-      service: "https://10.10.30.200",
-      originRequest: {
-        http2Origin: false,
-        httpHostHeader: "labs.dsqr.dev",
-        originServerName: "labs.dsqr.dev",
-      },
-    },
-    {
       hostname: "fidara.io",
       zone: "fidaraIo",
       service: "https://10.10.30.200",

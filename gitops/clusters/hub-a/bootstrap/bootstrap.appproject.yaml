@@ -20,15 +20,10 @@ spec:
     - server: https://kubernetes.default.svc
       namespace: argocd
     - server: https://kubernetes.default.svc
-      namespace: dsqr
-    - server: https://kubernetes.default.svc
       namespace: fidara
     - server: https://kubernetes.default.svc
       namespace: twt
   clusterResourceWhitelist:
-    - group: ""
-      kind: Namespace
-      name: dsqr
     - group: ""
       kind: Namespace
       name: fidara
