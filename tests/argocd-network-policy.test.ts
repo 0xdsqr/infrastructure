@@ -94,6 +94,7 @@ test("Only repo-server gets registry HTTPS and DNS inspection for FQDN enforceme
   const hosts = downloads.egress[0].toFQDNs.map((host: any) => host.matchName)
   assert.deepEqual(hosts, [
     "github.com",
+    "api.github.com",
     "release-assets.githubusercontent.com",
     "ghcr.io",
     "pkg-containers.githubusercontent.com",
