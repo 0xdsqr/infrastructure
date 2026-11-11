@@ -174,6 +174,18 @@ const secretPaths = {
     description: "Dedicated Vault endpoint metadata. Do not store root token or unseal keys here.",
     fields: ["VAULT_ADDR"],
   },
+  githubDeploymentPromoter: {
+    path: "dsqr-labs/platform/github/apps/deployment-promoter",
+    description: "GitHub App credentials for opening reviewed deployment promotion pull requests.",
+    fields: [
+      "githubAppSlug",
+      "githubAppID",
+      "githubAppClientID",
+      "githubAppInstallationID",
+      "githubAppPrivateKey",
+      "repository",
+    ],
+  },
   indigoBootstrapSmokeTest: {
     path: "dsqr-labs/clusters/indigo/bootstrap/eso-smoke-test",
     description: "Harmless validation data for the Indigo External Secrets bootstrap path.",
