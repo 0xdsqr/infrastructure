@@ -5,6 +5,7 @@ kind: Kustomization
 # beside Envoy, while the routes, Secret and ingress policy live beside Argo.
 resources:
   - ../../base
+  - deployments-repo.externalsecret.yaml
   - github-webhook.externalsecret.yaml
   - ui.httproute.yaml
   - github-webhook.httproute.yaml

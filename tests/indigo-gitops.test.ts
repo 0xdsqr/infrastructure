@@ -491,7 +491,7 @@ test("Indigo shared Envoy Gateway is HA, HTTPS-only, and restricted by namespace
   assert.match(externalSecret, /argocd\.argoproj\.io\/sync-wave: "3"/)
 })
 
-test("Indigo Argo access separates the private UI from the authenticated public webhook", async () => {
+test("Indigo Argo access separates UI, webhook, and private repository credentials", async () => {
   const [
     application,
     project,
@@ -499,6 +499,7 @@ test("Indigo Argo access separates the private UI from the authenticated public 
     uiRoute,
     webhookRoute,
     webhookSecret,
+    deploymentsSecret,
     policy,
     values,
     bootstrapProject,
@@ -509,6 +510,7 @@ test("Indigo Argo access separates the private UI from the authenticated public 
     read("gitops/components/argocd/access/overlays/indigo/ui.httproute.yaml"),
     read("gitops/components/argocd/access/overlays/indigo/github-webhook.httproute.yaml"),
     read("gitops/components/argocd/access/overlays/indigo/github-webhook.externalsecret.yaml"),
+    read("gitops/components/argocd/access/overlays/indigo/deployments-repo.externalsecret.yaml"),
     read("gitops/components/argocd/access/base/gateway-ingress.ciliumnetworkpolicy.yaml"),
     read("gitops/components/argocd/overlays/indigo/values-overrides.yaml"),
     read("gitops/clusters/indigo/bootstrap/bootstrap.appproject.yaml"),
@@ -525,6 +527,7 @@ test("Indigo Argo access separates the private UI from the authenticated public 
   assert.doesNotMatch(project, /kind: "\*"|name: "\*"/)
 
   for (const resource of [
+    "deployments-repo.externalsecret.yaml",
     "github-webhook.externalsecret.yaml",
     "github-webhook.httproute.yaml",
     "ui.httproute.yaml",
@@ -544,6 +547,22 @@ test("Indigo Argo access separates the private UI from the authenticated public 
     /key: dsqr-labs\/clusters\/indigo\/platform\/argocd\/webhooks\/github/,
   )
   assert.match(webhookSecret, /deletionPolicy: Retain/)
+  const repositoryCredentials = parseAllDocuments(deploymentsSecret)[0].toJSON()
+  assert.equal(repositoryCredentials.spec.target.name, "argocd-deployments-repo")
+  assert.equal(
+    repositoryCredentials.spec.target.template.metadata.labels["argocd.argoproj.io/secret-type"],
+    "repository",
+  )
+  assert.equal(repositoryCredentials.spec.target.deletionPolicy, "Retain")
+  assert.deepEqual(
+    repositoryCredentials.spec.data.map((entry: { secretKey: string }) => entry.secretKey),
+    ["type", "url", "githubAppID", "githubAppInstallationID", "githubAppPrivateKey"],
+  )
+  for (const entry of repositoryCredentials.spec.data) {
+    assert.equal(entry.remoteRef.key, "dsqr-labs/clusters/indigo/platform/argocd/repos/deployments")
+    assert.equal(entry.remoteRef.property, entry.secretKey)
+  }
+  assert.doesNotMatch(deploymentsSecret, /BEGIN .*PRIVATE KEY|github\.com\/.*@/)
   assert.match(policy, /fromEndpoints:/)
   assert.match(policy, /k8s:io\.kubernetes\.pod\.namespace.*envoy-gateway-system/)
   assert.match(policy, /k8s:gateway\.envoyproxy\.io\/owning-gateway-name.*shared/)

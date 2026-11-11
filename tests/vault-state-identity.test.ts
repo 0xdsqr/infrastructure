@@ -103,6 +103,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     [kubernetesAuthBackendConfigToken, "kubernetes-auth-backend-config-indigo"],
     [policyToken, "external-secrets-token-self-policy"],
     [policyToken, "external-secrets-token-self-policy-indigo"],
+    [policyToken, "external-secrets-policy-indigo-argocd-deployments-repo"],
     [policyToken, "external-secrets-policy-indigo-argocd-github-webhook"],
     [policyToken, "external-secrets-policy-indigo-bootstrap-smoke-test"],
     [policyToken, "external-secrets-policy-indigo-cloudflare-tunnel"],
@@ -244,6 +245,9 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   lifecycle("external-secrets-policy-indigo-argocd-github-webhook", {
     dependsOn: ["kv"],
   })
+  lifecycle("external-secrets-policy-indigo-argocd-deployments-repo", {
+    dependsOn: ["kv"],
+  })
   lifecycle("external-secrets-policy-indigo-bootstrap-smoke-test", {
     dependsOn: ["kv"],
   })
@@ -259,6 +263,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
       "external-secrets-policy-indigo-dotdev-web",
       "external-secrets-policy-indigo-cloudflare-tunnel",
       "external-secrets-policy-indigo-argocd-github-webhook",
+      "external-secrets-policy-indigo-argocd-deployments-repo",
       "external-secrets-policy-indigo-bootstrap-smoke-test",
       "external-secrets-token-self-policy-indigo",
     ],
@@ -492,12 +497,17 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     "indigo-external-secrets-dotdev-web",
     "indigo-external-secrets-cloudflare-tunnel",
     "indigo-external-secrets-argocd-github-webhook",
+    "indigo-external-secrets-argocd-deployments-repo",
     "indigo-external-secrets-bootstrap-smoke-test",
     "indigo-external-secrets-token-self",
   ])
   assert.equal(
     byName(resources, "external-secrets-policy-indigo-dotdev-web").inputs.policy,
     'path "kv/data/dsqr-labs/clusters/indigo/apps/dotdev-web" {\n  capabilities = ["read"]\n}\n\npath "kv/metadata/dsqr-labs/clusters/indigo/apps/dotdev-web" {\n  capabilities = ["read"]\n}',
+  )
+  assert.equal(
+    byName(resources, "external-secrets-policy-indigo-argocd-deployments-repo").inputs.policy,
+    'path "kv/data/dsqr-labs/clusters/indigo/platform/argocd/repos/deployments" {\n  capabilities = ["read"]\n}\n\npath "kv/metadata/dsqr-labs/clusters/indigo/platform/argocd/repos/deployments" {\n  capabilities = ["read"]\n}',
   )
 
   for (const key of issuerKeys) {

@@ -194,6 +194,12 @@ const secretPaths = {
     description: "Dedicated HMAC secret for authenticated GitHub webhooks to Indigo Argo CD.",
     fields: ["secret"],
   },
+  indigoArgocdDeploymentsRepo: {
+    path: "dsqr-labs/clusters/indigo/platform/argocd/repos/deployments",
+    description:
+      "Read-only GitHub App credentials for Indigo Argo CD to fetch private deployment state.",
+    fields: ["type", "url", "githubAppID", "githubAppInstallationID", "githubAppPrivateKey"],
+  },
 } satisfies VaultSecretPathInventory
 
 const humanAdminPolicy = {
@@ -296,6 +302,11 @@ const externalSecretsKubernetesAuthBoundaries = {
         name: "indigo-external-secrets-argocd-github-webhook",
         readPaths: [secretPaths.indigoArgocdGithubWebhook.path],
         resourceName: "external-secrets-policy-indigo-argocd-github-webhook",
+      },
+      argocdDeploymentsRepo: {
+        name: "indigo-external-secrets-argocd-deployments-repo",
+        readPaths: [secretPaths.indigoArgocdDeploymentsRepo.path],
+        resourceName: "external-secrets-policy-indigo-argocd-deployments-repo",
       },
       bootstrapSmokeTest: {
         name: "indigo-external-secrets-bootstrap-smoke-test",
