@@ -24,16 +24,16 @@ const zoneIds = {
   tastingswithtayCom: "zone-twt",
 } as const
 
-test("Indigo owns the existing Dotdev Web DNS identity without retaining preview DNS", async () => {
+test("Indigo owns existing Dotdev and TWT DNS identities without retaining preview DNS", async () => {
   const deployment = await runPulumiMockProgram({
     program: () =>
       runPulumiProgram(
         createCloudflareEdgeEffect({
           accountId: "account-id",
           tunnel: indigoTunnel,
-          zoneIds: { dsqrDev: "zone-dsqr" },
-          zones: { dsqrDev: "dsqr.dev" },
-          zoneSecurity: { dsqrDev: {} },
+          zoneIds: { dsqrDev: "zone-dsqr", tastingswithtayCom: "zone-twt" },
+          zones: { dsqrDev: "dsqr.dev", tastingswithtayCom: "tastingswithtay.com" },
+          zoneSecurity: { dsqrDev: {}, tastingswithtayCom: {} },
           manageZoneSecurity: false,
           ingressRules: indigoIngressRules,
           resourceOptions: { protect: true },
@@ -54,9 +54,11 @@ test("Indigo owns the existing Dotdev Web DNS identity without retaining preview
     resource.type.startsWith("cloudflare:"),
   )
   assert.deepEqual(resources.map((resource) => resource.name).sort(), [
+    "admin-tastingswithtay-com",
     "dsqr-dev",
     "dsqr-labs-indigo",
     "dsqr-labs-indigo-config",
+    "tastingswithtay-com",
   ])
   const production = byName(resources, "dsqr-dev")
   assert.equal(production.type, dnsToken)
@@ -136,7 +138,7 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
     resource.type.startsWith("cloudflare:"),
   )
 
-  assert.equal(resources.length, 33)
+  assert.equal(resources.length, 31)
   assert.deepEqual(
     resources
       .map((resource) => [resource.type, resource.name] as const)
@@ -148,7 +150,6 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
       [dnsToken, "TXT-dsqr-dev"],
       [dnsToken, "TXT-ed25519-domainkey-dsqr-dev"],
       [dnsToken, "TXT-rsa-domainkey-dsqr-dev"],
-      [dnsToken, "admin-tastingswithtay-com"],
       [dnsToken, "api-fidara-io"],
       [dnsToken, "argocd-hooks-hub-a-dsqr-dev"],
       [dnsToken, "argocd-hooks-indigo-dsqr-dev"],
@@ -169,7 +170,6 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
       [r2BucketToken, "dsqr-platform-backups"],
       [r2BucketLockToken, "dsqr-platform-backups-lock"],
       [dnsToken, "s3-dsqr-dev"],
-      [dnsToken, "tastingswithtay-com"],
       [zoneSettingToken, "tastingswithtayCom-always-use-https"],
       [zoneSettingToken, "tastingswithtayCom-automatic-https-rewrites"],
       [zoneSettingToken, "tastingswithtayCom-min-tls-version"],

@@ -68,7 +68,7 @@ test("Indigo tunnel is HA, restricted, and exclusively scheduled on platform nod
   ])
 })
 
-test("Only Dotdev Web uses the TLS-verified Indigo origin", () => {
+test("Dotdev and TWT use the TLS-verified Indigo origin", () => {
   const resources = render("cloudflared")
   const ca = resources.find(
     (resource) => resource.kind === "ConfigMap" && resource.metadata.name === "dsqr-home-root-ca",
@@ -90,9 +90,9 @@ test("Only Dotdev Web uses the TLS-verified Indigo origin", () => {
   assert.equal(mount.mountPath, "/etc/cloudflared-ca")
   assert.deepEqual(
     indigoIngressRules,
-    ["dsqr.dev"].map((hostname) => ({
+    ["tastingswithtay.com", "admin.tastingswithtay.com", "dsqr.dev"].map((hostname) => ({
       hostname,
-      zone: "dsqrDev",
+      zone: hostname === "dsqr.dev" ? "dsqrDev" : "tastingswithtayCom",
       service:
         "https://envoy-gateway-system-shared-e9cec0f8.envoy-gateway-system.svc.cluster.local:443",
       originRequest: {
@@ -106,7 +106,12 @@ test("Only Dotdev Web uses the TLS-verified Indigo origin", () => {
     cloudflare.ingressRules.some((rule) => rule.hostname === "dsqr.dev"),
     false,
   )
-  assert.ok(cloudflare.ingressRules.some((rule) => rule.hostname === "tastingswithtay.com"))
+  for (const hostname of ["tastingswithtay.com", "admin.tastingswithtay.com"]) {
+    assert.equal(
+      cloudflare.ingressRules.some((rule) => rule.hostname === hostname),
+      false,
+    )
+  }
   for (const hostname of ["labs.dsqr.dev", "studio.dsqr.dev"]) {
     assert.equal(
       cloudflare.ingressRules.some((rule) => rule.hostname === hostname),

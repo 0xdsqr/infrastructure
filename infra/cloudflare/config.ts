@@ -26,8 +26,19 @@ export const indigoTunnel = {
   defaultService: "http_status:404",
 } as const
 
-// Dotdev Web is the first migrated application; other legacy routes remain unchanged.
+// Migrated applications use the Indigo connector and verified internal Gateway TLS.
 export const indigoIngressRules: ReadonlyArray<CloudflareIngressRule> = [
+  ...["tastingswithtay.com", "admin.tastingswithtay.com"].map((hostname) => ({
+    hostname,
+    zone: "tastingswithtayCom",
+    service:
+      "https://envoy-gateway-system-shared-e9cec0f8.envoy-gateway-system.svc.cluster.local:443",
+    originRequest: {
+      httpHostHeader: hostname,
+      originServerName: "gateway.indigo.home.arpa",
+      caPool: "/etc/cloudflared-ca/ca.crt",
+    },
+  })),
   {
     hostname: "dsqr.dev",
     zone: "dsqrDev",
@@ -168,26 +179,6 @@ export const cloudflare = {
         http2Origin: false,
         httpHostHeader: "cdn.dsqr.dev",
         originServerName: "rustfs.service.home.arpa",
-      },
-    },
-    {
-      hostname: "tastingswithtay.com",
-      zone: "tastingswithtayCom",
-      service: "https://10.10.30.200",
-      originRequest: {
-        http2Origin: false,
-        httpHostHeader: "tastingswithtay.com",
-        originServerName: "tastingswithtay.com",
-      },
-    },
-    {
-      hostname: "admin.tastingswithtay.com",
-      zone: "tastingswithtayCom",
-      service: "https://10.10.30.200",
-      originRequest: {
-        http2Origin: false,
-        httpHostHeader: "admin.tastingswithtay.com",
-        originServerName: "admin.tastingswithtay.com",
       },
     },
   ],

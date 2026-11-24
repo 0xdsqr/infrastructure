@@ -16,9 +16,9 @@ export const indigoEdge = runPulumiProgram(
       // Cloudflare generates a distinct secret for this remotely managed tunnel.
       // Never reuse the legacy gateway tunnel secret.
       tunnel: indigoTunnel,
-      zoneIds: { dsqrDev: config.dsqrDevZoneId },
-      zones: { dsqrDev: "dsqr.dev" },
-      zoneSecurity: { dsqrDev: {} },
+      zoneIds: { dsqrDev: config.dsqrDevZoneId, tastingswithtayCom: config.tastingswithtayZoneId },
+      zones: { dsqrDev: "dsqr.dev", tastingswithtayCom: "tastingswithtay.com" },
+      zoneSecurity: { dsqrDev: {}, tastingswithtayCom: {} },
       manageZoneSecurity: false, // The existing cloudflareEdge graph owns zone settings.
       ingressRules: indigoIngressRules,
       resourceOptions: { protect: true },
