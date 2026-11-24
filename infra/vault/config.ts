@@ -31,6 +31,11 @@ const kv = {
 } satisfies VaultKvMountConfig
 
 const secretPaths = {
+  indigoGhcrPull: {
+    path: "dsqr-labs/clusters/indigo/platform/ghcr-pull",
+    description: "GHCR pull-only credentials projected into onboarded Indigo application namespaces.",
+    fields: ["server", "username", "password", "email"],
+  },
   indigoDotdevWeb: {
     path: "dsqr-labs/clusters/indigo/apps/dotdev-web",
     description: "Indigo Dotdev runtime-only database credential; no owner or migration login.",
@@ -311,6 +316,11 @@ const externalSecretsKubernetesAuthBoundaries = {
       disableLocalCaJwt: true,
     },
     policies: {
+      ghcrPull: {
+        name: "indigo-external-secrets-ghcr-pull",
+        readPaths: [secretPaths.indigoGhcrPull.path],
+        resourceName: "external-secrets-policy-indigo-ghcr-pull",
+      },
       dotdevWeb: {
         name: "indigo-external-secrets-dotdev-web",
         readPaths: [secretPaths.indigoDotdevWeb.path],

@@ -106,6 +106,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     [policyToken, "external-secrets-policy-indigo-bootstrap-smoke-test"],
     [policyToken, "external-secrets-policy-indigo-cloudflare-tunnel"],
     [policyToken, "external-secrets-policy-indigo-dotdev-web"],
+    [policyToken, "external-secrets-policy-indigo-ghcr-pull"],
     [policyToken, "external-secrets-policy-indigo-twt-admin"],
     [policyToken, "external-secrets-policy-indigo-twt-web"],
     ...Object.keys(externalPolicyNames).map(
@@ -256,12 +257,14 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   })
   lifecycle("external-secrets-token-self-policy-indigo", { protect: true })
   lifecycle("external-secrets-policy-indigo-dotdev-web", { dependsOn: ["kv"] })
+  lifecycle("external-secrets-policy-indigo-ghcr-pull", { dependsOn: ["kv"] })
   lifecycle("external-secrets-policy-indigo-twt-web", { dependsOn: ["kv"] })
   lifecycle("external-secrets-policy-indigo-twt-admin", { dependsOn: ["kv"] })
   lifecycle("external-secrets-kubernetes-role-indigo", {
     protect: true,
     dependsOn: [
       "kubernetes-auth-backend-config-indigo",
+      "external-secrets-policy-indigo-ghcr-pull",
       "external-secrets-policy-indigo-dotdev-web",
       "external-secrets-policy-indigo-twt-web",
       "external-secrets-policy-indigo-twt-admin",
@@ -498,6 +501,7 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   assert.equal(indigoRole.inputs.roleName, "indigo-external-secrets")
   assert.equal(indigoRole.inputs.tokenNoDefaultPolicy, true)
   assert.deepEqual(indigoRole.inputs.tokenPolicies, [
+    "indigo-external-secrets-ghcr-pull",
     "indigo-external-secrets-dotdev-web",
     "indigo-external-secrets-twt-web",
     "indigo-external-secrets-twt-admin",
