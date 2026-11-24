@@ -132,36 +132,6 @@ export const cloudflare = {
       },
     },
     {
-      hostname: "argocd-hooks-hub-a.dsqr.dev",
-      zone: "dsqrDev",
-      service: "https://10.10.30.200",
-      originRequest: {
-        http2Origin: false,
-        httpHostHeader: "argocd-hooks-hub-a.dsqr.dev",
-        originServerName: "argocd-hooks-hub-a.dsqr.dev",
-      },
-    },
-    {
-      hostname: "fidara.io",
-      zone: "fidaraIo",
-      service: "https://10.10.30.200",
-      originRequest: {
-        http2Origin: false,
-        httpHostHeader: "fidara.io",
-        originServerName: "fidara.io",
-      },
-    },
-    {
-      hostname: "api.fidara.io",
-      zone: "fidaraIo",
-      service: "https://10.10.30.200",
-      originRequest: {
-        http2Origin: false,
-        httpHostHeader: "api.fidara.io",
-        originServerName: "api.fidara.io",
-      },
-    },
-    {
       hostname: "s3.dsqr.dev",
       zone: "dsqrDev",
       service: "https://10.10.30.107:9000",

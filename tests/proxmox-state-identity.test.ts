@@ -50,9 +50,6 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
     [
       [vmToken, "backup"],
       [vmToken, "gateway"],
-      [vmToken, "k8s-main-cp-01"],
-      [vmToken, "k8s-main-w-01"],
-      [vmToken, "k8s-main-w-02"],
       [vmToken, "khaos"],
       [vmToken, "knox"],
       [vmToken, "observability"],
@@ -87,9 +84,6 @@ test("Proxmox preserves provider and VM identities, options, and critical inputs
     ["vault", "vault", 1140, 2, 4096, 64, "ssd-dsqr-raid-002", 30, "02:00:00:00:11:40"],
     ["backup", "backup", 1160, 2, 4096, 128, "ssd-dsqr-raid-001", 30, "02:00:00:00:11:60"],
     ["pantheon", "pantheon", 1180, 4, 8192, 64, "ssd-dsqr-raid-002", 30, "02:00:00:00:11:80"],
-    ["k8s-main-cp-01", "k8s-main-cp-01", 1200, 4, 16384, 100, "ssd-dsqr-raid-001", 30, undefined],
-    ["k8s-main-w-01", "k8s-main-w-01", 1210, 4, 8192, 100, "ssd-dsqr-raid-001", 30, undefined],
-    ["k8s-main-w-02", "k8s-main-w-02", 1220, 4, 8192, 100, "ssd-dsqr-raid-001", 30, undefined],
     [
       "srv-lx-k8s-indigo-control-01",
       "srv-lx-k8s-indigo-control-01",

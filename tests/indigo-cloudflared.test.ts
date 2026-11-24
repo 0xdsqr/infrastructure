@@ -112,7 +112,13 @@ test("Dotdev and TWT use the TLS-verified Indigo origin", () => {
       false,
     )
   }
-  for (const hostname of ["labs.dsqr.dev", "studio.dsqr.dev"]) {
+  for (const hostname of [
+    "labs.dsqr.dev",
+    "studio.dsqr.dev",
+    "fidara.io",
+    "api.fidara.io",
+    "argocd-hooks-hub-a.dsqr.dev",
+  ]) {
     assert.equal(
       cloudflare.ingressRules.some((rule) => rule.hostname === hostname),
       false,

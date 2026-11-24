@@ -138,7 +138,7 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
     resource.type.startsWith("cloudflare:"),
   )
 
-  assert.equal(resources.length, 31)
+  assert.equal(resources.length, 28)
   assert.deepEqual(
     resources
       .map((resource) => [resource.type, resource.name] as const)
@@ -150,8 +150,6 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
       [dnsToken, "TXT-dsqr-dev"],
       [dnsToken, "TXT-ed25519-domainkey-dsqr-dev"],
       [dnsToken, "TXT-rsa-domainkey-dsqr-dev"],
-      [dnsToken, "api-fidara-io"],
-      [dnsToken, "argocd-hooks-hub-a-dsqr-dev"],
       [dnsToken, "argocd-hooks-indigo-dsqr-dev"],
       [dnsToken, "cdn-dsqr-dev"],
       [zoneSettingToken, "dsqrDev-always-use-https"],
@@ -159,7 +157,6 @@ test("Cloudflare preserves tunnel, DNS, and zone-security state identities", asy
       [zoneSettingToken, "dsqrDev-min-tls-version"],
       [zoneSettingToken, "dsqrDev-ssl"],
       [zoneSettingToken, "dsqrDev-tls-1-3"],
-      [dnsToken, "fidara-io"],
       [zoneSettingToken, "fidaraIo-always-use-https"],
       [zoneSettingToken, "fidaraIo-automatic-https-rewrites"],
       [zoneSettingToken, "fidaraIo-min-tls-version"],
