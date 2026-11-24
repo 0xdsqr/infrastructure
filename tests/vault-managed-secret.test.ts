@@ -17,7 +17,7 @@ test("Managed tunnel credentials are protected, secret-wrapped KV v2 resources",
           secretPaths: vault.secretPaths,
           humanAdminPolicy: vault.policies.humanAdmin,
           externalSecretsPolicies: vault.policies.externalSecrets,
-          externalSecretsKubernetesRole: vault.externalSecretsKubernetesRole,
+          externalSecretsKubernetesAuthBoundaries: vault.externalSecretsKubernetesAuthBoundaries,
           pkiIssuers: { gatewayCaddy: vault.pkiIssuers.gatewayCaddy },
           audit: vault.audit,
           managedKvSecrets: {

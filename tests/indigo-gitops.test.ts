@@ -77,11 +77,6 @@ test("Indigo keeps platform controllers reviewed while Dotdev deploys automatica
       application.metadata.name,
     )
   }
-  assert.equal(
-    render("hub-a").find((application) => application.metadata.name === "cilium").spec.syncPolicy
-      .automated.enabled,
-    false,
-  )
 })
 
 test("steady-state lifecycle selection works for new Application names", async () => {
@@ -144,8 +139,8 @@ test("steady-state lifecycle selection works for new Application names", async (
   }
 })
 
-test("only hub-a renders the legacy Cilium tracking exception", () => {
-  for (const cluster of ["hub-a", "indigo"]) {
+test("Indigo does not render legacy Cilium tracking exceptions", () => {
+  for (const cluster of ["indigo"]) {
     const applications = renderApplications(cluster)
     const rules =
       applications.find((application) => application.metadata.name === "cilium").spec
@@ -154,20 +149,20 @@ test("only hub-a renders the legacy Cilium tracking exception", () => {
       rules.some((rule) =>
         rule.jsonPointers.includes("/metadata/annotations/argocd.argoproj.io~1tracking-id"),
       ),
-      cluster === "hub-a",
+      false,
     )
     assert.deepEqual(
       rules
         .filter((rule) => rule.kind === "Secret")
         .map((rule) => rule.name)
         .sort(),
-      cluster === "hub-a" ? ["cilium-ca", "hubble-server-certs"] : [],
+      [],
     )
   }
 })
 
 test("cluster overlays retain only their active AppProjects", () => {
-  for (const cluster of ["hub-a", "indigo"]) {
+  for (const cluster of ["indigo"]) {
     const projects = parseAllDocuments(
       execFileSync("kubectl", ["kustomize", `gitops/components/argocd/overlays/${cluster}`], {
         encoding: "utf8",
@@ -176,14 +171,10 @@ test("cluster overlays retain only their active AppProjects", () => {
       .map((document) => document.toJSON())
       .filter((resource) => resource.kind === "AppProject")
       .map((resource) => resource.metadata.name)
-    assert.equal(projects.includes("platform-traefik"), cluster === "hub-a")
+    assert.equal(projects.includes("platform-traefik"), false)
+    assert.equal(projects.includes("fidara"), false)
     assert.equal(projects.includes("dsqr"), cluster === "indigo")
-    for (const project of [
-      "twt",
-      "fidara",
-      "platform-k8s-monitoring",
-      "platform-kube-state-metrics",
-    ])
+    for (const project of ["twt", "platform-k8s-monitoring", "platform-kube-state-metrics"])
       assert.ok(projects.includes(project), project)
   }
 })
@@ -245,7 +236,6 @@ test("Indigo foundation declares only current platform and onboarded application
     "gitops/components/cluster-foundation/overlays/indigo/namespaces.yaml",
   )
   const names = [...namespaces.matchAll(/^  name: (.+)$/gm)].map((match) => match[1])
-
   assert.deepEqual(names, [
     "dsqr",
     "cloudflare-system",
@@ -309,12 +299,6 @@ test("Indigo Dotdev is pinned, proxy-guarded, and automatically synced", async (
   })
   assert.equal(owner.spec.template.spec.project, "dsqr")
   assert.equal(owner.spec.template.spec.destination.namespace, "dsqr")
-})
-
-test("retired Hub-A Dotdev applications cannot be recreated by the current GitOps inventory", () => {
-  const names = renderApplications("hub-a").map((application) => application.metadata.name)
-  for (const name of ["dotdev-web", "dotdev-labs", "dotdev-studio"])
-    assert.equal(names.includes(name), false)
 })
 
 test("Indigo Dotdev prerequisites isolate the namespace and expose only its runtime URL", async () => {

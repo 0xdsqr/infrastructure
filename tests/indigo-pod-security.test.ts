@@ -75,7 +75,7 @@ test(
   "rendered Argo pods and hooks retain restricted security and correct API access",
   { skip: !argoChart },
   () => {
-    for (const cluster of ["indigo", "hub-a"]) {
+    for (const cluster of ["indigo"]) {
       const resources = render("argocd", argoChart!, "argocd", cluster)
       for (const name of cluster === "indigo"
         ? ["argocd-repo-server", "argocd-redis-ha-haproxy"]

@@ -251,12 +251,6 @@ test(
         current.filter((r) => r.metadata.name !== "indigo-metrics-discovery"),
         helm(before),
       )
-      assert.equal(
-        helm("gitops/components/external-secrets/overlays/hub-a/values-overrides.yaml").some(
-          (r) => r.metadata.name === "indigo-metrics-discovery",
-        ),
-        false,
-      )
     } finally {
       rmSync(dir, { recursive: true, force: true })
     }

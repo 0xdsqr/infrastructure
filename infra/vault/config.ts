@@ -3,7 +3,6 @@ import type {
   VaultExternalSecretsPolicyConfig,
   VaultExternalSecretsKubernetesAuthBoundaryInventory,
   VaultHumanAdminPolicyConfig,
-  VaultKubernetesAuthRoleConfig,
   VaultKvMountConfig,
   VaultPkiIssuerInventory,
   VaultRaftSnapshotAppRoleConfig,
@@ -19,7 +18,7 @@ const resourceNames = {
   kvConfig: "kv-config",
   humanAdminPolicy: "human-admin-policy",
   externalSecretsTokenSelfPolicy: "external-secrets-token-self-policy",
-  externalSecretsKubernetesRole: "external-secrets-kubernetes-role-hub-a",
+  externalSecretsKubernetesRole: "external-secrets-kubernetes-role",
   audit: "audit",
 } satisfies VaultFoundationResourceNames
 
@@ -33,7 +32,8 @@ const kv = {
 const secretPaths = {
   indigoGhcrPull: {
     path: "dsqr-labs/clusters/indigo/platform/ghcr-pull",
-    description: "GHCR pull-only credentials projected into onboarded Indigo application namespaces.",
+    description:
+      "GHCR pull-only credentials projected into onboarded Indigo application namespaces.",
     fields: ["server", "username", "password", "email"],
   },
   indigoDotdevWeb: {
@@ -256,55 +256,9 @@ const audit = {
   },
 } satisfies VaultAuditConfig
 
-const externalSecretsPolicies = {
-  fidaraApi: {
-    name: "hub-a-external-secrets-fidara-api",
-    readPaths: [secretPaths.fidaraApi.path],
-  },
-  fidaraWeb: {
-    name: "hub-a-external-secrets-fidara-web",
-    readPaths: [secretPaths.fidaraWeb.path],
-  },
-  tastingsWithTayShared: {
-    name: "hub-a-external-secrets-tastingswithtay-shared",
-    readPaths: [secretPaths.tastingsWithTayShared.path],
-  },
-  tastingsWithTayWeb: {
-    name: "hub-a-external-secrets-tastingswithtay-web",
-    readPaths: [secretPaths.tastingsWithTayWeb.path],
-  },
-  tastingsWithTayAdmin: {
-    name: "hub-a-external-secrets-tastingswithtay-admin",
-    readPaths: [secretPaths.tastingsWithTayAdmin.path],
-  },
-  argocdFidaraRepo: {
-    name: "hub-a-external-secrets-argocd-fidara-repo",
-    readPaths: [secretPaths.argocdFidaraRepo.path],
-  },
-  argocdGithubWebhook: {
-    name: "hub-a-external-secrets-argocd-github-webhook",
-    readPaths: [secretPaths.argocdGithubWebhook.path],
-  },
-  githubArgoRepoRead: {
-    name: "hub-a-external-secrets-github-argocd-repo-read",
-    readPaths: [secretPaths.githubArgoRepoRead.path],
-  },
-  githubGhcrPull: {
-    name: "hub-a-external-secrets-github-ghcr-pull",
-    readPaths: [secretPaths.githubGhcrPull.path],
-  },
-} satisfies Readonly<Record<string, VaultExternalSecretsPolicyConfig>>
-
-const externalSecretsKubernetesRole = {
-  backend: "kubernetes",
-  roleName: "hub-a-external-secrets",
-  tokenSelfPolicyName: "hub-a-external-secrets-token-self",
-  boundServiceAccountNames: ["external-secrets"],
-  boundServiceAccountNamespaces: ["external-secrets"],
-  tokenTtlSeconds: 1_200,
-  tokenMaxTtlSeconds: 3_600,
-  tokenExplicitMaxTtlSeconds: 3_600,
-} satisfies VaultKubernetesAuthRoleConfig
+const externalSecretsPolicies = {} satisfies Readonly<
+  Record<string, VaultExternalSecretsPolicyConfig>
+>
 
 const externalSecretsKubernetesAuthBoundaries = {
   indigo: {
@@ -592,7 +546,6 @@ const pkiIssuers = {
     roleName: "gateway-caddy-home-arpa",
     policyName: "homelab-pki-gateway-caddy-home-arpa",
     allowedDomains: [
-      "argocd.hub-a.home.arpa",
       "argocd.indigo.home.arpa",
       "exo.home.arpa",
       "exo.service.home.arpa",
@@ -611,32 +564,6 @@ const pkiIssuers = {
       roleName: "gateway-caddy-pki-renewer",
       secretIdBoundCidrs: ["10.10.60.100/32"],
       tokenBoundCidrs: ["10.10.60.100/32"],
-    },
-  },
-  hubATraefikOrigin: {
-    backend: "pki_int",
-    roleName: "hub-a-traefik-origin",
-    policyName: "homelab-pki-hub-a-traefik-origin",
-    allowedDomains: [
-      "admin.tastingswithtay.com",
-      "api.fidara.io",
-      "argocd.hub-a.home.arpa",
-      "argocd-hooks-hub-a.dsqr.dev",
-      "fidara.io",
-      "tastingswithtay.com",
-    ],
-    allowWildcardCertificates: false,
-    generateLease: true,
-    ttlHours: 720,
-    maxTtlHours: 720,
-    kubernetesAuthRole: {
-      backend: "kubernetes",
-      roleName: "hub-a-traefik-origin-issuer",
-      boundServiceAccountNames: ["traefik-origin-issuer"],
-      boundServiceAccountNamespaces: ["traefik"],
-      tokenTtlSeconds: 1_200,
-      tokenMaxTtlSeconds: 3_600,
-      tokenExplicitMaxTtlSeconds: 3_600,
     },
   },
   indigoArgocdServer: {
@@ -713,7 +640,6 @@ export const vault = {
     humanAdmin: humanAdminPolicy,
     externalSecrets: externalSecretsPolicies,
   },
-  externalSecretsKubernetesRole,
   externalSecretsKubernetesAuthBoundaries,
   raftSnapshotAppRole,
   pkiIssuers,

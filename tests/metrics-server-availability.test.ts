@@ -98,19 +98,11 @@ test(
       resources.filter((o) => o.kind !== "PodDisruptionBudget"),
       original,
     )
-    const hub = render(values("hub-a"))
-    assert.equal(
-      hub.some((o) => o.kind === "PodDisruptionBudget"),
-      false,
-    )
-    const hubDeployment = hub.find((o) => o.kind === "Deployment")
-    assert.equal(hubDeployment.spec.replicas, 1)
-    assert.equal(hubDeployment.spec.template.spec.topologySpreadConstraints, undefined)
   },
 )
 
 test("only Indigo's Metrics Server project permits the namespaced budget", () => {
-  for (const cluster of ["indigo", "hub-a"]) {
+  for (const cluster of ["indigo"]) {
     const project = kustomize(`gitops/components/argocd/overlays/${cluster}`).find(
       (o) => o.kind === "AppProject" && o.metadata.name === "platform-metrics-server",
     )

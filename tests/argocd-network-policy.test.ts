@@ -36,12 +36,6 @@ test("Argo allowances are opt-in, egress-only and ordered before namespace enfor
       )
     }
   }
-  assert.equal(
-    render("gitops/components/argocd/overlays/hub-a").filter((resource) =>
-      ["NetworkPolicy", "CiliumNetworkPolicy"].includes(resource.kind),
-    ).length,
-    0,
-  )
   const bootstrap = render("gitops/clusters/indigo/bootstrap").find(
     (resource) => resource.kind === "AppProject" && resource.metadata.name === "bootstrap",
   )

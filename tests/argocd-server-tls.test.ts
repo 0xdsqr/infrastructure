@@ -167,7 +167,7 @@ test("existing generated secrets Application owns certificate preparation with s
   )
 })
 
-test("Indigo routes use authenticated backend TLS while hub-a retains its existing server mode", () => {
+test("Indigo routes use authenticated backend TLS", () => {
   const values = parse(readFileSync("gitops/components/argocd/base/values-common.yaml", "utf8"))
   assert.equal(values.configs.params["server.insecure"], "true")
   const indigoValues = parse(
@@ -209,10 +209,4 @@ test("Indigo routes use authenticated backend TLS while hub-a retains its existi
       )
     }
   }
-  assert.equal(
-    render("gitops/components/external-secrets-config/overlays/hub-a").some((item) =>
-      ["argocd-server-tls", "argocd-server-issuer"].includes(item.metadata.name),
-    ),
-    false,
-  )
 })

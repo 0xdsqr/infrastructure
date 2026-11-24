@@ -41,7 +41,7 @@ test(
   "Pinned Argo chart renders replica spreading and matching PDBs only for Indigo",
   { skip: !chart },
   () => {
-    for (const cluster of ["indigo", "hub-a"]) {
+    for (const cluster of ["indigo"]) {
       const objects = parseAllDocuments(
         execFileSync(
           "helm",
@@ -72,14 +72,7 @@ test(
         const pdb = objects.find(
           (o) => o.kind === "PodDisruptionBudget" && o.metadata.name === name,
         )
-        assert.equal(
-          deployment.spec.replicas,
-          cluster === "indigo" ? 2 : name === "argocd-applicationset-controller" ? 0 : 1,
-        )
-        if (cluster === "hub-a") {
-          assert.equal(pdb, undefined)
-          continue
-        }
+        assert.equal(deployment.spec.replicas, 2)
         assert.equal(pdb.spec.minAvailable, 1)
         assert.deepEqual(pdb.spec.selector, deployment.spec.selector)
         assert.deepEqual(deployment.spec.strategy, {
@@ -98,10 +91,7 @@ test(
       const params = objects.find(
         (o) => o.kind === "ConfigMap" && o.metadata.name === "argocd-cmd-params-cm",
       )
-      assert.equal(
-        params.data["applicationsetcontroller.enable.leader.election"],
-        cluster === "indigo" ? "true" : "false",
-      )
+      assert.equal(params.data["applicationsetcontroller.enable.leader.election"], "true")
       assert.equal(
         objects.find(
           (o) => o.kind === "StatefulSet" && o.metadata.name === "argocd-application-controller",
@@ -110,7 +100,7 @@ test(
       )
       assert.equal(
         objects.some((o) => o.kind === "Deployment" && o.metadata.name === "argocd-redis"),
-        cluster === "hub-a",
+        false,
       )
     }
   },

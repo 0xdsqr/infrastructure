@@ -1,89 +1,32 @@
 import { strict as assert } from "node:assert"
+import { execFileSync } from "node:child_process"
 import { X509Certificate } from "node:crypto"
-import { readFileSync } from "node:fs"
 import { test } from "node:test"
+import { parseAllDocuments } from "yaml"
 
 const rootCaFingerprint =
   "5E:CA:96:D8:61:31:42:40:2A:54:C3:EC:B7:B5:D1:E7:E2:51:7A:A2:77:E5:8C:F6:08:81:45:2C:96:80:82:4F"
-const rootCaMountPath = "/etc/dsqr/pki/dsqr-home-root-ca.pem"
-
-test("hub-a distributes the expected home root CA to application namespaces", () => {
-  const manifest = readFileSync(
-    new URL(
-      "../gitops/components/cluster-foundation/overlays/hub-a/internal-ca.configmaps.yaml",
-      import.meta.url,
-    ),
-    "utf8",
-  )
-  const certificates = manifest.match(
-    /-----BEGIN CERTIFICATE-----[\s\S]+?-----END CERTIFICATE-----/g,
-  )
-
-  assert.equal(certificates?.length, 2)
-  assert.equal((manifest.match(/name: dsqr-home-root-ca/g) ?? []).length, 2)
-
-  for (const namespace of ["fidara", "twt"]) {
-    assert.match(manifest, new RegExp(`namespace: ${namespace}`))
-  }
-  assert.doesNotMatch(manifest, /namespace: dsqr/)
-
-  for (const indentedCertificate of certificates ?? []) {
-    const certificate = new X509Certificate(
-      indentedCertificate
-        .split("\n")
-        .map((line) => line.trim())
-        .join("\n"),
+test("Indigo application namespaces retain the verified database root CA", () => {
+  for (const [component, namespace] of [
+    ["dotdev", "dsqr"],
+    ["twt", "twt"],
+  ]) {
+    const resources = parseAllDocuments(
+      execFileSync(
+        "kubectl",
+        ["kustomize", `gitops/components/${component}/database-trust/overlays/indigo`],
+        { encoding: "utf8" },
+      ),
     )
-
+      .map((d) => d.toJSON())
+      .filter(Boolean)
+    const ca = resources.find(
+      (r) => r.kind === "ConfigMap" && r.metadata.name === "dsqr-home-root-ca",
+    )
+    assert.equal(ca.metadata.namespace, namespace)
+    const pem = Object.values(ca.data).find((v) => String(v).includes("BEGIN CERTIFICATE"))
+    const certificate = new X509Certificate(String(pem))
     assert.equal(certificate.fingerprint256, rootCaFingerprint)
     assert.equal(certificate.ca, true)
   }
-
-  const bootstrapProject = readFileSync(
-    new URL("../gitops/clusters/hub-a/bootstrap/bootstrap.appproject.yaml", import.meta.url),
-    "utf8",
-  )
-
-  for (const namespace of ["argocd", "fidara", "twt"]) {
-    assert.match(bootstrapProject, new RegExp(`namespace: ${namespace}`))
-  }
-  assert.doesNotMatch(bootstrapProject, /namespace: dsqr/)
-  assert.match(bootstrapProject, /group: ""\n      kind: ConfigMap/)
-})
-
-test("all remaining hub-a Node workloads load the additional trust anchor", () => {
-  for (const app of ["twt-web", "twt-admin"]) {
-    const values = readFileSync(
-      new URL(`../gitops/components/${app}/overlays/hub-a/values-overrides.yaml`, import.meta.url),
-      "utf8",
-    )
-
-    assert.match(
-      values,
-      /additionalTrustedCa:\n  enabled: true\n  configMapName: dsqr-home-root-ca/,
-    )
-  }
-
-  for (const app of ["twt-web", "twt-admin"]) {
-    const values = readFileSync(
-      new URL(`../gitops/components/${app}/overlays/hub-a/values-overrides.yaml`, import.meta.url),
-      "utf8",
-    )
-
-    assert.match(values, /DATABASE_SSL: require/)
-    assert.match(values, /DATABASE_SSL_REJECT_UNAUTHORIZED: "true"/)
-  }
-})
-
-test("Fidara verifies PostgreSQL through Knox and the exact home CA", () => {
-  const values = readFileSync(
-    new URL("../gitops/components/fidara/overlays/hub-a/values-overrides.yaml", import.meta.url),
-    "utf8",
-  )
-
-  assert.match(values, /cidr: 10\.10\.30\.109\/32/)
-  assert.doesNotMatch(values, /10\.10\.30\.107/)
-  assert.ok(values.includes(`NODE_EXTRA_CA_CERTS: ${rootCaMountPath}`))
-  assert.ok(values.includes(`PGSSLROOTCERT: ${rootCaMountPath}`))
-  assert.equal((values.match(/name: dsqr-home-root-ca/g) ?? []).length, 6)
 })

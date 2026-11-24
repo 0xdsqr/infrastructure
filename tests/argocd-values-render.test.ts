@@ -6,7 +6,7 @@ import { parseAllDocuments } from "yaml"
 // Supply the cached pinned chart to exercise upstream Helm tpl without network access.
 const chart = process.env.ARGOCD_TEST_CHART
 test("Argo Helm renders legacy ingress only for hub-a", { skip: !chart }, () => {
-  for (const cluster of ["hub-a", "indigo"]) {
+  for (const cluster of ["indigo"]) {
     const resources = parseAllDocuments(
       execFileSync(
         "helm",

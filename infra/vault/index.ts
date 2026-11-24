@@ -37,7 +37,6 @@ export const foundation = runPulumiProgram(
       },
       humanAdminPolicy: infrastructure.vault.policies.humanAdmin,
       externalSecretsPolicies: infrastructure.vault.policies.externalSecrets,
-      externalSecretsKubernetesRole: infrastructure.vault.externalSecretsKubernetesRole,
       externalSecretsKubernetesAuthBoundaries:
         infrastructure.vault.externalSecretsKubernetesAuthBoundaries,
       raftSnapshotAppRole: infrastructure.vault.raftSnapshotAppRole,

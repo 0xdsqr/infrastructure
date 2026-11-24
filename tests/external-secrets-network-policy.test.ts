@@ -23,12 +23,6 @@ test("Indigo stages ESO allowances before namespace isolation; hub-a is unchange
     assert.equal(policy.metadata.annotations["argocd.argoproj.io/sync-wave"], "0")
     assert.deepEqual(policy.spec.enableDefaultDeny, { ingress: false, egress: false })
   }
-  assert.equal(
-    render("gitops/components/external-secrets-config/overlays/hub-a").filter((resource) =>
-      ["NetworkPolicy", "CiliumNetworkPolicy"].includes(resource.kind),
-    ).length,
-    0,
-  )
 })
 
 test("ESO traffic is limited to DNS, API, controller-only Vault, probes and monitoring", () => {

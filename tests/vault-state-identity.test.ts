@@ -21,22 +21,11 @@ const pkiRoleToken = "vault:pkiSecret/secretBackendRole:SecretBackendRole"
 const appRoleToken = "vault:appRole/authBackendRole:AuthBackendRole"
 const auditToken = "vault:index/audit:Audit"
 
-const externalPolicyNames = {
-  argocdFidaraRepo: "hub-a-external-secrets-argocd-fidara-repo",
-  argocdGithubWebhook: "hub-a-external-secrets-argocd-github-webhook",
-  fidaraApi: "hub-a-external-secrets-fidara-api",
-  fidaraWeb: "hub-a-external-secrets-fidara-web",
-  githubArgoRepoRead: "hub-a-external-secrets-github-argocd-repo-read",
-  githubGhcrPull: "hub-a-external-secrets-github-ghcr-pull",
-  tastingsWithTayAdmin: "hub-a-external-secrets-tastingswithtay-admin",
-  tastingsWithTayShared: "hub-a-external-secrets-tastingswithtay-shared",
-  tastingsWithTayWeb: "hub-a-external-secrets-tastingswithtay-web",
-} as const
+const externalPolicyNames = {} as const
 
 const issuerKeys = [
   "beaconTelemetry",
   "gatewayCaddy",
-  "hubATraefikOrigin",
   "indigoArgocdServer",
   "indigoArgocdRepoServer",
   "indigoGatewayOrigin",
@@ -68,7 +57,6 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
           secretPaths: vault.secretPaths,
           humanAdminPolicy: vault.policies.humanAdmin,
           externalSecretsPolicies: vault.policies.externalSecrets,
-          externalSecretsKubernetesRole: vault.externalSecretsKubernetesRole,
           externalSecretsKubernetesAuthBoundaries: vault.externalSecretsKubernetesAuthBoundaries,
           pkiIssuers: vault.pkiIssuers,
           audit: vault.audit,
@@ -95,11 +83,9 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
       [appRoleToken, `pki-issuer-approle-${key}`] as const,
     ]),
     [auditToken, "audit"],
-    [kubernetesRoleToken, "external-secrets-kubernetes-role-hub-a"],
     [kubernetesRoleToken, "external-secrets-kubernetes-role-indigo"],
     [authBackendToken, "kubernetes-auth-backend-indigo"],
     [kubernetesAuthBackendConfigToken, "kubernetes-auth-backend-config-indigo"],
-    [policyToken, "external-secrets-token-self-policy"],
     [policyToken, "external-secrets-token-self-policy-indigo"],
     [policyToken, "external-secrets-policy-indigo-argocd-deployments-repo"],
     [policyToken, "external-secrets-policy-indigo-argocd-github-webhook"],
@@ -129,7 +115,6 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
         "vaultListener",
       ] as const
     ).map((key) => [appRoleToken, `pki-issuer-approle-${key}`] as const),
-    [kubernetesRoleToken, "pki-issuer-kubernetes-role-hubATraefikOrigin"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoGatewayOrigin"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoArgocdServer"],
     [kubernetesRoleToken, "pki-issuer-kubernetes-role-indigoArgocdRepoServer"],
@@ -236,8 +221,6 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   lifecycle("kv")
   lifecycle("kv-config", { dependsOn: ["kv"] })
   lifecycle("human-admin-policy", { dependsOn: ["kv"] })
-  lifecycle("external-secrets-token-self-policy", { protect: true })
-  lifecycle("external-secrets-kubernetes-role-hub-a", { protect: true })
   lifecycle("kubernetes-auth-backend-indigo", { protect: true })
   lifecycle("kubernetes-auth-backend-config-indigo", {
     protect: true,
@@ -369,14 +352,6 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
       dependsOn: [`pki-issuer-role-${key}`, `pki-issuer-policy-${key}`],
     })
   }
-  lifecycle("pki-issuer-kubernetes-role-hubATraefikOrigin", {
-    protect: true,
-    dependsOn: [
-      "pki-issuer-role-hubATraefikOrigin",
-      "pki-issuer-policy-hubATraefikOrigin",
-      "external-secrets-token-self-policy",
-    ],
-  })
   lifecycle("pki-issuer-kubernetes-role-indigoGatewayOrigin", {
     protect: true,
     dependsOn: [
@@ -452,34 +427,6 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     assert.match(policy.inputs.policy, /path "kv\/data\//)
     assert.match(policy.inputs.policy, /path "kv\/metadata\//)
   }
-
-  const externalRole = byName(resources, "external-secrets-kubernetes-role-hub-a")
-  assert.deepEqual(
-    {
-      backend: externalRole.inputs.backend,
-      roleName: externalRole.inputs.roleName,
-      boundServiceAccountNames: externalRole.inputs.boundServiceAccountNames,
-      boundServiceAccountNamespaces: externalRole.inputs.boundServiceAccountNamespaces,
-      tokenExplicitMaxTtl: externalRole.inputs.tokenExplicitMaxTtl,
-      tokenMaxTtl: externalRole.inputs.tokenMaxTtl,
-      tokenNoDefaultPolicy: externalRole.inputs.tokenNoDefaultPolicy,
-      tokenNumUses: externalRole.inputs.tokenNumUses,
-      tokenTtl: externalRole.inputs.tokenTtl,
-      tokenType: externalRole.inputs.tokenType,
-    },
-    {
-      backend: "kubernetes",
-      roleName: "hub-a-external-secrets",
-      boundServiceAccountNames: ["external-secrets"],
-      boundServiceAccountNamespaces: ["external-secrets"],
-      tokenExplicitMaxTtl: 3600,
-      tokenMaxTtl: 3600,
-      tokenNoDefaultPolicy: true,
-      tokenNumUses: 0,
-      tokenTtl: 1200,
-      tokenType: "service",
-    },
-  )
 
   assert.deepEqual(byName(resources, "kubernetes-auth-backend-indigo").inputs, {
     description: "Kubernetes authentication for the isolated Indigo cluster.",
@@ -591,8 +538,6 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     assert.deepEqual(appRole.inputs.secretIdBoundCidrs, [...config.secretIdBoundCidrs])
     assert.deepEqual(appRole.inputs.tokenBoundCidrs, [...config.tokenBoundCidrs])
   }
-
-  const traefikRole = byName(resources, "pki-issuer-kubernetes-role-hubATraefikOrigin")
   const telemetryRole = byName(resources, "pki-issuer-role-indigoTelemetryClient").inputs
   assert.deepEqual(telemetryRole.allowedDomains, ["indigo.telemetry-client.home.arpa"])
   for (const option of [
@@ -658,13 +603,6 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   )
   // The bootstrap secret and leaf private key are not Pulumi resources.
   assert.ok(!resources.some((resource) => /secretid|secretbackendcert/i.test(resource.type)))
-  assert.equal(traefikRole.inputs.roleName, "hub-a-traefik-origin-issuer")
-  assert.deepEqual(traefikRole.inputs.boundServiceAccountNames, ["traefik-origin-issuer"])
-  assert.deepEqual(traefikRole.inputs.boundServiceAccountNamespaces, ["traefik"])
-  assert.deepEqual(traefikRole.inputs.tokenPolicies, [
-    "homelab-pki-hub-a-traefik-origin",
-    "hub-a-external-secrets-token-self",
-  ])
 
   const indigoGatewayRole = byName(resources, "pki-issuer-kubernetes-role-indigoGatewayOrigin")
   assert.equal(indigoGatewayRole.inputs.backend, "kubernetes-indigo")

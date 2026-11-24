@@ -157,14 +157,4 @@ test("existing generated secrets Application owns repo-server certificate prepar
         item.name === "argocd-repo-server-issuer-auth-delegator",
     ),
   )
-  assert.equal(
-    render("gitops/components/external-secrets-config/overlays/hub-a").some((item) =>
-      [
-        servingSecret,
-        "argocd-repo-server-issuer",
-        "argocd-repo-server-issuer-auth-delegator",
-      ].includes(item.metadata.name),
-    ),
-    false,
-  )
 })

@@ -198,7 +198,7 @@ export type VaultFoundationArgs = {
     | undefined
   readonly humanAdminPolicy: VaultHumanAdminPolicyConfig
   readonly externalSecretsPolicies: Readonly<Record<string, VaultExternalSecretsPolicyConfig>>
-  readonly externalSecretsKubernetesRole: VaultKubernetesAuthRoleConfig
+  readonly externalSecretsKubernetesRole?: VaultKubernetesAuthRoleConfig
   readonly externalSecretsKubernetesAuthBoundaries?:
     | VaultExternalSecretsKubernetesAuthBoundaryInventory
     | undefined
@@ -954,7 +954,15 @@ const isNormalizedSecretPath = (value: string) =>
 export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(function* (
   args: VaultFoundationArgs,
 ) {
-  yield* validateExternalSecretsKubernetesRoleEffect(args.externalSecretsKubernetesRole)
+  if (args.externalSecretsKubernetesRole) {
+    yield* validateExternalSecretsKubernetesRoleEffect(args.externalSecretsKubernetesRole)
+  }
+  yield* requireResourceConfigEffect(
+    args.externalSecretsKubernetesRole !== undefined ||
+      Object.keys(args.externalSecretsPolicies).length === 0,
+    "vault:externalSecretsPolicies",
+    "Standalone external-secrets policies require an associated Kubernetes auth role.",
+  )
   const externalSecretsKubernetesAuthBoundaryEntries = Object.entries(
     args.externalSecretsKubernetesAuthBoundaries ?? {},
   ).map(([key, boundary]) => ({
@@ -1066,7 +1074,9 @@ export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(funct
 
   const physicalPolicyNames = [
     args.humanAdminPolicy.name,
-    args.externalSecretsKubernetesRole.tokenSelfPolicyName,
+    ...(args.externalSecretsKubernetesRole
+      ? [args.externalSecretsKubernetesRole.tokenSelfPolicyName]
+      : []),
     ...externalSecretsKubernetesAuthBoundaryEntries.flatMap(({ boundary, policyEntries }) => [
       boundary.role.tokenSelfPolicyName,
       ...policyEntries.map(({ policy }) => policy.name),
@@ -1083,7 +1093,11 @@ export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(funct
   )
 
   const kubernetesAuthRoleIdentities = [
-    `${args.externalSecretsKubernetesRole.backend}\0${args.externalSecretsKubernetesRole.roleName}`,
+    ...(args.externalSecretsKubernetesRole
+      ? [
+          `${args.externalSecretsKubernetesRole.backend}\0${args.externalSecretsKubernetesRole.roleName}`,
+        ]
+      : []),
     ...externalSecretsKubernetesAuthBoundaryEntries.map(
       ({ boundary }) => `${boundary.role.backend}\0${boundary.role.roleName}`,
     ),
@@ -1099,7 +1113,9 @@ export const planVaultFoundationEffect = Effect.fn("Vault.planFoundation")(funct
     "Physical Vault Kubernetes auth roles must have unique backend and role-name identities.",
   )
 
-  const existingKubernetesAuthBackends = new Set([args.externalSecretsKubernetesRole.backend])
+  const existingKubernetesAuthBackends = new Set(
+    args.externalSecretsKubernetesRole ? [args.externalSecretsKubernetesRole.backend] : [],
+  )
   const managedKubernetesAuthBackends = externalSecretsKubernetesAuthBoundaryEntries.map(
     ({ boundary }) => boundary.backend.path,
   )
@@ -1289,50 +1305,52 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
     ),
   )
 
-  const externalSecretsTokenSelfPolicy = yield* registerPulumiResource(
-    resourceNames.externalSecretsTokenSelfPolicy,
-    () =>
-      new vault.Policy(
+  const legacyRole = args.externalSecretsKubernetesRole
+  const externalSecretsTokenSelfPolicy = legacyRole
+    ? yield* registerPulumiResource(
         resourceNames.externalSecretsTokenSelfPolicy,
-        {
-          name: args.externalSecretsKubernetesRole.tokenSelfPolicyName,
-          policy: renderTokenSelfPolicy(),
-        },
-        { ...resourceOptions, protect: true },
-      ),
-  )
+        () =>
+          new vault.Policy(
+            resourceNames.externalSecretsTokenSelfPolicy,
+            {
+              name: legacyRole.tokenSelfPolicyName,
+              policy: renderTokenSelfPolicy(),
+            },
+            { ...resourceOptions, protect: true },
+          ),
+      )
+    : undefined
 
-  const externalSecretsKubernetesRole = yield* registerPulumiResource(
-    resourceNames.externalSecretsKubernetesRole,
-    () =>
-      new vault.kubernetes.AuthBackendRole(
-        resourceNames.externalSecretsKubernetesRole,
-        {
-          backend: args.externalSecretsKubernetesRole.backend,
-          roleName: args.externalSecretsKubernetesRole.roleName,
-          boundServiceAccountNames: [
-            ...args.externalSecretsKubernetesRole.boundServiceAccountNames,
-          ],
-          boundServiceAccountNamespaces: [
-            ...args.externalSecretsKubernetesRole.boundServiceAccountNamespaces,
-          ],
-          tokenExplicitMaxTtl: args.externalSecretsKubernetesRole.tokenExplicitMaxTtlSeconds,
-          tokenMaxTtl: args.externalSecretsKubernetesRole.tokenMaxTtlSeconds,
-          tokenNoDefaultPolicy: true,
-          tokenNumUses: 0,
-          tokenPolicies: [
-            ...Object.values(externalSecretsPolicies),
-            externalSecretsTokenSelfPolicy.name,
-          ],
-          tokenTtl: args.externalSecretsKubernetesRole.tokenTtlSeconds,
-          tokenType: "service",
-        },
-        {
-          ...resourceOptions,
-          protect: true,
-        },
-      ),
-  )
+  const externalSecretsKubernetesRole =
+    legacyRole && externalSecretsTokenSelfPolicy
+      ? yield* registerPulumiResource(
+          resourceNames.externalSecretsKubernetesRole,
+          () =>
+            new vault.kubernetes.AuthBackendRole(
+              resourceNames.externalSecretsKubernetesRole,
+              {
+                backend: legacyRole.backend,
+                roleName: legacyRole.roleName,
+                boundServiceAccountNames: [...legacyRole.boundServiceAccountNames],
+                boundServiceAccountNamespaces: [...legacyRole.boundServiceAccountNamespaces],
+                tokenExplicitMaxTtl: legacyRole.tokenExplicitMaxTtlSeconds,
+                tokenMaxTtl: legacyRole.tokenMaxTtlSeconds,
+                tokenNoDefaultPolicy: true,
+                tokenNumUses: 0,
+                tokenPolicies: [
+                  ...Object.values(externalSecretsPolicies),
+                  externalSecretsTokenSelfPolicy.name,
+                ],
+                tokenTtl: legacyRole.tokenTtlSeconds,
+                tokenType: "service",
+              },
+              {
+                ...resourceOptions,
+                protect: true,
+              },
+            ),
+        )
+      : undefined
 
   const externalSecretsKubernetesAuthBoundaryResources = Object.fromEntries(
     yield* Effect.forEach(
@@ -1632,6 +1650,8 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
                 managedBoundaryResources?.authBackend.path ?? issuer.kubernetesAuthRole!.backend
               const tokenSelfPolicy =
                 managedBoundaryResources?.tokenSelfPolicy ?? externalSecretsTokenSelfPolicy
+              if (!tokenSelfPolicy)
+                throw new Error("PKI Kubernetes issuer has no auth boundary token-self policy")
 
               return new vault.kubernetes.AuthBackendRole(
                 issuerResourceNames.kubernetesAuthRole,
@@ -1715,16 +1735,16 @@ export const createVaultFoundationEffect = Effect.fn("Vault.createFoundation")(f
     policies: {
       humanAdmin: adminPolicy.name,
       externalSecrets: externalSecretsPolicies,
-      externalSecretsTokenSelf: externalSecretsTokenSelfPolicy.name,
+      externalSecretsTokenSelf: externalSecretsTokenSelfPolicy?.name,
       raftSnapshot: raftSnapshotPolicy?.name,
       pkiIssuers: Object.fromEntries(
         Object.entries(pkiIssuers).map(([key, issuer]) => [key, issuer.policyName]),
       ),
     },
     externalSecretsKubernetesRole: {
-      backend: externalSecretsKubernetesRole.backend,
-      roleName: externalSecretsKubernetesRole.roleName,
-      policies: externalSecretsKubernetesRole.tokenPolicies,
+      backend: externalSecretsKubernetesRole?.backend,
+      roleName: externalSecretsKubernetesRole?.roleName,
+      policies: externalSecretsKubernetesRole?.tokenPolicies,
     },
     externalSecretsKubernetesAuthBoundaries,
     raftSnapshotAppRole: {

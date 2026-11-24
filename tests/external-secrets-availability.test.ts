@@ -99,20 +99,11 @@ test(
         assert.ok(pod.containers[0].args.includes("--enable-leader-election=true"))
       }
     }
-    const hub = render("hub-a")
-    assert.equal(
-      hub.some((o) => o.kind === "PodDisruptionBudget"),
-      false,
-    )
-    for (const deployment of hub.filter((o) => o.kind === "Deployment")) {
-      assert.equal(deployment.spec.replicas, 1)
-      assert.equal(deployment.spec.template.spec.topologySpreadConstraints, undefined)
-    }
   },
 )
 
 test("only Indigo's ESO project gains namespaced disruption-budget permission", () => {
-  for (const cluster of ["indigo", "hub-a"]) {
+  for (const cluster of ["indigo"]) {
     const project = kustomize(`gitops/components/argocd/overlays/${cluster}`).find(
       (o) => o.kind === "AppProject" && o.metadata.name === "platform-external-secrets",
     )

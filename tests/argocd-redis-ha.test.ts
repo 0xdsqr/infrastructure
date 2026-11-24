@@ -298,12 +298,6 @@ test(
     )
     assert.equal(argo.spec.syncPolicy.automated.enabled, false)
     assert.equal(argo.spec.syncPolicy.automated.prune, false)
-    const hub = render("hub-a")
-    assert.equal(
-      hub.some((o) => o.metadata.name.includes("redis-ha")),
-      false,
-    )
-    assert.ok(hub.some((o) => o.kind === "Deployment" && o.metadata.name === "argocd-redis"))
   },
 )
 

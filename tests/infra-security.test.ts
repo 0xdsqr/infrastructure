@@ -256,25 +256,32 @@ test("Tailscale machine enrollment keys are hardened while the live ACL remains 
 
 test("External Secrets policies use unique exact paths and exclude infrastructure credentials", () => {
   Effect.runSync(
-    validateExternalSecretsPoliciesEffect(vault.policies.externalSecrets, vault.secretPaths),
+    validateExternalSecretsPoliciesEffect(
+      vault.externalSecretsKubernetesAuthBoundaries.indigo.policies,
+      vault.secretPaths,
+    ),
   )
 
-  const readPaths = Object.values(vault.policies.externalSecrets).flatMap(
-    (policy) => policy.readPaths,
-  )
+  const readPaths = Object.values(
+    vault.externalSecretsKubernetesAuthBoundaries.indigo.policies,
+  ).flatMap((policy) => policy.readPaths)
   assert.equal(new Set(readPaths).size, readPaths.length)
   assert.ok(
-    Object.values(vault.policies.externalSecrets).every((policy) => policy.readPaths.length === 1),
+    Object.values(vault.externalSecretsKubernetesAuthBoundaries.indigo.policies).every(
+      (policy) => policy.readPaths.length === 1,
+    ),
   )
   assert.ok(readPaths.every((path) => !path.includes("*")))
   assert.ok(readPaths.every((path) => !path.startsWith("homelab/infra/")))
   assert.ok(
-    Object.values(vault.policies.externalSecrets).every((policy) =>
-      policy.name.startsWith("hub-a-external-secrets-"),
+    Object.values(vault.externalSecretsKubernetesAuthBoundaries.indigo.policies).every((policy) =>
+      policy.name.startsWith("indigo-external-secrets-"),
     ),
   )
 
-  for (const policy of Object.values(vault.policies.externalSecrets)) {
+  for (const policy of Object.values(
+    vault.externalSecretsKubernetesAuthBoundaries.indigo.policies,
+  )) {
     const rendered = renderKvV2ReadPolicy(vault.kv.path, policy.readPaths)
     assert.doesNotMatch(rendered, /\*/)
     assert.doesNotMatch(rendered, /"list"/)
@@ -329,34 +336,43 @@ test("Indigo TWT secret inventories and policies preserve workload boundaries", 
   }
 })
 
-test("hub-a External Secrets auth is exact and least-privilege after migration", () => {
-  Effect.runSync(validateExternalSecretsKubernetesRoleEffect(vault.externalSecretsKubernetesRole))
+test("Indigo External Secrets auth is exact and least-privilege after migration", () => {
+  Effect.runSync(
+    validateExternalSecretsKubernetesRoleEffect(
+      vault.externalSecretsKubernetesAuthBoundaries.indigo.role,
+    ),
+  )
 
-  assert.equal(vault.externalSecretsKubernetesRole.roleName, "hub-a-external-secrets")
   assert.equal(
-    vault.externalSecretsKubernetesRole.tokenSelfPolicyName,
-    "hub-a-external-secrets-token-self",
+    vault.externalSecretsKubernetesAuthBoundaries.indigo.role.roleName,
+    "indigo-external-secrets",
+  )
+  assert.equal(
+    vault.externalSecretsKubernetesAuthBoundaries.indigo.role.tokenSelfPolicyName,
+    "indigo-external-secrets-token-self",
   )
   const tokenSelfPolicy = renderTokenSelfPolicy()
   assert.match(tokenSelfPolicy, /auth\/token\/lookup-self[\s\S]*\["read"\]/)
   assert.match(tokenSelfPolicy, /auth\/token\/renew-self[\s\S]*\["update"\]/)
   assert.match(tokenSelfPolicy, /auth\/token\/revoke-self[\s\S]*\["update"\]/)
   assert.doesNotMatch(tokenSelfPolicy, /"create"|"delete"|"list"|"sudo"/)
-  assert.deepEqual(vault.externalSecretsKubernetesRole.boundServiceAccountNames, [
-    "external-secrets",
-  ])
-  assert.deepEqual(vault.externalSecretsKubernetesRole.boundServiceAccountNamespaces, [
-    "external-secrets",
-  ])
+  assert.deepEqual(
+    vault.externalSecretsKubernetesAuthBoundaries.indigo.role.boundServiceAccountNames,
+    ["external-secrets"],
+  )
+  assert.deepEqual(
+    vault.externalSecretsKubernetesAuthBoundaries.indigo.role.boundServiceAccountNamespaces,
+    ["external-secrets"],
+  )
 
   assert.equal("legacyExternalSecrets" in vault.policies, false)
   assert.equal("dotdevLabs" in vault.secretPaths, false)
-  assert.equal("dotdevLabs" in vault.policies.externalSecrets, false)
+  assert.equal("dotdevLabs" in vault.externalSecretsKubernetesAuthBoundaries.indigo.policies, false)
 
   const wildcardBinding = Effect.runSync(
     Effect.flip(
       validateExternalSecretsKubernetesRoleEffect({
-        ...vault.externalSecretsKubernetesRole,
+        ...vault.externalSecretsKubernetesAuthBoundaries.indigo.role,
         boundServiceAccountNamespaces: ["*"],
       }),
     ),
@@ -414,7 +430,7 @@ test("Vault PKI issuers are exact, least-privilege, and do not persist SecretIDs
   ])
   assert.ok(vault.pkiIssuers.gatewayCaddy.allowedDomains.includes("exo.service.home.arpa"))
   assert.ok(vault.pkiIssuers.gatewayCaddy.allowedDomains.includes("argocd.indigo.home.arpa"))
-  assert.ok(!("appRole" in vault.pkiIssuers.hubATraefikOrigin))
+  assert.equal("hubATraefikOrigin" in vault.pkiIssuers, false)
   assert.deepEqual(vault.pkiIssuers.indigoGatewayOrigin.allowedDomains, [
     "argocd.indigo.home.arpa",
     "gateway.indigo.home.arpa",

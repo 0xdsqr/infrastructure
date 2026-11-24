@@ -122,12 +122,6 @@ test("issuance has one GitOps owner while serving cutover stays manual", () => {
     owned.metadata.labels["platform.dsqr.dev/tier"] = "platform-policy"
     assert.deepEqual(matches[0], owned)
   }
-  assert.equal(
-    kustomize("gitops/components/external-secrets-config/overlays/hub-a").some((o) =>
-      /metallb.*metrics/.test(o.metadata.name),
-    ),
-    false,
-  )
   const project = kustomize("gitops/components/argocd/overlays/indigo").find(
     (o) => o.kind === "AppProject" && o.metadata.name === "secrets",
   ).spec

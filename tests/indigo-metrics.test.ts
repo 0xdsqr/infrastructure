@@ -52,21 +52,6 @@ test("Indigo collectors are pinned manual-sync applications without changing hub
       `${name} chart repository must be reachable`,
     )
   }
-  const old = render("gitops/clusters/hub-a/applications")
-  assert.equal(
-    old.some((a) => a.metadata.name === "indigo-metrics"),
-    false,
-  )
-  assert.equal(
-    old.find((a) => a.metadata.name === "k8s-monitoring").spec.sources[0].targetRevision,
-    "4.3.1",
-  )
-  assert.equal(
-    render("gitops/components/argocd/overlays/hub-a").some(
-      (p) => p.metadata.name === "platform-telemetry-metrics",
-    ),
-    false,
-  )
 })
 
 test("collector access is only explicit node metrics and API metrics, not secrets or proxy", () => {

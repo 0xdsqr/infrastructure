@@ -38,7 +38,6 @@ const foundationArgs = (): VaultFoundationArgs => ({
   secretPaths: vault.secretPaths,
   humanAdminPolicy: vault.policies.humanAdmin,
   externalSecretsPolicies: vault.policies.externalSecrets,
-  externalSecretsKubernetesRole: vault.externalSecretsKubernetesRole,
   externalSecretsKubernetesAuthBoundaries: vault.externalSecretsKubernetesAuthBoundaries,
   pkiIssuers: vault.pkiIssuers,
   audit: vault.audit,
@@ -252,17 +251,22 @@ test("Vault rejects malformed AppRole CIDRs", () => {
 
 test("Vault rejects duplicate physical policies across foundation categories", () => {
   const args = foundationArgs()
-  const [policyKey, policy] = Object.entries(args.externalSecretsPolicies)[0]!
   const count = resources.length
   const error = Effect.runSync(
     Effect.flip(
       createVaultFoundationEffect({
         ...args,
-        externalSecretsPolicies: {
-          ...args.externalSecretsPolicies,
-          [policyKey]: {
-            ...policy,
-            name: args.humanAdminPolicy.name,
+        externalSecretsKubernetesAuthBoundaries: {
+          ...args.externalSecretsKubernetesAuthBoundaries,
+          indigo: {
+            ...vault.externalSecretsKubernetesAuthBoundaries.indigo,
+            policies: {
+              ...vault.externalSecretsKubernetesAuthBoundaries.indigo.policies,
+              ghcrPull: {
+                name: args.humanAdminPolicy.name,
+                readPaths: [vault.secretPaths.indigoGhcrPull.path],
+              },
+            },
           },
         },
       }),
@@ -289,8 +293,8 @@ test("Vault rejects duplicate physical Kubernetes auth roles across consumers", 
             ...issuer,
             kubernetesAuthRole: {
               ...issuer.kubernetesAuthRole!,
-              backend: args.externalSecretsKubernetesRole.backend,
-              roleName: args.externalSecretsKubernetesRole.roleName,
+              backend: vault.externalSecretsKubernetesAuthBoundaries.indigo.role.backend,
+              roleName: vault.externalSecretsKubernetesAuthBoundaries.indigo.role.roleName,
             },
           },
         },

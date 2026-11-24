@@ -75,12 +75,6 @@ test(
       original,
       "Cilium agents, Envoy, Hubble TLS and all other resources must be unchanged",
     )
-    assert.equal(
-      render("cilium", ciliumChart!, values("cilium", "hub-a")).some(
-        (o) => o.kind === "PodDisruptionBudget",
-      ),
-      false,
-    )
   },
 )
 
@@ -125,7 +119,7 @@ test(
 )
 
 test("only Indigo opts into kube-system disruption budgets, without taking CoreDNS ownership", () => {
-  for (const cluster of ["indigo", "hub-a"]) {
+  for (const cluster of ["indigo"]) {
     const projects = kustomize(`gitops/components/argocd/overlays/${cluster}`)
     for (const name of ["platform-cilium", "platform-kubelet-csr-approver"]) {
       const project = projects.find((o) => o.kind === "AppProject" && o.metadata.name === name)

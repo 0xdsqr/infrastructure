@@ -139,12 +139,6 @@ test(
       const oldOverride = join(dir, "indigo.yaml")
       writeFileSync(oldBase, execFileSync("git", ["show", `${baseline}:${basePath}`]))
       writeFileSync(oldOverride, execFileSync("git", ["show", `${baseline}:${overridePath}`]))
-      const hub = "gitops/components/argocd/overlays/hub-a/values-overrides.yaml"
-      assert.deepEqual(
-        render(basePath, hub),
-        render(oldBase, hub),
-        "hub-a render must be identical",
-      )
       const current = render(basePath, overridePath)
       const previous = render(oldBase, oldOverride)
       const workloads = (objects: any[]) =>

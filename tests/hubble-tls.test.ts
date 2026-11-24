@@ -146,12 +146,6 @@ test("Hubble serving cutover stays Indigo-only with no new Application or automa
         item.kind === "ClusterRoleBinding" && item.name === "hubble-server-issuer-auth-delegator",
     ),
   )
-  assert.equal(
-    render("gitops/components/external-secrets-config/overlays/hub-a").some((item) =>
-      /hubble/.test(item.metadata.name),
-    ),
-    false,
-  )
 })
 
 test("Hubble trusts only the dedicated Vault CA and rolls agents when trust changes", () => {
@@ -183,10 +177,6 @@ test("Hubble trusts only the dedicated Vault CA and rolls agents when trust chan
   )
   assert.equal(active.hubble.tls.server.existingSecret, "dsqr-hubble-server-tls")
   assert.equal(active.updateStrategy.rollingUpdate.maxUnavailable, 1)
-  const hubA = parse(
-    readFileSync("gitops/components/cilium/overlays/hub-a/values-overrides.yaml", "utf8"),
-  )
-  assert.equal(hubA.tls?.caBundle, undefined)
 })
 
 test(

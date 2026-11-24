@@ -4,7 +4,7 @@
 dsqr:
   # Legacy ingress is opt-in; new clusters declare their own Gateway routes.
   legacyTraefikIngress: false
-  # Defaults preserve hub-a. Indigo opts into namespace-local discovery and
+  # Indigo opts into namespace-local discovery and
   # points the existing metrics policies at its standalone Alloy collectors.
   indigoMetrics: false
   metricsCollectorInstance: k8s-monitoring-alloy-metrics

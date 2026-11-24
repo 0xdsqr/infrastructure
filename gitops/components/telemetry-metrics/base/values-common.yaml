@@ -1,5 +1,5 @@
 # Standalone Alloy: no operator, host mounts, logs, profiles, or trace receivers.
-# Kept separate from k8s-monitoring so hub-a's pipeline is untouched.
+# Independent metrics collector with explicit cluster-scoped discovery.
 fullnameOverride: indigo-metrics
 crds:
   create: false

@@ -13,5 +13,4 @@ resources:
   - platform-metrics-server.appproject.yaml
   - secrets.appproject.yaml
   - dsqr.appproject.yaml
-  - fidara.appproject.yaml
   - twt.appproject.yaml

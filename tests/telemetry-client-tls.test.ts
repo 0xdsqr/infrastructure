@@ -1,7 +1,6 @@
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
 import { X509Certificate } from "node:crypto"
-import { readFileSync } from "node:fs"
 import test from "node:test"
 import { parseAllDocuments } from "yaml"
 import { vault } from "../infra/vault/config.ts"
@@ -193,23 +192,5 @@ test("existing Indigo applications own telemetry credentials with explicit proje
       (r: { kind: string; name: string }) =>
         r.kind === "ClusterRoleBinding" && r.name === "telemetry-client-issuer-auth-delegator",
     ),
-  )
-  const old = render("gitops/components/external-secrets-config/overlays/hub-a")
-  assert.equal(
-    old.some((r) =>
-      [
-        "telemetry-client-tls",
-        "telemetry-client-issuer",
-        "telemetry-client-issuer-auth-delegator",
-      ].includes(r.metadata.name),
-    ),
-    false,
-  )
-  assert.equal(
-    readFileSync(
-      "gitops/components/external-secrets-config/overlays/hub-a/kustomization.yaml",
-      "utf8",
-    ).includes("client-tls"),
-    false,
   )
 })

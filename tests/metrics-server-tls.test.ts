@@ -112,7 +112,7 @@ test("ESO renews early and retains the certificate without declaring private mat
   assert.equal(es.target.template.metadata.labels["platform.dsqr.dev/tls-reload"], undefined)
 })
 
-test("issuance uses existing generated ownership, keeps serving cutover manual and does not touch hub-a", () => {
+test("issuance uses existing generated ownership and keeps serving cutover manual", () => {
   const apps = kustomize("gitops/clusters/indigo/applications").flatMap((o) =>
     o.kind === "ApplicationSet" ? previewApplicationSet(o) : [o],
   )
@@ -146,12 +146,6 @@ test("issuance uses existing generated ownership, keeps serving cutover manual a
       (o: any) =>
         o.kind === "ClusterRoleBinding" && o.name === "metrics-server-issuer-auth-delegator",
     ),
-  )
-  assert.equal(
-    kustomize("gitops/components/external-secrets-config/overlays/hub-a").some((o) =>
-      /metrics-server/.test(o.metadata.name),
-    ),
-    false,
   )
 })
 
@@ -198,10 +192,6 @@ test(
       resources.filter((o) => o.kind !== "APIService"),
       before.filter((o) => o.kind !== "APIService"),
     )
-    const hubValues = parse(
-      readFileSync("gitops/components/metrics-server/overlays/hub-a/values-overrides.yaml", "utf8"),
-    )
-    assert.equal(hubValues.apiService, undefined)
     const deploy = resources.find((o) => o.kind === "Deployment")
     assert.equal(deploy.spec.replicas, 2)
     assert.equal(deploy.spec.strategy.rollingUpdate.maxUnavailable, 0)
