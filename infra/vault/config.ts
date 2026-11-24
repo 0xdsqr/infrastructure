@@ -36,6 +36,22 @@ const secretPaths = {
     description: "Indigo Dotdev runtime-only database credential; no owner or migration login.",
     fields: ["DATABASE_URL"],
   },
+  indigoTastingsWithTayWeb: {
+    path: "dsqr-labs/clusters/indigo/apps/twt-web",
+    description: "Indigo Tastings with Tay public web runtime secrets.",
+    fields: [
+      "AUTH_SECRET",
+      "DATABASE_URL",
+      "DISCORD_CLIENT_SECRET",
+      "S3_ACCESS_KEY",
+      "S3_SECRET_KEY",
+    ],
+  },
+  indigoTastingsWithTayAdmin: {
+    path: "dsqr-labs/clusters/indigo/apps/twt-admin",
+    description: "Indigo Tastings with Tay admin runtime secrets; social providers are disabled.",
+    fields: ["AUTH_SECRET", "DATABASE_URL", "S3_ACCESS_KEY", "S3_SECRET_KEY"],
+  },
   indigoCloudflareTunnel: {
     path: "dsqr-labs/clusters/indigo/cloudflare/tunnel",
     description:
@@ -299,6 +315,16 @@ const externalSecretsKubernetesAuthBoundaries = {
         name: "indigo-external-secrets-dotdev-web",
         readPaths: [secretPaths.indigoDotdevWeb.path],
         resourceName: "external-secrets-policy-indigo-dotdev-web",
+      },
+      tastingsWithTayWeb: {
+        name: "indigo-external-secrets-twt-web",
+        readPaths: [secretPaths.indigoTastingsWithTayWeb.path],
+        resourceName: "external-secrets-policy-indigo-twt-web",
+      },
+      tastingsWithTayAdmin: {
+        name: "indigo-external-secrets-twt-admin",
+        readPaths: [secretPaths.indigoTastingsWithTayAdmin.path],
+        resourceName: "external-secrets-policy-indigo-twt-admin",
       },
       cloudflareTunnel: {
         name: "indigo-external-secrets-cloudflare-tunnel",

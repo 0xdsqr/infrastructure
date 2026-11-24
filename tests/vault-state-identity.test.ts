@@ -106,6 +106,8 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
     [policyToken, "external-secrets-policy-indigo-bootstrap-smoke-test"],
     [policyToken, "external-secrets-policy-indigo-cloudflare-tunnel"],
     [policyToken, "external-secrets-policy-indigo-dotdev-web"],
+    [policyToken, "external-secrets-policy-indigo-twt-admin"],
+    [policyToken, "external-secrets-policy-indigo-twt-web"],
     ...Object.keys(externalPolicyNames).map(
       (key) => [policyToken, `external-secrets-policy-${key}`] as const,
     ),
@@ -254,11 +256,15 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   })
   lifecycle("external-secrets-token-self-policy-indigo", { protect: true })
   lifecycle("external-secrets-policy-indigo-dotdev-web", { dependsOn: ["kv"] })
+  lifecycle("external-secrets-policy-indigo-twt-web", { dependsOn: ["kv"] })
+  lifecycle("external-secrets-policy-indigo-twt-admin", { dependsOn: ["kv"] })
   lifecycle("external-secrets-kubernetes-role-indigo", {
     protect: true,
     dependsOn: [
       "kubernetes-auth-backend-config-indigo",
       "external-secrets-policy-indigo-dotdev-web",
+      "external-secrets-policy-indigo-twt-web",
+      "external-secrets-policy-indigo-twt-admin",
       "external-secrets-policy-indigo-cloudflare-tunnel",
       "external-secrets-policy-indigo-argocd-github-webhook",
       "external-secrets-policy-indigo-argocd-deployments-repo",
@@ -493,6 +499,8 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   assert.equal(indigoRole.inputs.tokenNoDefaultPolicy, true)
   assert.deepEqual(indigoRole.inputs.tokenPolicies, [
     "indigo-external-secrets-dotdev-web",
+    "indigo-external-secrets-twt-web",
+    "indigo-external-secrets-twt-admin",
     "indigo-external-secrets-cloudflare-tunnel",
     "indigo-external-secrets-argocd-github-webhook",
     "indigo-external-secrets-argocd-deployments-repo",
@@ -502,6 +510,14 @@ test("Vault preserves provider, policy, auth-role, PKI, and lifecycle state cont
   assert.equal(
     byName(resources, "external-secrets-policy-indigo-dotdev-web").inputs.policy,
     'path "kv/data/dsqr-labs/clusters/indigo/apps/dotdev-web" {\n  capabilities = ["read"]\n}\n\npath "kv/metadata/dsqr-labs/clusters/indigo/apps/dotdev-web" {\n  capabilities = ["read"]\n}',
+  )
+  assert.equal(
+    byName(resources, "external-secrets-policy-indigo-twt-web").inputs.policy,
+    'path "kv/data/dsqr-labs/clusters/indigo/apps/twt-web" {\n  capabilities = ["read"]\n}\n\npath "kv/metadata/dsqr-labs/clusters/indigo/apps/twt-web" {\n  capabilities = ["read"]\n}',
+  )
+  assert.equal(
+    byName(resources, "external-secrets-policy-indigo-twt-admin").inputs.policy,
+    'path "kv/data/dsqr-labs/clusters/indigo/apps/twt-admin" {\n  capabilities = ["read"]\n}\n\npath "kv/metadata/dsqr-labs/clusters/indigo/apps/twt-admin" {\n  capabilities = ["read"]\n}',
   )
   assert.equal(
     byName(resources, "external-secrets-policy-indigo-argocd-deployments-repo").inputs.policy,

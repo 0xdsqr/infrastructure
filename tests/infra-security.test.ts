@@ -296,6 +296,39 @@ test("External Secrets policies use unique exact paths and exclude infrastructur
   assert.match(wildcardPolicy.message, /cannot use wildcard path/)
 })
 
+test("Indigo TWT secret inventories and policies preserve workload boundaries", () => {
+  const indigo = vault.externalSecretsKubernetesAuthBoundaries.indigo
+
+  Effect.runSync(validateExternalSecretsPoliciesEffect(indigo.policies, vault.secretPaths))
+
+  assert.deepEqual(vault.secretPaths.indigoTastingsWithTayWeb.fields, [
+    "AUTH_SECRET",
+    "DATABASE_URL",
+    "DISCORD_CLIENT_SECRET",
+    "S3_ACCESS_KEY",
+    "S3_SECRET_KEY",
+  ])
+  assert.deepEqual(vault.secretPaths.indigoTastingsWithTayAdmin.fields, [
+    "AUTH_SECRET",
+    "DATABASE_URL",
+    "S3_ACCESS_KEY",
+    "S3_SECRET_KEY",
+  ])
+  assert.deepEqual(indigo.policies.tastingsWithTayWeb.readPaths, [
+    "dsqr-labs/clusters/indigo/apps/twt-web",
+  ])
+  assert.deepEqual(indigo.policies.tastingsWithTayAdmin.readPaths, [
+    "dsqr-labs/clusters/indigo/apps/twt-admin",
+  ])
+
+  for (const policy of [indigo.policies.tastingsWithTayWeb, indigo.policies.tastingsWithTayAdmin]) {
+    assert.equal(policy.readPaths.length, 1)
+    const rendered = renderKvV2ReadPolicy(vault.kv.path, policy.readPaths)
+    assert.doesNotMatch(rendered, /\*/)
+    assert.doesNotMatch(rendered, /"list"/)
+  }
+})
+
 test("hub-a External Secrets auth is exact and least-privilege after migration", () => {
   Effect.runSync(validateExternalSecretsKubernetesRoleEffect(vault.externalSecretsKubernetesRole))
 
