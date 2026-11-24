@@ -5,6 +5,7 @@
 }:
 {
   apps = pkgs.callPackage ./apps.nix { inherit packages; };
+  infra-runtime = pkgs.callPackage ./infra-runtime.nix { inherit packages; };
   format = treefmtCheck;
   gitops = pkgs.callPackage ./gitops.nix {
     inherit (packages) gitops;
