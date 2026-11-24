@@ -1,6 +1,6 @@
 # hub-a Helm value overrides for twt-web.
-# Use this for cluster-specific external chart values that should layer on top of Tastings with Tay's own values-prod.yaml.
-# Leave empty when hub-a uses the external chart values unchanged.
+# Retained for rollback only. Production traffic and releases are owned by Indigo.
+replicaCount: 0
 existingSecret: twt-web-secrets
 
 env:

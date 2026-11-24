@@ -1,7 +1,8 @@
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
+import { readFileSync } from "node:fs"
 import test from "node:test"
-import { parseAllDocuments } from "yaml"
+import { parse, parseAllDocuments } from "yaml"
 import { previewApplicationSet } from "../packages/gitops/src/applicationset.ts"
 
 const render = (component: string) =>
@@ -12,6 +13,27 @@ const render = (component: string) =>
   )
     .map((d) => d.toJSON())
     .filter(Boolean)
+
+test("Legacy TWT is a zero-replica, pinned, manual rollback deployment", () => {
+  for (const app of ["web", "admin"]) {
+    const application = parse(
+      readFileSync(`gitops/clusters/hub-a/applications/twt-${app}.yaml`, "utf8"),
+    )
+    const values = parse(
+      readFileSync(`gitops/components/twt-${app}/overlays/hub-a/values-overrides.yaml`, "utf8"),
+    )
+    assert.equal(values.replicaCount, 0)
+    assert.equal(
+      application.spec.sources[0].targetRevision,
+      "6538cee87a65beba916f8366c4753e37054cd31b",
+    )
+    assert.deepEqual(application.spec.syncPolicy.automated, {
+      enabled: false,
+      prune: false,
+      selfHeal: false,
+    })
+  }
+})
 
 test("TWT release data cannot choose deployment privileges or enable first-release auto-sync", () => {
   const set = render("application-set").find((r) => r.metadata.name === "indigo-twt")

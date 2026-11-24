@@ -19,7 +19,8 @@ spec:
   project: twt
   sources:
     - repoURL: https://github.com/0xdsqr/tastingswithtay.git
-      targetRevision: refs/heads/master
+      # Frozen rollback chart after the Indigo cutover; do not track new releases here.
+      targetRevision: 6538cee87a65beba916f8366c4753e37054cd31b
       path: helm/tastingswithtay-web
       helm:
         releaseName: twt-web
@@ -35,9 +36,9 @@ spec:
     namespace: twt
   syncPolicy:
     automated:
-      enabled: true
-      prune: true
-      selfHeal: true
+      enabled: false
+      prune: false
+      selfHeal: false
     retry:
       limit: 3
       refresh: true
