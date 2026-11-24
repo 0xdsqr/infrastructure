@@ -52,9 +52,28 @@ export const previewApplicationSet = (applicationSet: YamlRecord): YamlRecord[] 
       )
         throw new Error("Git file inventory must pin one path on master")
       const file = record(git.files[0])
+      // Permit only the explicitly named app from the first list inventory.
+      // Never interpolate private release data into a repository path.
+      const names = record(record(children[0]).list).elements
+      const paths =
+        typeof file.path === "string" && file.path.includes("{{ .name }}")
+          ? Array.isArray(names) && names.length > 0
+            ? names.map((entry) => {
+                const name = record(entry).name
+                if (typeof name !== "string" || !/^[a-z][a-z0-9-]*$/.test(name))
+                  throw new Error("Git file inventory requires a safe public app name")
+                return (file.path as string).replaceAll("{{ .name }}", name)
+              })
+            : []
+          : [file.path]
       if (
         typeof file.path !== "string" ||
-        !/^apps\/[a-z][a-z0-9-]*\/environments\/[a-z][a-z0-9-]*\/release\.yaml$/.test(file.path)
+        paths.length === 0 ||
+        paths.some(
+          (path) =>
+            typeof path !== "string" ||
+            !/^apps\/[a-z][a-z0-9-]*\/environments\/[a-z][a-z0-9-]*\/release\.yaml$/.test(path),
+        )
       )
         throw new Error("Git file inventory uses an unsafe release path")
       // CI cannot read a private repository. Supply a structurally valid placeholder

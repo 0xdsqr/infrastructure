@@ -4,5 +4,6 @@ namePrefix: indigo-
 resources:
   - ../../base
   - applications.applicationset.yaml
+  - twt.applicationset.yaml
 patches:
   - path: inventory.yaml

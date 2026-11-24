@@ -6,6 +6,7 @@ resources:
   - dmz-ingress.ciliumnetworkpolicy.yaml
   - cloudflared-ingress.ciliumnetworkpolicy.yaml
   - dotdev-egress.ciliumnetworkpolicy.yaml
+  - twt-egress.ciliumnetworkpolicy.yaml
 
 components:
   - ../../network-policy

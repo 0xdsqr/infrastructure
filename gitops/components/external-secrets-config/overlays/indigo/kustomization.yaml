@@ -12,6 +12,8 @@ resources:
   - vault-indigo.clustersecretstore.yaml
   - cloudflared-token.externalsecret.yaml
   - dotdev-web.externalsecret.yaml
+  - twt.externalsecrets.yaml
+  - ../../../twt/database-trust/overlays/indigo
   - ../../../dotdev/database-trust/overlays/indigo
   - indigo-bootstrap-smoke-test.externalsecret.yaml
   - gateway-origin-issuer.serviceaccount.yaml

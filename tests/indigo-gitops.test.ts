@@ -45,6 +45,8 @@ test("Indigo keeps platform controllers reviewed while Dotdev deploys automatica
     "cloudflared",
     "kube-state-metrics",
     "dotdev-web",
+    "twt-web",
+    "twt-admin",
   ])
   for (const application of applications) {
     const lifecycle = application.metadata.labels["platform.dsqr.dev/lifecycle"]

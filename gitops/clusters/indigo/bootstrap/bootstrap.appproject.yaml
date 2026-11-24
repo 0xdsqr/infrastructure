@@ -27,7 +27,12 @@ spec:
       namespace: observability
     - server: https://kubernetes.default.svc
       namespace: dsqr
+    - server: https://kubernetes.default.svc
+      namespace: twt
   clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
+      name: twt
     - group: ""
       kind: Namespace
       name: dsqr

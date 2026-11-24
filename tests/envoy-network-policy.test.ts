@@ -34,6 +34,7 @@ test("Envoy allow rules stage without enabling default-deny prematurely", () => 
     "envoy-shared-proxy-access",
     "envoy-shared-to-argocd",
     "envoy-shared-to-dotdev-web",
+    "envoy-shared-to-twt",
   ])
   for (const policy of policies) {
     assert.equal(policy.metadata.annotations["argocd.argoproj.io/sync-wave"], "0")

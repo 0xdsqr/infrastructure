@@ -1,0 +1,79 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: twt
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-options: Prune=confirm,Delete=confirm
+spec:
+  goTemplate: true
+  goTemplateOptions: [missingkey=error]
+  generators:
+    - matrix:
+        generators:
+          - list:
+              elements:
+                - name: twt-web
+                  profile: values-web.yaml
+                  lifecycle: controller
+                  retryProfile: standard
+                - name: twt-admin
+                  profile: values-admin.yaml
+                  lifecycle: controller
+                  retryProfile: standard
+          - git:
+              repoURL: https://github.com/dsqr-labs/deployments.git
+              revision: refs/heads/master
+              files:
+                - path: 'apps/{{ .name }}/environments/production/release.yaml'
+  syncPolicy:
+    applicationsSync: create-update
+    preserveResourcesOnDeletion: true
+  template:
+    metadata:
+      name: '{{ .name }}'
+      namespace: argocd
+      labels:
+        app.kubernetes.io/name: '{{ .name }}'
+        app.kubernetes.io/managed-by: argocd
+        app.kubernetes.io/part-of: tastingswithtay
+        platform.dsqr.dev/owner: twt
+        platform.dsqr.dev/lifecycle: controller
+        platform.dsqr.dev/cluster: indigo
+        platform.dsqr.dev/environment: production
+    spec:
+      project: twt
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: twt
+      sources:
+        - repoURL: https://github.com/0xdsqr/tastingswithtay.git
+          targetRevision: '{{ .sourceRevision }}'
+          path: helm/twt-app
+          helm:
+            releaseName: '{{ .name }}'
+            valueFiles:
+              - '{{ .profile }}'
+              - '$values/apps/{{ .name }}/environments/production/values.yaml'
+        - repoURL: https://github.com/dsqr-labs/deployments.git
+          targetRevision: refs/heads/master
+          ref: values
+      syncPolicy:
+        # First release stays manual until health and rollback are verified.
+        automated:
+          enabled: false
+          prune: false
+          selfHeal: false
+          allowEmpty: false
+        retry:
+          limit: 3
+          backoff:
+            duration: 20s
+            factor: 2
+            maxDuration: 2m
+        syncOptions:
+          - ApplyOutOfSyncOnly=true
+          - FailOnSharedResource=true
+          - PruneLast=true
+  templatePatch: |
+    spec: {}

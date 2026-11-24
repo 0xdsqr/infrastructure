@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - namespaces.yaml
+  - twt.yaml
   - observability-default-deny.networkpolicy.yaml
   - dsqr-default-deny.networkpolicy.yaml
 

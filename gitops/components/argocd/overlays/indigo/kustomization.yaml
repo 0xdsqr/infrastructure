@@ -24,6 +24,20 @@ patches:
   - target:
       group: argoproj.io
       kind: AppProject
+      name: twt
+    patch: |-
+      - op: add
+        path: /spec/sourceRepos/-
+        value: https://github.com/dsqr-labs/deployments.git
+      - op: add
+        path: /spec/namespaceResourceWhitelist/-
+        value: {group: gateway.networking.k8s.io, kind: HTTPRoute}
+      - op: add
+        path: /spec/namespaceResourceWhitelist/-
+        value: {group: cilium.io, kind: CiliumNetworkPolicy}
+  - target:
+      group: argoproj.io
+      kind: AppProject
       name: dsqr
     patch: |-
       - op: add
@@ -98,6 +112,8 @@ patches:
             namespace: cloudflare-system
           - server: https://kubernetes.default.svc
             namespace: dsqr
+          - server: https://kubernetes.default.svc
+            namespace: twt
       - op: replace
         path: /spec/clusterResourceWhitelist
         value:

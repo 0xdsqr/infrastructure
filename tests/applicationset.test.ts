@@ -104,7 +104,7 @@ test("every managed Indigo namespace requires prune and deletion confirmation", 
     }),
   ).map((document) => document.toJSON())
   const namespaces = resources.filter((resource) => resource.kind === "Namespace")
-  assert.equal(namespaces.length, 8)
+  assert.equal(namespaces.length, 9)
   for (const namespace of namespaces) {
     const options = namespace.metadata.annotations["argocd.argoproj.io/sync-options"].split(",")
     assert.ok(options.includes("Prune=confirm"), namespace.metadata.name)
